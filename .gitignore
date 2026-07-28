@@ -1,0 +1,15 @@
+.DS_Store
+DerivedData/
+**/Derived/
+*.xcuserstate
+*.xcuserdata/
+.tuist/
+Tuist/.build/
+Tuist/Package.resolved
+graph.png
+*.xcodeproj
+*.xcworkspace
+!docs/**
+.build/
+.swiftpm/
+docs/.DS_Store
