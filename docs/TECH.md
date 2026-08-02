@@ -7,7 +7,7 @@
 Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App。
 
 - Domain：纯 Swift，可单测的规则与用例
-- Data：Keychain 配置、本地 UserSig、七牛/OMDb、内存 IM 适配（可替换为腾讯云 IM SDK / VLCKit）
+- Data：Keychain 配置、本地 UserSig、七牛/OMDb、内存 IM 适配；观影页使用 **VLCKit**（`Vendor/VLCKitSPM`，首次 `make setup` / `Scripts/download-vlckit.sh`）
 - Presentation：SwiftUI SPA，无 Tab；「我的」在右上角 Sheet
 - 最低系统：**iOS 26.0**
 
@@ -67,11 +67,15 @@ Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App�
 
 ## 元数据
 
-缓存 → 豆瓣（当前跳过）→ OMDb（需 `omdbApiKey`）→ 文件名 `{Title}.{Year}`。
+缓存 → 豆瓣 → IMDb suggestion（无 Key，补海报）→ OMDb（需 `omdbApiKey`）→ 文件名 `{Title}.{Year}` / `{Title} (Year)`。
 
-## 播放器
+## 片库（七牛 S3 兼容）
 
-默认 `AVPlayer`；`.mkv` 映射为不支持提示。可在 Data 层将 `PlayerGateway` 换为 VLCKit 而不改 Domain。
+- Endpoint 示例：`s3.cn-east-1.qiniucs.com`（也兼容历史写法 `s3-cn-east-1.qiniucs.com`）
+- 列表：`ListObjectsV2` + **AWS Signature V4**；自动按 `NextContinuationToken` 翻页（每页最多 1000，最多 50 页）
+- 播放：对 `/{bucket}/{key}` 生成 **AWS SigV4 预签名 GET**（默认 **6h**）；不走未签名自定义域名，避免私有桶 403
+- 观影页播放器：**MobileVLCKit**（`VLCPlayerController`），用预签名 URL 拉取后本地解码，支持 `.mp4` / `.m4v` / `.mkv`
+- 仅展示 `.mp4` / `.m4v` / `.mkv`；失败返回明确错误；刷新取消不会清空已有列表
 
 ## 测试
 

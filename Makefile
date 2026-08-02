@@ -2,7 +2,8 @@
 
 DESTINATION ?= platform=iOS Simulator,name=iPhone 17,OS=26.5
 
-setup: ## Resolve deps and generate Xcode workspace
+setup: ## Download VLCKit (if needed), resolve deps, generate workspace
+	./Scripts/download-vlckit.sh
 	tuist install
 	tuist generate --no-open
 

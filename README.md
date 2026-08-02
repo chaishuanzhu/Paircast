@@ -10,7 +10,7 @@
 ## 快速开始
 
 ```bash
-make setup    # tuist install && tuist generate
+make setup    # 下载 VLCKit（首次）+ tuist install/generate
 make test     # 跑各模块单测
 make open     # 打开生成的 workspace
 ```
@@ -18,9 +18,9 @@ make open     # 打开生成的 workspace
 或手动：
 
 ```bash
+./Scripts/download-vlckit.sh   # 约 740MB，首次需要
 tuist install
 tuist generate
-tuist test
 ```
 
 ## 模块

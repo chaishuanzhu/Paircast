@@ -1,20 +1,37 @@
 import Foundation
 import Domain
 
-/// Lists objects via S3-compatible API when credentials work; falls back to demo catalog in DEBUG-like usage.
+/// Qiniu Kodo via S3-compatible ListObjectsV2 + SigV4 (with pagination).
 public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
     private let session: URLSession
-    public var demoFallbackEnabled: Bool
+    private let presignExpires: Int
+    private let maxKeysPerPage: Int
+    private let maxPages: Int
 
-    public init(session: URLSession = .shared, demoFallbackEnabled: Bool = true) {
+    /// Default play URL lifetime: 6 hours (AWS SigV4 `X-Amz-Expires`).
+    public static let defaultPresignExpiresSeconds = 6 * 3600
+
+    public init(
+        session: URLSession = .shared,
+        presignExpires: Int = Self.defaultPresignExpiresSeconds,
+        maxKeysPerPage: Int = 1000,
+        maxPages: Int = 50
+    ) {
         self.session = session
-        self.demoFallbackEnabled = demoFallbackEnabled
+        self.presignExpires = presignExpires
+        self.maxKeysPerPage = maxKeysPerPage
+        self.maxPages = maxPages
     }
 
     public func listMovies(config: AppCloudConfig) async throws -> [Movie] {
+        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
+        let region = AWSV4Signer.region(fromEndpoint: host)
+        TandemLog.catalog.info(
+            "listMovies begin bucket=\(config.qiniu.bucket, privacy: .public) host=\(host, privacy: .public) region=\(region, privacy: .public) prefix=\(config.qiniu.prefix ?? "", privacy: .public)"
+        )
         do {
-            let keys = try await listObjectKeys(config: config)
-            return keys.compactMap { key in
+            let keys = try await listAllObjectKeys(config: config)
+            let movies = keys.compactMap { key -> Movie? in
                 guard let format = VideoFormat(filename: key) else { return nil }
                 let parsed = MovieCatalogRules.parseFilenameMetadata(from: key)
                 return Movie(
@@ -25,79 +42,202 @@ public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
                     format: format
                 )
             }
+            TandemLog.catalog.info(
+                "listMovies done objects=\(keys.count, privacy: .public) videos=\(movies.count, privacy: .public)"
+            )
+            return movies
         } catch {
-            if demoFallbackEnabled {
-                return Self.demoMovies
-            }
-            throw AppError.catalogUnauthorized
+            TandemLog.catalog.error("listMovies failed error=\(String(describing: error), privacy: .public)")
+            throw error
         }
     }
 
     public func playURL(for movie: Movie, config: AppCloudConfig) async throws -> URL {
         if let playURL = movie.playURL {
+            TandemLog.catalog.info(
+                "playURL using embedded url movie=\(movie.objectKey, privacy: .public) \(TandemLog.redactedURL(playURL), privacy: .public)"
+            )
             return playURL
         }
-        if let domain = config.qiniu.domain, !domain.isEmpty {
-            let base = domain.hasPrefix("http") ? domain : "https://\(domain)"
-            if let url = URL(string: "\(base)/\(movie.objectKey)") {
-                return url
-            }
-        }
-        // Demo / placeholder stream for local UI development.
-        if let url = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8") {
+        // Always AWS SigV4 query-presign against the S3 endpoint (private bucket).
+        do {
+            let url = try makePresignedGetURL(objectKey: movie.objectKey, config: config)
+            TandemLog.catalog.info(
+                "playURL presigned expires=\(self.presignExpires, privacy: .public)s movie=\(movie.objectKey, privacy: .public) \(TandemLog.redactedURL(url), privacy: .public)"
+            )
             return url
+        } catch {
+            TandemLog.catalog.error(
+                "playURL presign failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
+            )
+            throw error
         }
-        throw AppError.playbackFailed
     }
 
-    private func listObjectKeys(config: AppCloudConfig) async throws -> [String] {
-        // Minimal ListObjectsV2 attempt; private buckets need signing — failures trigger demo fallback.
+    // MARK: - Paginated list
+
+    private func listAllObjectKeys(config: AppCloudConfig) async throws -> [String] {
+        var allKeys: [String] = []
+        var continuationToken: String?
+        var pageCount = 0
+
+        repeat {
+            try Task.checkCancellation()
+            pageCount += 1
+            if pageCount > maxPages {
+                break
+            }
+            let page = try await listObjectKeysPage(config: config, continuationToken: continuationToken)
+            allKeys.append(contentsOf: page.keys)
+            TandemLog.catalog.debug(
+                "listObjects page=\(pageCount, privacy: .public) keys=\(page.keys.count, privacy: .public) truncated=\(page.isTruncated, privacy: .public)"
+            )
+            if page.isTruncated, let next = page.nextContinuationToken, !next.isEmpty {
+                continuationToken = next
+            } else {
+                continuationToken = nil
+            }
+        } while continuationToken != nil
+
+        return allKeys
+    }
+
+    private func listObjectKeysPage(
+        config: AppCloudConfig,
+        continuationToken: String?
+    ) async throws -> S3ListObjectsV2Page {
+        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
+        let region = AWSV4Signer.region(fromEndpoint: host)
+        let credentials = AWSV4Signer.Credentials(
+            accessKey: config.qiniu.accessKey,
+            secretKey: config.qiniu.secretKey
+        )
+
         var components = URLComponents()
         components.scheme = "https"
-        components.host = config.qiniu.endpoint
+        components.host = host
         components.path = "/\(config.qiniu.bucket)"
-        components.queryItems = [
+        var query: [URLQueryItem] = [
             URLQueryItem(name: "list-type", value: "2"),
-            URLQueryItem(name: "prefix", value: config.qiniu.prefix ?? ""),
+            URLQueryItem(name: "max-keys", value: String(maxKeysPerPage)),
         ]
+        if let prefix = config.qiniu.prefix, !prefix.isEmpty {
+            query.append(URLQueryItem(name: "prefix", value: prefix))
+        }
+        if let continuationToken, !continuationToken.isEmpty {
+            query.append(URLQueryItem(name: "continuation-token", value: continuationToken))
+        }
+        components.queryItems = query
+
         guard let url = components.url else {
             throw AppError.catalogUnauthorized
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.timeoutInterval = 8
-        let (_, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+
+        let signed = try AWSV4Signer.signHeader(
+            method: "GET",
+            url: url,
+            region: region,
+            credentials: credentials
+        )
+
+        var request = URLRequest(url: signed.url)
+        request.httpMethod = signed.method
+        request.timeoutInterval = 30
+        for (key, value) in signed.headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            throw CancellationError()
+        } catch {
+            throw AppError.network
+        }
+
+        guard let http = response as? HTTPURLResponse else {
             throw AppError.catalogUnauthorized
         }
-        // Full XML parsing deferred; empty success returns demo until signed client lands.
-        return Self.demoMovies.map(\.objectKey)
+
+        if !(200..<300).contains(http.statusCode) {
+            TandemLog.catalog.error(
+                "listObjects HTTP \(http.statusCode, privacy: .public) \(TandemLog.redactedURL(signed.url), privacy: .public)"
+            )
+            throw mapListFailure(data: data, statusCode: http.statusCode)
+        }
+
+        do {
+            return try S3ListObjectsV2Parser.parsePage(from: data)
+        } catch S3ListObjectsV2Parser.ParseError.errorResponse(let code, let message) {
+            throw mapS3Error(code: code, message: message)
+        } catch {
+            throw AppError.unknown("七牛列表解析失败")
+        }
     }
 
-    public static let demoMovies: [Movie] = [
-        Movie(
-            id: "Inception.2010.mp4",
-            objectKey: "films/Inception.2010.mp4",
-            title: "Inception",
-            year: "2010",
-            overview: "A thief who steals corporate secrets through dream-sharing technology.",
-            format: .mp4
-        ),
-        Movie(
-            id: "Interstellar.2014.mkv",
-            objectKey: "films/Interstellar.2014.mkv",
-            title: "Interstellar",
-            year: "2014",
-            overview: "Explorers travel through a wormhole in space.",
-            format: .mkv
-        ),
-        Movie(
-            id: "Spirited.Away.2001.mp4",
-            objectKey: "films/Spirited.Away.2001.mp4",
-            title: "Spirited Away",
-            year: "2001",
-            overview: "A young girl enters a world of spirits.",
-            format: .mp4
-        ),
-    ]
+    private func makeObjectURL(objectKey: String, config: AppCloudConfig) throws -> URL {
+        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = host
+        // Must percent-encode with SigV4 rules (parens/spaces/CJK); do not use `path=`.
+        components.percentEncodedPath = "/" + ([config.qiniu.bucket] + objectKey.split(separator: "/").map(String.init))
+            .map { AWSV4Signer.uriEncodePublic($0) }
+            .joined(separator: "/")
+        guard let url = components.url else {
+            throw AppError.playbackFailed
+        }
+        return url
+    }
+
+    private func makePresignedGetURL(objectKey: String, config: AppCloudConfig) throws -> URL {
+        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
+        let region = AWSV4Signer.region(fromEndpoint: host)
+        let url = try makeObjectURL(objectKey: objectKey, config: config)
+        do {
+            return try AWSV4Signer.presignGET(
+                url: url,
+                region: region,
+                credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+                expires: presignExpires
+            )
+        } catch {
+            throw AppError.playbackFailed
+        }
+    }
+
+    private func mapListFailure(data: Data, statusCode: Int) -> AppError {
+        do {
+            _ = try S3ListObjectsV2Parser.parsePage(from: data)
+        } catch S3ListObjectsV2Parser.ParseError.errorResponse(let code, let message) {
+            return mapS3Error(code: code, message: message)
+        } catch {
+            // fall through
+        }
+        if statusCode == 403 || statusCode == 401 {
+            return .catalogUnauthorized
+        }
+        return .unknown("七牛列目录失败（HTTP \(statusCode)）")
+    }
+
+    private func mapS3Error(code: String, message: String) -> AppError {
+        switch code {
+        case "InvalidAccessKeyId", "SignatureDoesNotMatch", "AccessDenied", "InvalidToken":
+            return .catalogUnauthorized
+        case "NoSuchBucket":
+            return .incompleteConfig(missing: ["七牛 Bucket"])
+        default:
+            return .unknown("七牛：\(code) — \(message)")
+        }
+    }
+}
+
+extension AWSV4Signer {
+    public static func uriEncodePublic(_ string: String) -> String {
+        uriEncode(string, encodeSlash: true)
+    }
 }

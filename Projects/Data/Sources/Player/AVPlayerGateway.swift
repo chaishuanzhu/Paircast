@@ -2,8 +2,8 @@ import Foundation
 import AVFoundation
 import Domain
 
-/// AVFoundation-backed player. MKV may fail → maps to `.unsupportedContainer`.
-/// VLCKit can replace this adapter behind the same `PlayerGateway` once linked.
+/// Legacy AVFoundation adapter kept for reference / unit tests.
+/// Watch scene uses VLCKit (`VLCPlayerController`) which supports mkv/m4v/mp4.
 @MainActor
 public final class AVPlayerGateway: NSObject, PlayerGateway {
     private var player: AVPlayer?
@@ -14,13 +14,9 @@ public final class AVPlayerGateway: NSObject, PlayerGateway {
     }
 
     public func prepare(url: URL) async throws {
-        if url.pathExtension.lowercased() == "mkv" {
-            throw AppError.unsupportedContainer
-        }
         let item = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: item)
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            // Brief wait for item readiness; failures surface on play.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 cont.resume()
             }
@@ -51,7 +47,6 @@ public final class AVPlayerGateway: NSObject, PlayerGateway {
 
     public func setSubtitleURL(_ url: URL?, offsetMs: Int) async {
         subtitleOffsetMs = offsetMs
-        // External subtitle rendering is handled in Presentation overlay using offsetMs.
         _ = url
     }
 

@@ -1,6 +1,4 @@
 import SwiftUI
-import AVKit
-import CoreMedia
 import UIKit
 import Domain
 
@@ -29,7 +27,7 @@ public final class WatchViewModel: ObservableObject {
     let initialRoomId: String?
     let initialMovieId: String?
     private var seq: UInt64 = 1
-    let player = AVPlayer()
+    let player = VLCPlayerController()
     private var signalTask: Task<Void, Never>?
     private var chatTask: Task<Void, Never>?
 
@@ -74,7 +72,7 @@ public final class WatchViewModel: ObservableObject {
     public func stop() {
         signalTask?.cancel()
         chatTask?.cancel()
-        player.pause()
+        player.stop()
     }
 
     private func loadMovie(id: String) async {
@@ -91,19 +89,26 @@ public final class WatchViewModel: ObservableObject {
 
     private func preparePlayer() async {
         guard let movie else { return }
+        TandemLog.playback.info(
+            "preparePlayer movie=\(movie.objectKey, privacy: .public) format=\(movie.format.rawValue, privacy: .public)"
+        )
+        player.stop()
         do {
             let config = try await session.configGateway.load() ?? AppCloudConfig(
                 im: .init(sdkAppId: 0, secretKey: ""),
                 qiniu: .init(accessKey: "", secretKey: "", bucket: "", endpoint: "")
             )
             let url = try await session.catalogGateway.playURL(for: movie, config: config)
-            if movie.format == .mkv {
-                throw AppError.unsupportedContainer
+            try await player.prepare(url: url)
+            if let playerError = player.lastError {
+                TandemLog.playback.error("preparePlayer playerError=\(playerError, privacy: .public)")
+                errorMessage = playerError
             }
-            player.replaceCurrentItem(with: AVPlayerItem(url: url))
         } catch let error as AppError {
+            TandemLog.playback.error("preparePlayer AppError=\(error.userMessage, privacy: .public)")
             errorMessage = error.userMessage
         } catch {
+            TandemLog.playback.error("preparePlayer error=\(String(describing: error), privacy: .public)")
             errorMessage = AppError.playbackFailed.userMessage
         }
     }
@@ -148,22 +153,19 @@ public final class WatchViewModel: ObservableObject {
                     await preparePlayer()
                 }
             }
-            Task {
-                let seconds = Double(state.positionMs) / 1000
-                await player.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
-                if state.isPaused {
-                    player.pause()
-                } else {
-                    player.play()
-                }
+            player.seek(toMs: state.positionMs)
+            if state.isPaused {
+                player.pause()
+            } else {
+                player.play()
             }
         }
     }
 
     public func togglePlay() {
         guard isHost, let room, let user = session.currentUser else { return }
-        let action: PlaybackAction = player.rate == 0 ? .play : .pause
-        let position = Int64((player.currentTime().seconds.isFinite ? player.currentTime().seconds : 0) * 1000)
+        let action: PlaybackAction = player.isPaused ? .play : .pause
+        let position = player.currentPositionMs
         seq += 1
         Task {
             let harness = SyncHarness(session: session)
@@ -268,7 +270,7 @@ public final class WatchViewModel: ObservableObject {
         }
         seq += 1
         let harness = LeaveHarness(session: session)
-        let position = Int64((player.currentTime().seconds.isFinite ? player.currentTime().seconds : 0) * 1000)
+        let position = player.currentPositionMs
         _ = try? await harness.leaveRoom(
             room: room,
             leavingUserId: user.id,
@@ -358,9 +360,20 @@ public struct WatchView: View {
             .foregroundStyle(.white)
             .background(Color.black)
 
-            VideoPlayer(player: viewModel.player)
+            VLCPlayerView(videoView: viewModel.player.videoView)
                 .frame(height: 220)
                 .background(Color.black)
+                .overlay {
+                    if !viewModel.player.isReady {
+                        VStack(spacing: 8) {
+                            ProgressView()
+                            Text("正在缓冲…")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                        }
+                        .padding()
+                    }
+                }
                 .overlay(alignment: .bottom) {
                     if viewModel.subtitleState.source != .off {
                         Text("字幕偏移 \(String(format: "%.1f", Double(viewModel.subtitleState.offsetMs) / 1000))s")
@@ -396,6 +409,9 @@ public struct WatchView: View {
         .background(TandemColors.groupedBackground.ignoresSafeArea())
         .task { await viewModel.start() }
         .onDisappear { viewModel.stop() }
+        .onReceive(viewModel.player.$lastError.compactMap { $0 }) { message in
+            viewModel.errorMessage = message
+        }
         .sheet(isPresented: $viewModel.showSwitchMovie) {
             SwitchMovieSheet(viewModel: viewModel)
                 .presentationDetents([.medium, .large])

@@ -13,3 +13,5 @@ graph.png
 .build/
 .swiftpm/
 docs/.DS_Store
+Vendor/VLCKitSPM/VLCKit-all.xcframework/
+Vendor/VLCKitSPM/VLCKit-all.xcframework.zip

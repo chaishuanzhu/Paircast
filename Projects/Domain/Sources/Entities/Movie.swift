@@ -33,12 +33,14 @@ public struct Movie: Equatable, Sendable, Identifiable {
 
 public enum VideoFormat: String, Equatable, Sendable {
     case mp4
+    case m4v
     case mkv
 
     public init?(filename: String) {
         let ext = (filename as NSString).pathExtension.lowercased()
         switch ext {
         case "mp4": self = .mp4
+        case "m4v": self = .m4v
         case "mkv": self = .mkv
         default: return nil
         }

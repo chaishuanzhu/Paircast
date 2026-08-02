@@ -22,6 +22,7 @@ public protocol UserSigGateway {
 
 public protocol MovieCatalogGateway {
     func listMovies(config: AppCloudConfig) async throws -> [Movie]
+    /// AWS SigV4 query-presigned HTTPS URL for online VLC playback (default 6h).
     func playURL(for movie: Movie, config: AppCloudConfig) async throws -> URL
 }
 

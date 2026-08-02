@@ -11,5 +11,8 @@ let packageSettings = PackageSettings(
 
 let package = Package(
     name: "Tandem",
-    dependencies: []
+    dependencies: [
+        // Local wrapper around pre-downloaded VLCKit binary (see Scripts/download-vlckit.sh).
+        .package(path: "../Vendor/VLCKitSPM"),
+    ]
 )

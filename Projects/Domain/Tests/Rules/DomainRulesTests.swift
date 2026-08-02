@@ -2,15 +2,30 @@ import XCTest
 @testable import Domain
 
 final class MovieCatalogRulesTests: XCTestCase {
-    func test_filtersOnlyMp4AndMkv() {
-        let keys = ["a.mp4", "b.mkv", "c.avi", "d.srt", "folder/e.MP4"]
-        XCTAssertEqual(MovieCatalogRules.filterVideoKeys(keys), ["a.mp4", "b.mkv", "folder/e.MP4"])
+    func test_filtersOnlySupportedVideoExtensions() {
+        let keys = ["a.mp4", "b.mkv", "c.avi", "d.srt", "folder/e.MP4", "f.m4v"]
+        XCTAssertEqual(
+            MovieCatalogRules.filterVideoKeys(keys),
+            ["a.mp4", "b.mkv", "folder/e.MP4", "f.m4v"]
+        )
     }
 
     func test_parseFilenameWithYear() {
         let parsed = MovieCatalogRules.parseFilenameMetadata(from: "films/Inception.2010.1080p.mkv")
         XCTAssertEqual(parsed.title, "Inception")
         XCTAssertEqual(parsed.year, "2010")
+    }
+
+    func test_parseFilenameWithParenthesizedYear() {
+        let parsed = MovieCatalogRules.parseFilenameMetadata(from: "画江湖之天罡 (2023).mkv")
+        XCTAssertEqual(parsed.title, "画江湖之天罡")
+        XCTAssertEqual(parsed.year, "2023")
+    }
+
+    func test_parseFilenameWithFullwidthParentheses() {
+        let parsed = MovieCatalogRules.parseFilenameMetadata(from: "流浪地球（2019）.mp4")
+        XCTAssertEqual(parsed.title, "流浪地球")
+        XCTAssertEqual(parsed.year, "2019")
     }
 
     func test_parseFilenameWithoutYear() {

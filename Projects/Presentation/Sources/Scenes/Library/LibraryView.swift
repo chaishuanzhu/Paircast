@@ -20,13 +20,30 @@ public final class LibraryViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             let harness = LibraryHarness(session: session)
-            movies = try await harness.listMovies()
+            let listed = try await harness.listMovies(enrichMetadata: false)
+            movies = listed
+            errorMessage = nil
+
+            guard !listed.isEmpty, !Task.isCancelled else { return }
+            let enriched = await harness.enrich(listed)
+            if !Task.isCancelled {
+                movies = enriched
+            }
+        } catch is CancellationError {
+            // Pull-to-refresh / task cancellation: keep current movies.
+            return
         } catch let error as AppError {
-            errorMessage = error.userMessage
-            movies = []
+            if movies.isEmpty {
+                errorMessage = error.userMessage
+            } else {
+                session.showToast(error.userMessage)
+            }
         } catch {
-            errorMessage = AppError.catalogUnauthorized.userMessage
-            movies = []
+            if movies.isEmpty {
+                errorMessage = AppError.catalogUnauthorized.userMessage
+            } else {
+                session.showToast(AppError.catalogUnauthorized.userMessage)
+            }
         }
     }
 
@@ -46,6 +63,35 @@ private struct LibraryHarness: ListMoviesUseCase {
     var catalogGateway: MovieCatalogGateway { session.catalogGateway }
     var metadataGateway: MetadataGateway { session.metadataGateway }
     var configGateway: ConfigGateway { session.configGateway }
+
+    func enrich(_ movies: [Movie]) async -> [Movie] {
+        guard let config = try? await configGateway.load() else { return movies }
+        return await withTaskGroup(of: (Int, Movie).self, returning: [Movie].self) { group in
+            let concurrency = 4
+            var index = 0
+            var results = Array(repeating: Optional<Movie>.none, count: movies.count)
+
+            func enqueue() {
+                guard index < movies.count else { return }
+                let i = index
+                let movie = movies[i]
+                index += 1
+                group.addTask {
+                    let enriched = await metadataGateway.enrich(movie, config: config)
+                    return (i, enriched)
+                }
+            }
+
+            for _ in 0..<min(concurrency, movies.count) {
+                enqueue()
+            }
+            for await (i, movie) in group {
+                results[i] = movie
+                enqueue()
+            }
+            return results.enumerated().map { offset, value in value ?? movies[offset] }
+        }
+    }
 }
 
 public struct LibraryView: View {
@@ -77,7 +123,7 @@ public struct LibraryView: View {
                         Button("去配置") { session.route = .config(fromLogin: false) }
                     }
                 } else if viewModel.movies.isEmpty {
-                    ContentUnavailableView("暂无影片", systemImage: "film", description: Text("确认七牛 Bucket 中有 mp4/mkv"))
+                    ContentUnavailableView("暂无影片", systemImage: "film", description: Text("确认七牛 Bucket 中有 mp4/m4v/mkv"))
                 } else {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 12) {
@@ -127,22 +173,11 @@ private struct MovieCardView: View {
                     .fill(Color.gray.opacity(0.2))
                     .aspectRatio(2 / 3, contentMode: .fit)
                     .overlay {
-                        if let url = movie.posterURL {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().scaledToFill()
-                                default:
-                                    Image(systemName: "film")
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        } else {
-                            Image(systemName: "film")
-                                .foregroundStyle(.secondary)
-                        }
+                        PosterImage(url: movie.posterURL)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipped()
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 Text(movie.format.rawValue.uppercased())
                     .font(.caption2.weight(.semibold))
                     .padding(.horizontal, 6)
@@ -157,10 +192,12 @@ private struct MovieCardView: View {
             Text(movie.year ?? "未知")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text(movie.overview ?? "")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+            if let overview = movie.overview, !overview.isEmpty {
+                Text(overview)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
         }
     }
 }
