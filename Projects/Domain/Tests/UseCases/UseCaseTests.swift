@@ -188,8 +188,17 @@ private final class FakeRoomGateway: RoomGateway, @unchecked Sendable {
         rooms[room.id] = room
         return room
     }
-    func joinRoom(roomId: String, userId: String) async throws -> WatchRoom {
-        var room = rooms[roomId] ?? WatchRoom(id: roomId, movieId: "m", hostUserId: userId)
+    func joinRoom(
+        roomId: String,
+        userId: String,
+        movieId: String?,
+        hostUserId: String?
+    ) async throws -> WatchRoom {
+        var room = rooms[roomId] ?? WatchRoom(
+            id: roomId,
+            movieId: movieId ?? "m",
+            hostUserId: hostUserId ?? userId
+        )
         if !room.memberIds.contains(userId) {
             room.memberIds.append(userId)
             room.joinOrder.append(userId)

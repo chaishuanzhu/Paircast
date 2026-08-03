@@ -15,3 +15,5 @@ graph.png
 docs/.DS_Store
 Vendor/VLCKitSPM/VLCKit-all.xcframework/
 Vendor/VLCKitSPM/VLCKit-all.xcframework.zip
+Vendor/ImSDKSPM/ImSDK_Plus.xcframework/
+Vendor/ImSDKSPM/ImSDK_Plus.xcframework.zip

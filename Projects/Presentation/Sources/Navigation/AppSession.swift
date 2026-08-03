@@ -18,6 +18,9 @@ public final class AppSession: ObservableObject {
     public let syncGateway: PlaybackSyncGateway
     public let subtitleGateway: SubtitleGateway
 
+    /// Deep-link invite kept until the user finishes login.
+    private(set) var pendingInvite: RoomInvite?
+
     public init(
         configGateway: ConfigGateway,
         authGateway: AuthGateway,
@@ -39,6 +42,7 @@ public final class AppSession: ObservableObject {
         self.syncGateway = syncGateway
         self.subtitleGateway = subtitleGateway
         self.route = .login
+        installIMSessionObservers()
     }
 
     public func bootstrap() async {
@@ -51,6 +55,7 @@ public final class AppSession: ObservableObject {
                 try await authGateway.login(userId: userId, userSig: sig)
                 currentUser = try await authGateway.fetchProfile()
                 route = .library
+                consumePendingInviteIfPossible()
             } catch {
                 route = .login
             }
@@ -64,17 +69,75 @@ public final class AppSession: ObservableObject {
     }
 
     public func handleDeepLink(_ url: URL) {
-        guard url.scheme == "tandem" else { return }
-        if url.host == "watch",
-           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let roomId = components.queryItems?.first(where: { $0.name == "roomId" })?.value {
-            if currentUser == nil {
-                route = .login
-                showToast("请先登录再加入房间")
-            } else {
-                route = .watch(roomId: roomId, movieId: nil)
+        guard let invite = RoomInvite(url: url) else { return }
+        pendingInvite = invite
+        if currentUser == nil {
+            route = .login
+            showToast("请先登录再加入房间")
+        } else {
+            consumePendingInviteIfPossible()
+        }
+    }
+
+    /// Call after a successful login so a queued invite can open the watch scene.
+    public func consumePendingInviteIfPossible() {
+        guard currentUser != nil, let invite = pendingInvite else { return }
+        pendingInvite = nil
+        route = .watch(
+            roomId: invite.roomId,
+            movieId: invite.movieId,
+            hostUserId: invite.hostUserId
+        )
+    }
+
+    public func installIMSessionObservers() {
+        NotificationCenter.default.addObserver(
+            forName: .tandemIMKickedOffline,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleForcedLogout(message: AppError.kickedOffline.userMessage)
             }
         }
+        NotificationCenter.default.addObserver(
+            forName: .tandemIMUserSigExpired,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleForcedLogout(message: AppError.userSigExpired.userMessage)
+            }
+        }
+    }
+
+    private func handleForcedLogout(message: String) {
+        currentUser = nil
+        pendingInvite = nil
+        route = .login
+        showToast(message)
+    }
+}
+
+public struct RoomInvite: Equatable, Sendable {
+    public var roomId: String
+    public var movieId: String?
+    public var hostUserId: String?
+
+    public init(roomId: String, movieId: String? = nil, hostUserId: String? = nil) {
+        self.roomId = roomId
+        self.movieId = movieId
+        self.hostUserId = hostUserId
+    }
+
+    public init?(url: URL) {
+        guard url.scheme == "tandem", url.host == "watch" else { return nil }
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        guard let roomId = items.first(where: { $0.name == "roomId" })?.value,
+              !roomId.isEmpty else { return nil }
+        self.roomId = roomId
+        self.movieId = items.first(where: { $0.name == "movieId" })?.value
+        self.hostUserId = items.first(where: { $0.name == "hostUserId" })?.value
     }
 }
 
@@ -82,5 +145,5 @@ public enum AppRoute: Equatable, Hashable {
     case login
     case config(fromLogin: Bool)
     case library
-    case watch(roomId: String?, movieId: String?)
+    case watch(roomId: String?, movieId: String?, hostUserId: String? = nil)
 }

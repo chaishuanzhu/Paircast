@@ -5,7 +5,11 @@ public enum TandemColors {
     public static let groupedBackground = Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
     public static let secondaryGrouped = Color.white
     public static let watchBackground = Color.black
+    public static let watchPanel = Color(red: 44 / 255, green: 44 / 255, blue: 46 / 255)
     public static let danger = Color(red: 1, green: 59 / 255, blue: 48 / 255)
+    public static let secondaryLabel = Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.6)
+    public static let tertiaryLabel = Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.3)
+    public static let avatarAccent = Color(red: 91 / 255, green: 141 / 255, blue: 239 / 255)
 }
 
 public struct PrimaryButtonStyle: ButtonStyle {
@@ -44,6 +48,7 @@ public struct TandemTextField: View {
                     TextField(title, text: $text)
                 }
             }
+            .font(.system(size: 17))
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             if isSecure {
@@ -58,3 +63,68 @@ public struct TandemTextField: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
+
+/// Circular initial avatar matching design preview (blue pill / circle with letter).
+public struct TandemAvatarView: View {
+    public var initial: String
+    public var size: CGFloat = 36
+    public var color: Color = TandemColors.systemBlue
+    public var isHost: Bool = false
+
+    public init(initial: String, size: CGFloat = 36, color: Color = TandemColors.systemBlue, isHost: Bool = false) {
+        self.initial = initial
+        self.size = size
+        self.color = color
+        self.isHost = isHost
+    }
+
+    public init(userId: String, size: CGFloat = 36, color: Color? = nil, isHost: Bool = false) {
+        let trimmed = userId.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.initial = trimmed.first.map { String($0).uppercased() } ?? "?"
+        self.size = size
+        self.color = color ?? TandemColors.avatarColor(for: trimmed)
+        self.isHost = isHost
+    }
+
+    public var body: some View {
+        Text(initial)
+            .font(.system(size: size * 0.42, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(color)
+            .clipShape(Circle())
+            .overlay {
+                if isHost {
+                    Circle()
+                        .stroke(Color(red: 1, green: 107 / 255, blue: 129 / 255), lineWidth: 2)
+                }
+            }
+    }
+}
+
+extension TandemColors {
+    public static func avatarColor(for userId: String) -> Color {
+        let palette: [Color] = [
+            systemBlue,
+            avatarAccent,
+            Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255),
+            Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255),
+            Color(red: 255 / 255, green: 149 / 255, blue: 0),
+            Color(red: 175 / 255, green: 82 / 255, blue: 222 / 255),
+        ]
+        let hash = userId.unicodeScalars.reduce(0) { ($0 &+ Int($1.value)) % palette.count }
+        return palette[hash]
+    }
+
+    public static func formatPlaybackTime(_ ms: Int64) -> String {
+        let total = max(0, Int(ms / 1000))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
+        return String(format: "%d:%02d", m, s)
+    }
+}
+

@@ -17,6 +17,7 @@ public enum AppError: Error, Equatable, Sendable {
     case movieChangeFailed
     case onlyHostCanSwitchMovie
     case roomEnded
+    case roomNotFound
     case subtitleUnavailable
     case validation(String)
     case unknown(String)
@@ -55,6 +56,8 @@ public enum AppError: Error, Equatable, Sendable {
             return "仅房主可切换影片"
         case .roomEnded:
             return "房间已结束"
+        case .roomNotFound:
+            return "房间不存在或邀请已失效"
         case .subtitleUnavailable:
             return "暂无可用字幕"
         case .validation(let message):

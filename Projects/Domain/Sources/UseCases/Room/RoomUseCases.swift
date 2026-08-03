@@ -9,8 +9,18 @@ public extension CreateOrJoinRoomUseCase {
         try await roomGateway.createRoom(movieId: movieId, hostUserId: hostUserId)
     }
 
-    func joinRoom(roomId: String, userId: String) async throws -> WatchRoom {
-        try await roomGateway.joinRoom(roomId: roomId, userId: userId)
+    func joinRoom(
+        roomId: String,
+        userId: String,
+        movieId: String? = nil,
+        hostUserId: String? = nil
+    ) async throws -> WatchRoom {
+        try await roomGateway.joinRoom(
+            roomId: roomId,
+            userId: userId,
+            movieId: movieId,
+            hostUserId: hostUserId
+        )
     }
 }
 
@@ -106,7 +116,15 @@ public extension ChangeMovieUseCase {
 public protocol InviteToRoomUseCase {}
 
 public extension InviteToRoomUseCase {
-    func inviteURL(roomId: String) -> URL {
-        URL(string: "tandem://watch?roomId=\(roomId)")!
+    func inviteURL(roomId: String, movieId: String, hostUserId: String) -> URL {
+        var components = URLComponents()
+        components.scheme = "tandem"
+        components.host = "watch"
+        components.queryItems = [
+            URLQueryItem(name: "roomId", value: roomId),
+            URLQueryItem(name: "movieId", value: movieId),
+            URLQueryItem(name: "hostUserId", value: hostUserId),
+        ]
+        return components.url ?? URL(string: "tandem://watch?roomId=\(roomId)")!
     }
 }

@@ -16,8 +16,8 @@ public struct RootView: View {
                 ServiceConfigView(session: session, fromLogin: fromLogin)
             case .library:
                 LibraryView(session: session)
-            case .watch(let roomId, let movieId):
-                WatchView(session: session, roomId: roomId, movieId: movieId)
+            case .watch(let roomId, let movieId, let hostUserId):
+                WatchView(session: session, roomId: roomId, movieId: movieId, hostUserId: hostUserId)
             }
         }
         .overlay(alignment: .bottom) {

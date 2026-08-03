@@ -19,18 +19,39 @@ public final class InMemoryRoomGateway: RoomGateway, @unchecked Sendable {
         return room
     }
 
-    public func joinRoom(roomId: String, userId: String) async throws -> WatchRoom {
+    public func joinRoom(
+        roomId: String,
+        userId: String,
+        movieId: String?,
+        hostUserId: String?
+    ) async throws -> WatchRoom {
         lock.lock()
-        guard var room = rooms[roomId], room.status == .active else {
+        let id = roomId.lowercased()
+        let room: WatchRoom
+        if var existing = rooms[id] {
+            guard existing.status == .active else {
+                lock.unlock()
+                throw AppError.roomEnded
+            }
+            if !existing.memberIds.contains(userId) {
+                existing.memberIds.append(userId)
+                existing.joinOrder.append(userId)
+            }
+            rooms[id] = existing
+            room = existing
+        } else if let movieId, let hostUserId, !movieId.isEmpty, !hostUserId.isEmpty {
+            var created = WatchRoom(id: id, movieId: movieId, hostUserId: hostUserId)
+            if userId != hostUserId, !created.memberIds.contains(userId) {
+                created.memberIds.append(userId)
+                created.joinOrder.append(userId)
+            }
+            rooms[id] = created
+            room = created
+        } else {
             lock.unlock()
-            throw AppError.roomEnded
+            throw AppError.roomNotFound
         }
-        if !room.memberIds.contains(userId) {
-            room.memberIds.append(userId)
-            room.joinOrder.append(userId)
-        }
-        rooms[roomId] = room
-        let conts = continuations[roomId]?.values.map { $0 } ?? []
+        let conts = continuations[id]?.values.map { $0 } ?? []
         lock.unlock()
         conts.forEach { $0.yield(room) }
         return room

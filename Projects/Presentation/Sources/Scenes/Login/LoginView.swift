@@ -35,7 +35,12 @@ public final class LoginViewModel: ObservableObject {
             let harness = LoginHarness(session: session)
             try await harness.login(userId: userId, password: password)
             session.currentUser = try await session.authGateway.fetchProfile()
-            session.route = .library
+            session.consumePendingInviteIfPossible()
+            if case .watch = session.route {
+                // Pending invite consumed — stay on watch.
+            } else {
+                session.route = .library
+            }
         } catch let error as AppError {
             errorMessage = error.userMessage
         } catch {
@@ -63,14 +68,19 @@ public struct LoginView: View {
     public var body: some View {
         ZStack {
             TandemColors.groupedBackground.ignoresSafeArea()
-            VStack(spacing: 24) {
-                Spacer()
-                VStack(spacing: 8) {
+            VStack(spacing: 28) {
+                Spacer(minLength: 24)
+                VStack(spacing: 10) {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(TandemColors.systemBlue)
+                        .frame(width: 72, height: 72)
+                        .accessibilityHidden(true)
                     Text("Tandem")
                         .font(.system(size: 34, weight: .bold))
+                        .tracking(-0.4)
                     Text("一起看电影")
-                        .font(.system(size: 17))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 15))
+                        .foregroundStyle(TandemColors.secondaryLabel)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -80,7 +90,7 @@ public struct LoginView: View {
                     if let summary = viewModel.configSummary {
                         Text(summary)
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(TandemColors.secondaryLabel)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         Text("请先完成服务配置")
@@ -109,13 +119,21 @@ public struct LoginView: View {
                     Button("服务配置") {
                         session.route = .config(fromLogin: true)
                     }
-                    .font(.body)
+                    .font(.system(size: 17))
                     .foregroundStyle(TandemColors.systemBlue)
                     .accessibilityLabel("服务配置")
+
+                    Text("账号由管理员分配 · 不提供注册")
+                        .font(.system(size: 13))
+                        .foregroundStyle(TandemColors.tertiaryLabel)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 24)
                 Spacer()
             }
+            .padding(.top, 32)
+            .padding(.bottom, 40)
         }
         .alert("请先完成服务配置", isPresented: $viewModel.showConfigAlert) {
             Button("去配置") { session.route = .config(fromLogin: true) }

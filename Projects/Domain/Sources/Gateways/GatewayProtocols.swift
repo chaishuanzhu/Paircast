@@ -32,7 +32,14 @@ public protocol MetadataGateway {
 
 public protocol RoomGateway: AnyObject {
     func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom
-    func joinRoom(roomId: String, userId: String) async throws -> WatchRoom
+    /// - Parameters:
+    ///   - movieId/hostUserId: optional invite bootstrap when the room record is not found yet.
+    func joinRoom(
+        roomId: String,
+        userId: String,
+        movieId: String?,
+        hostUserId: String?
+    ) async throws -> WatchRoom
     func leaveRoom(roomId: String, userId: String) async throws -> WatchRoom?
     func updateRoom(_ room: WatchRoom) async throws
     func observeRoom(roomId: String) -> AsyncStream<WatchRoom>

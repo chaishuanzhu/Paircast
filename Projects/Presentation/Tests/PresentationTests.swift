@@ -5,8 +5,13 @@ import Domain
 @MainActor
 final class InviteUseCasePresentationTests: XCTestCase {
     func test_inviteURLFormat() {
-        let url = InviteHarness().inviteURL(roomId: "abc")
-        XCTAssertEqual(url.absoluteString, "tandem://watch?roomId=abc")
+        let url = InviteHarness().inviteURL(roomId: "abc", movieId: "film.mkv", hostUserId: "alice")
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        XCTAssertEqual(url.scheme, "tandem")
+        XCTAssertEqual(url.host, "watch")
+        XCTAssertEqual(items.first(where: { $0.name == "roomId" })?.value, "abc")
+        XCTAssertEqual(items.first(where: { $0.name == "movieId" })?.value, "film.mkv")
+        XCTAssertEqual(items.first(where: { $0.name == "hostUserId" })?.value, "alice")
     }
 }
 
@@ -14,7 +19,7 @@ private struct InviteHarness: InviteToRoomUseCase {}
 
 @MainActor
 final class AppRouteDeepLinkTests: XCTestCase {
-    func test_watchDeepLinkRequiresLogin() async {
+    func test_watchDeepLinkRequiresLoginAndKeepsPendingInvite() async {
         let session = AppSession(
             configGateway: FakeConfig(),
             authGateway: FakeAuth(),
@@ -26,9 +31,30 @@ final class AppRouteDeepLinkTests: XCTestCase {
             syncGateway: FakeSync(),
             subtitleGateway: FakeSubtitle()
         )
-        session.handleDeepLink(URL(string: "tandem://watch?roomId=r1")!)
+        session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         XCTAssertEqual(session.route, .login)
         XCTAssertEqual(session.toast, "请先登录再加入房间")
+        XCTAssertEqual(session.pendingInvite?.roomId, "r1")
+        XCTAssertEqual(session.pendingInvite?.movieId, "m1")
+        XCTAssertEqual(session.pendingInvite?.hostUserId, "host")
+    }
+
+    func test_watchDeepLinkOpensWatchWhenLoggedIn() async {
+        let session = AppSession(
+            configGateway: FakeConfig(),
+            authGateway: FakeAuth(),
+            userSigGateway: FakeSig(),
+            catalogGateway: FakeCatalog(),
+            metadataGateway: FakeMeta(),
+            roomGateway: FakeRoom(),
+            chatGateway: FakeChat(),
+            syncGateway: FakeSync(),
+            subtitleGateway: FakeSubtitle()
+        )
+        session.currentUser = User(id: "bob", nickname: "bob")
+        session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
+        XCTAssertEqual(session.route, .watch(roomId: "r1", movieId: "m1", hostUserId: "host"))
+        XCTAssertNil(session.pendingInvite)
     }
 }
 
@@ -60,8 +86,17 @@ private final class FakeRoom: RoomGateway, @unchecked Sendable {
     func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom {
         WatchRoom(id: "r", movieId: movieId, hostUserId: hostUserId)
     }
-    func joinRoom(roomId: String, userId: String) async throws -> WatchRoom {
-        WatchRoom(id: roomId, movieId: "m", hostUserId: userId)
+    func joinRoom(
+        roomId: String,
+        userId: String,
+        movieId: String?,
+        hostUserId: String?
+    ) async throws -> WatchRoom {
+        WatchRoom(
+            id: roomId,
+            movieId: movieId ?? "m",
+            hostUserId: hostUserId ?? userId
+        )
     }
     func leaveRoom(roomId: String, userId: String) async throws -> WatchRoom? { nil }
     func updateRoom(_ room: WatchRoom) async throws {}

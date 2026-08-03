@@ -15,6 +15,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     @Published public private(set) var isReady: Bool = false
     /// 0...1 while VLC is opening / buffering the stream.
     @Published public private(set) var loadProgress: Double = 0
+    @Published public private(set) var positionMs: Int64 = 0
+    @Published public private(set) var durationMs: Int64 = 0
 
     public override init() {
         _ = VLCLibrary.shared()
@@ -64,6 +66,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         isPaused = true
         isReady = true
         loadProgress = 1
+        positionMs = 0
+        durationMs = Int64(media.length.intValue)
         TandemLog.playback.info("prepare ready MobileVLCKit stream media set")
     }
 
@@ -94,12 +98,15 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         isReady = false
         isPaused = true
         loadProgress = 0
+        positionMs = 0
+        durationMs = 0
     }
 
     public func seek(toMs positionMs: Int64) {
         let clamped = max(0, min(positionMs, Int64(Int32.max)))
         mediaPlayer.time = VLCTime(int: Int32(clamped))
         mediaPlayer.rate = 1.0
+        self.positionMs = clamped
     }
 
     public var currentPositionMs: Int64 {
@@ -126,6 +133,7 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
             if abs(mediaPlayer.rate - 1.0) > 0.01, mediaPlayer.state == .playing {
                 mediaPlayer.rate = 1.0
             }
+            refreshTiming()
             switch mediaPlayer.state {
             case .error:
                 TandemLog.playback.error("vlc state=error")
@@ -149,6 +157,21 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
             default:
                 break
             }
+        }
+    }
+
+    nonisolated public func mediaPlayerTimeChanged(_ aNotification: Notification) {
+        Task { @MainActor in
+            refreshTiming()
+        }
+    }
+
+    @MainActor
+    private func refreshTiming() {
+        positionMs = Int64(mediaPlayer.time.intValue)
+        let length = Int64(mediaPlayer.media?.length.intValue ?? 0)
+        if length > 0 {
+            durationMs = length
         }
     }
 }

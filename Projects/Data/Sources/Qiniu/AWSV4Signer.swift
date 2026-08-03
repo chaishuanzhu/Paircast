@@ -265,8 +265,11 @@ public enum AWSV4Signer {
     }
 
     static func sha256Hex(_ string: String) -> String {
+        sha256Hex(Data(string.utf8))
+    }
+
+    static func sha256Hex(_ data: Data) -> String {
         var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
-        let data = Data(string.utf8)
         data.withUnsafeBytes { buffer in
             _ = CC_SHA256(buffer.baseAddress, CC_LONG(data.count), &hash)
         }

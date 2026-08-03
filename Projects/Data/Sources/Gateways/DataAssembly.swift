@@ -2,6 +2,8 @@ import Foundation
 import Domain
 
 public enum DataAssembly {
+    private static let imClient = TencentIMClient.shared
+
     public static func makeConfigGateway() -> ConfigGateway {
         KeychainConfigStore()
     }
@@ -10,8 +12,8 @@ public enum DataAssembly {
         LocalUserSigGateway()
     }
 
-    public static func makeAuthGateway() -> AuthGateway {
-        InMemoryAuthGateway()
+    public static func makeAuthGateway(configGateway: ConfigGateway = makeConfigGateway()) -> AuthGateway {
+        TencentIMAuthGateway(configGateway: configGateway, client: imClient)
     }
 
     public static func makeCatalogGateway() -> MovieCatalogGateway {
@@ -22,16 +24,19 @@ public enum DataAssembly {
         CascadingMetadataGateway()
     }
 
-    public static func makeRoomGateway() -> RoomGateway {
-        InMemoryRoomGateway()
+    public static func makeRoomGateway(configGateway: ConfigGateway = makeConfigGateway()) -> RoomGateway {
+        IMSyncedRoomGateway(
+            storage: QiniuRoomGateway(configGateway: configGateway),
+            client: imClient
+        )
     }
 
     public static func makeChatGateway() -> ChatGateway {
-        InMemoryChatGateway()
+        TencentIMChatGateway(client: imClient)
     }
 
     public static func makeSyncGateway() -> PlaybackSyncGateway {
-        InMemoryPlaybackSyncGateway()
+        TencentIMPlaybackSyncGateway(client: imClient)
     }
 
     public static func makeSubtitleGateway() -> SubtitleGateway {

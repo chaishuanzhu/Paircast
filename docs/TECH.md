@@ -7,7 +7,7 @@
 Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App。
 
 - Domain：纯 Swift，可单测的规则与用例
-- Data：Keychain 配置、本地 UserSig、七牛/OMDb、内存 IM 适配；观影页使用 **VLCKit**（`Vendor/VLCKitSPM`，首次 `make setup` / `Scripts/download-vlckit.sh`）
+- Data：Keychain 配置、本地 UserSig、七牛/OMDb、**腾讯云 IM**（登录 / Meeting 群聊天 / 自定义播控信令）；观影页使用 **VLCKit**（`Vendor/VLCKitSPM`，首次 `make setup` / `Scripts/download-vlckit.sh`）；IM SDK 见 `Vendor/ImSDKSPM`（`Scripts/download-imsdk.sh`）
 - Presentation：SwiftUI SPA，无 Tab；「我的」在右上角 Sheet
 - 最低系统：**iOS 26.0**
 
@@ -63,8 +63,17 @@ Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App�
 
 ## Deep Link
 
-`tandem://watch?roomId={id}`
+`tandem://watch?roomId={id}&movieId={id}&hostUserId={id}`
 
+房间状态写入七牛 `_tandem/rooms/{roomId}.json`（跨设备可加入）。
+
+**腾讯云 IM（播控 + 聊天）：**
+
+- 登录：`TencentIMAuthGateway` + 本地 UserSig → `V2TIMManager.login`
+- 观影群：Meeting 群，`groupID = tandem_{roomId}`（`WatchRoom.imGroupId`）；`IMSyncedRoomGateway` 在 create/join 时 `ensureMeetingGroup`
+- 聊天：群文本；系统消息前缀 `[sys]`
+- 播控：群自定义消息（`sendGroupCustomMessage`），payload 为上方信令 JSON；房主约每 5s 发 heartbeat（播放中）
+- 踢下线 / UserSig 过期：`Notification.Name.tandemIMKickedOffline` / `.tandemIMUserSigExpired` → 回登录页
 ## 元数据
 
 缓存 → 豆瓣 → IMDb suggestion（无 Key，补海报）→ OMDb（需 `omdbApiKey`）→ 文件名 `{Title}.{Year}` / `{Title} (Year)`。

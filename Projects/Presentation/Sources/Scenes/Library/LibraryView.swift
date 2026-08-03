@@ -51,7 +51,7 @@ public final class LibraryViewModel: ObservableObject {
         guard let user = session.currentUser else { return }
         do {
             let room = try await session.roomGateway.createRoom(movieId: movie.id, hostUserId: user.id)
-            session.route = .watch(roomId: room.id, movieId: movie.id)
+            session.route = .watch(roomId: room.id, movieId: movie.id, hostUserId: user.id)
         } catch {
             session.showToast(AppError.unknown("建房失败").userMessage)
         }
@@ -126,7 +126,7 @@ public struct LibraryView: View {
                     ContentUnavailableView("暂无影片", systemImage: "film", description: Text("确认七牛 Bucket 中有 mp4/m4v/mkv"))
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: columns, spacing: 12) {
+                        LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(viewModel.movies) { movie in
                                 Button {
                                     Task { await viewModel.openMovie(movie) }
@@ -136,23 +136,35 @@ public struct LibraryView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(16)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
                     }
                     .refreshable { await viewModel.load() }
                 }
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("Tandem")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Tandem")
+                        .font(.system(size: 28, weight: .bold))
+                        .tracking(-0.4)
+                        .accessibilityAddTraits(.isHeader)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.showMe = true
                     } label: {
-                        Image(systemName: "person.crop.circle")
-                            .accessibilityLabel("我的")
+                        TandemAvatarView(
+                            userId: session.currentUser?.nickname ?? session.currentUser?.id ?? "?",
+                            size: 36
+                        )
+                        .accessibilityLabel("我的")
                     }
+                    .buttonStyle(.plain)
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $viewModel.showMe) {
                 MeSheetView(session: session)
                     .presentationDetents([.medium, .large])
@@ -168,35 +180,27 @@ private struct MovieCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.gray.opacity(0.2))
-                    .aspectRatio(2 / 3, contentMode: .fit)
-                    .overlay {
-                        PosterImage(url: movie.posterURL)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipped()
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                Text(movie.format.rawValue.uppercased())
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
-                    .padding(8)
-            }
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.gray.opacity(0.2))
+                .aspectRatio(2 / 3, contentMode: .fit)
+                .overlay {
+                    PosterImage(url: movie.posterURL)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             Text(movie.title)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .lineLimit(1)
             Text(movie.year ?? "未知")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+                .foregroundStyle(TandemColors.secondaryLabel)
             if let overview = movie.overview, !overview.isEmpty {
                 Text(overview)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.45))
                     .lineLimit(2)
+                    .frame(minHeight: 32, alignment: .topLeading)
             }
         }
     }

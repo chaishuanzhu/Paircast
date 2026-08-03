@@ -18,6 +18,10 @@ public final class MeViewModel: ObservableObject {
         session.currentUser?.id ?? ""
     }
 
+    public var isConfigured: Bool {
+        session.config?.isComplete == true
+    }
+
     public func save() async {
         do {
             let harness = MeHarness(session: session)
@@ -61,36 +65,78 @@ public struct MeSheetView: View {
 
     public var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 56))
-                            .foregroundStyle(.secondary)
-                        VStack(alignment: .leading) {
+            ScrollView {
+                VStack(spacing: 16) {
+                    VStack(spacing: 10) {
+                        TandemAvatarView(
+                            userId: viewModel.nickname.isEmpty ? viewModel.userId : viewModel.nickname,
+                            size: 80
+                        )
+                        Text("轻点更换头像")
+                            .font(.system(size: 13))
+                            .foregroundStyle(TandemColors.secondaryLabel)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                    VStack(spacing: 0) {
+                        meRow(title: "昵称") {
                             TextField("昵称", text: $viewModel.nickname)
-                            Text(viewModel.userId)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing)
+                                .font(.system(size: 17))
                         }
+                        Divider().padding(.leading, 16)
+                        meRow(title: "用户名") {
+                            Text(viewModel.userId)
+                                .font(.system(size: 17))
+                                .foregroundStyle(TandemColors.secondaryLabel)
+                        }
+                        Divider().padding(.leading, 16)
+                        Button {
+                            dismiss()
+                            session.route = .config(fromLogin: false)
+                        } label: {
+                            meRow(title: "服务配置") {
+                                HStack(spacing: 4) {
+                                    Text(viewModel.isConfigured ? "已配置" : "未配置")
+                                        .foregroundStyle(TandemColors.secondaryLabel)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(TandemColors.tertiaryLabel)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
-                }
-                Section {
-                    Button("服务配置") {
-                        dismiss()
-                        session.route = .config(fromLogin: false)
-                    }
-                }
-                Section {
-                    Button("退出登录", role: .destructive) {
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    Button {
                         viewModel.showLogoutConfirm = true
+                    } label: {
+                        Text("退出登录")
+                            .font(.system(size: 17))
+                            .foregroundStyle(TandemColors.danger)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+
+                    if let status = viewModel.statusMessage {
+                        Text(status)
+                            .font(.footnote)
+                            .foregroundStyle(TandemColors.secondaryLabel)
                     }
                 }
-                if let status = viewModel.statusMessage {
-                    Text(status).foregroundStyle(.secondary)
-                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
             }
+            .background(TandemColors.groupedBackground.ignoresSafeArea())
             .navigationTitle("我的")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") {
@@ -110,5 +156,17 @@ public struct MeSheetView: View {
                 Text("将保留本地云服务配置")
             }
         }
+    }
+
+    private func meRow<Content: View>(title: String, @ViewBuilder trailing: () -> Content) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 17))
+                .foregroundStyle(Color.primary)
+            Spacer()
+            trailing()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }

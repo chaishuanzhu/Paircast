@@ -26,15 +26,19 @@ public final class WatchViewModel: ObservableObject {
     let session: AppSession
     let initialRoomId: String?
     let initialMovieId: String?
+    let initialHostUserId: String?
     private var seq: UInt64 = 1
     let player = VLCPlayerController()
     private var signalTask: Task<Void, Never>?
     private var chatTask: Task<Void, Never>?
+    private var roomTask: Task<Void, Never>?
+    private var heartbeatTask: Task<Void, Never>?
 
-    public init(session: AppSession, roomId: String?, movieId: String?) {
+    public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
         self.initialRoomId = roomId
         self.initialMovieId = movieId
+        self.initialHostUserId = hostUserId
     }
 
     public var isHost: Bool {
@@ -45,22 +49,25 @@ public final class WatchViewModel: ObservableObject {
     public func start() async {
         do {
             if let roomId = initialRoomId, let user = session.currentUser {
-                if let existingMovieId = initialMovieId {
-                    room = try await session.roomGateway.joinRoom(roomId: roomId, userId: user.id)
-                    await loadMovie(id: existingMovieId)
-                } else {
-                    let joined = try await session.roomGateway.joinRoom(roomId: roomId, userId: user.id)
-                    room = joined
-                    await loadMovie(id: joined.movieId)
-                }
+                let joined = try await session.roomGateway.joinRoom(
+                    roomId: roomId,
+                    userId: user.id,
+                    movieId: initialMovieId,
+                    hostUserId: initialHostUserId
+                )
+                room = joined
+                // Prefer live room movie over invite snapshot (host may have switched).
+                await loadMovie(id: joined.movieId)
             }
             guard let room, let movie else { return }
             playback = PlaybackState(movieId: movie.id, lastSeq: room.lastAppliedSeq)
+            seq = max(seq, room.lastAppliedSeq + 1)
             subtitleState = SubtitleState(movieId: movie.id)
             syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
             onlineQuery = movie.title
             await preparePlayer()
             listen()
+            startHeartbeatIfNeeded()
             await refreshSubtitles()
         } catch let error as AppError {
             errorMessage = error.userMessage
@@ -72,6 +79,12 @@ public final class WatchViewModel: ObservableObject {
     public func stop() {
         signalTask?.cancel()
         chatTask?.cancel()
+        roomTask?.cancel()
+        heartbeatTask?.cancel()
+        signalTask = nil
+        chatTask = nil
+        roomTask = nil
+        heartbeatTask = nil
         player.stop()
     }
 
@@ -115,6 +128,10 @@ public final class WatchViewModel: ObservableObject {
 
     private func listen() {
         guard let room else { return }
+        signalTask?.cancel()
+        chatTask?.cancel()
+        roomTask?.cancel()
+
         signalTask = Task {
             for await signal in session.syncGateway.signals(roomId: room.id) {
                 await MainActor.run {
@@ -128,6 +145,51 @@ public final class WatchViewModel: ObservableObject {
                     messages.append(message)
                 }
             }
+        }
+        roomTask = Task {
+            for await updated in session.roomGateway.observeRoom(roomId: room.id) {
+                await MainActor.run {
+                    self.room = updated
+                    syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
+                    if updated.status == .ended {
+                        errorMessage = AppError.roomEnded.userMessage
+                    }
+                }
+            }
+        }
+    }
+
+    private func startHeartbeatIfNeeded() {
+        heartbeatTask?.cancel()
+        guard isHost else { return }
+        heartbeatTask = Task { [weak self] in
+            let interval = UInt64(PlaybackSyncRules.foregroundHeartbeatSeconds * 1_000_000_000)
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: interval)
+                await MainActor.run {
+                    self?.emitHeartbeat()
+                }
+            }
+        }
+    }
+
+    private func emitHeartbeat() {
+        // Avoid resume-via-heartbeat while paused (rules force isPaused=false on heartbeat).
+        guard isHost, let room, let user = session.currentUser, !player.isPaused else { return }
+        seq += 1
+        let position = player.currentPositionMs
+        let currentSeq = seq
+        Task {
+            let harness = SyncHarness(session: session)
+            _ = try? await harness.emitHostSignal(
+                room: room,
+                hostUserId: user.id,
+                action: .heartbeat,
+                positionMs: position,
+                seq: currentSeq
+            )
+            playback.positionMs = position
+            playback.lastSeq = currentSeq
         }
     }
 
@@ -145,6 +207,7 @@ public final class WatchViewModel: ObservableObject {
                 self.room = room
                 syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
                 session.showToast("房主已变为 \(newHost)")
+                startHeartbeatIfNeeded()
             }
             if signal.action == .movieChange, let movieId = signal.movieId {
                 Task {
@@ -260,7 +323,11 @@ public final class WatchViewModel: ObservableObject {
     }
 
     public func inviteURL() -> URL {
-        InviteHarness().inviteURL(roomId: room?.id ?? "")
+        InviteHarness().inviteURL(
+            roomId: room?.id ?? "",
+            movieId: room?.movieId ?? movie?.id ?? "",
+            hostUserId: room?.hostUserId ?? ""
+        )
     }
 
     public func leave() async {
@@ -320,93 +387,26 @@ private struct InviteHarness: InviteToRoomUseCase {}
 public struct WatchView: View {
     @ObservedObject var session: AppSession
     @StateObject private var viewModel: WatchViewModel
+    @State private var showMoreMenu = false
 
-    public init(session: AppSession, roomId: String?, movieId: String?) {
+    public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
-        _viewModel = StateObject(wrappedValue: WatchViewModel(session: session, roomId: roomId, movieId: movieId))
+        _viewModel = StateObject(wrappedValue: WatchViewModel(
+            session: session,
+            roomId: roomId,
+            movieId: movieId,
+            hostUserId: hostUserId
+        ))
     }
 
     public var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button {
-                    Task { await viewModel.leave() }
-                } label: {
-                    Image(systemName: "chevron.left")
-                }
-                Button {
-                    if viewModel.isHost {
-                        viewModel.showSwitchMovie = true
-                    } else {
-                        session.showToast(AppError.onlyHostCanSwitchMovie.userMessage)
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(viewModel.movie?.title ?? "影片")
-                            .lineLimit(1)
-                        Image(systemName: "chevron.down")
-                    }
-                    .accessibilityLabel("切换影片")
-                }
-                Spacer()
-                Button {
-                    viewModel.showInvite = true
-                } label: {
-                    Image(systemName: "person.badge.plus")
-                }
-                .accessibilityLabel("邀请")
-            }
-            .padding()
-            .foregroundStyle(.white)
-            .background(Color.black)
-
-            VLCPlayerView(videoView: viewModel.player.videoView)
-                .frame(height: 220)
-                .background(Color.black)
-                .overlay {
-                    if !viewModel.player.isReady {
-                        VStack(spacing: 8) {
-                            ProgressView()
-                            Text("正在缓冲…")
-                                .font(.caption)
-                                .foregroundStyle(.white)
-                        }
-                        .padding()
-                    }
-                }
-                .overlay(alignment: .bottom) {
-                    if viewModel.subtitleState.source != .off {
-                        Text("字幕偏移 \(String(format: "%.1f", Double(viewModel.subtitleState.offsetMs) / 1000))s")
-                            .font(.caption)
-                            .foregroundStyle(.white)
-                            .padding(6)
-                    }
-                }
-
-            HStack(spacing: 16) {
-                Button { viewModel.togglePlay() } label: {
-                    Image(systemName: viewModel.playback.isPaused ? "play.fill" : "pause.fill")
-                }
-                .disabled(!viewModel.isHost)
-                Button("字幕") { viewModel.showSubtitlePanel = true }
-                Button("同步") { viewModel.showSubtitleSync = true }
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(TandemColors.danger)
-                    .padding(.horizontal)
-            }
-
+            playerStage
             membersBar
             chatList
             chatInput
         }
-        .background(TandemColors.groupedBackground.ignoresSafeArea())
+        .background(Color(red: 247 / 255, green: 247 / 255, blue: 248 / 255).ignoresSafeArea())
         .task { await viewModel.start() }
         .onDisappear { viewModel.stop() }
         .onReceive(viewModel.player.$lastError.compactMap { $0 }) { message in
@@ -436,58 +436,336 @@ public struct WatchView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        .confirmationDialog("更多", isPresented: $showMoreMenu, titleVisibility: .hidden) {
+            Button("字幕") { viewModel.showSubtitlePanel = true }
+            Button("字幕同步") { viewModel.showSubtitleSync = true }
+            Button("取消", role: .cancel) {}
+        }
+    }
+
+    private var playerStage: some View {
+        ZStack(alignment: .bottom) {
+            VLCPlayerView(videoView: viewModel.player.videoView)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.55),
+                    Color.clear,
+                    Color.black.opacity(0.72),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                watchChrome
+                    .padding(.top, 8)
+                Spacer(minLength: 0)
+                playerBottomChrome
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 10)
+
+            if !viewModel.player.isReady {
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .tint(.white)
+                    Text("正在缓冲…")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                }
+            }
+        }
+        .frame(height: 248)
+        .background(Color.black)
+        .overlay(alignment: .top) {
+            if let error = viewModel.errorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(TandemColors.danger.opacity(0.9))
+                    .clipShape(Capsule())
+                    .padding(.top, 52)
+            }
+        }
+    }
+
+    private var watchChrome: some View {
+        HStack(spacing: 6) {
+            Button {
+                Task { await viewModel.leave() }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .shadow(color: .black.opacity(0.45), radius: 1, y: 1)
+            }
+            .accessibilityLabel("返回")
+
+            Text(viewModel.movie?.title ?? "影片")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .shadow(color: .black.opacity(0.5), radius: 1, y: 1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                if viewModel.isHost {
+                    viewModel.showSwitchMovie = true
+                } else {
+                    session.showToast(AppError.onlyHostCanSwitchMovie.userMessage)
+                }
+            } label: {
+                Text("换片")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .frame(height: 28)
+                    .background(Color.black.opacity(0.18))
+                    .overlay {
+                        Capsule().stroke(Color.white.opacity(0.85), lineWidth: 1)
+                    }
+                    .clipShape(Capsule())
+            }
+            .accessibilityLabel("切换影片")
+
+            Button {
+                showMoreMenu = true
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+            }
+            .accessibilityLabel("更多")
+        }
+    }
+
+    private var playerBottomChrome: some View {
+        VStack(spacing: 8) {
+            if viewModel.subtitleState.source != .off {
+                Text("字幕偏移 \(String(format: "%.1f", Double(viewModel.subtitleState.offsetMs) / 1000))s")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.85), radius: 2, y: 1)
+                    .padding(.horizontal, 8)
+            }
+
+            HStack(spacing: 10) {
+                Button { viewModel.togglePlay() } label: {
+                    Image(systemName: viewModel.player.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                }
+                .disabled(!viewModel.isHost)
+                .opacity(viewModel.isHost ? 0.95 : 0.45)
+
+                Button { viewModel.showSubtitlePanel = true } label: {
+                    Image(systemName: "captions.bubble")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                }
+                .accessibilityLabel("字幕")
+
+                GeometryReader { geo in
+                    let progress = playbackProgress
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.28))
+                        Capsule()
+                            .fill(Color.white)
+                            .frame(width: max(3, geo.size.width * progress))
+                    }
+                }
+                .frame(height: 3)
+
+                Text(timeLabel)
+                    .font(.system(size: 11).monospacedDigit())
+                    .foregroundStyle(Color.white.opacity(0.88))
+                    .lineLimit(1)
+
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.95))
+                    .frame(width: 28, height: 28)
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(.white)
+        }
+    }
+
+    private var playbackProgress: CGFloat {
+        let duration = max(viewModel.player.durationMs, 1)
+        return CGFloat(min(1, max(0, Double(viewModel.player.positionMs) / Double(duration))))
+    }
+
+    private var timeLabel: String {
+        let current = TandemColors.formatPlaybackTime(viewModel.player.positionMs)
+        let total = TandemColors.formatPlaybackTime(viewModel.player.durationMs)
+        return "\(current)/\(total)"
     }
 
     private var membersBar: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("当前 \(viewModel.room?.memberIds.count ?? 0) 人")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.72))
+                Spacer()
+                Text(viewModel.syncLabel)
+                    .font(.system(size: 12))
+                    .foregroundStyle(TandemColors.secondaryLabel)
+                    .lineLimit(1)
+            }
+
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack {
+                HStack(spacing: 12) {
                     ForEach(viewModel.room?.memberIds ?? [], id: \.self) { id in
-                        VStack {
-                            Image(systemName: "person.crop.circle.fill")
-                            Text(id == viewModel.room?.hostUserId ? "\(id)·房主" : id)
-                                .font(.caption2)
-                        }
+                        TandemAvatarView(
+                            userId: id,
+                            size: 40,
+                            isHost: id == viewModel.room?.hostUserId
+                        )
+                        .accessibilityLabel(id == viewModel.room?.hostUserId ? "\(id)，房主" : id)
                     }
+                    Button {
+                        viewModel.showInvite = true
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(TandemColors.groupedBackground)
+                            Circle()
+                                .strokeBorder(
+                                    Color(red: 199 / 255, green: 199 / 255, blue: 204 / 255),
+                                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                                )
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .light))
+                                .foregroundStyle(Color(red: 142 / 255, green: 142 / 255, blue: 147 / 255))
+                        }
+                        .frame(width: 40, height: 40)
+                    }
+                    .accessibilityLabel("邀请")
                 }
             }
-            Text(viewModel.syncLabel)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        .background(Color.white)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.08))
+                .frame(height: 1)
+        }
     }
 
     private var chatList: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 8) {
-                ForEach(viewModel.messages) { message in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(message.kind == .system ? "系统" : message.senderNickname)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(message.text)
-                            .font(.body)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    ForEach(viewModel.messages) { message in
+                        chatRow(message)
+                            .id(message.id)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .onChange(of: viewModel.messages.count) { _, _ in
+                if let last = viewModel.messages.last {
+                    withAnimation {
+                        proxy.scrollTo(last.id, anchor: .bottom)
+                    }
                 }
             }
-            .padding()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(red: 247 / 255, green: 247 / 255, blue: 248 / 255))
+    }
+
+    @ViewBuilder
+    private func chatRow(_ message: ChatMessage) -> some View {
+        if message.kind == .system {
+            Text(message.text)
+                .font(.system(size: 12))
+                .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.4))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+        } else {
+            let isMe = message.senderId == session.currentUser?.id
+            HStack(alignment: .top, spacing: 8) {
+                if !isMe {
+                    TandemAvatarView(userId: message.senderNickname.isEmpty ? (message.senderId ?? "?") : message.senderNickname, size: 32)
+                }
+                VStack(alignment: isMe ? .trailing : .leading, spacing: 4) {
+                    if !isMe {
+                        Text(message.senderNickname)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.45))
+                    }
+                    Text(message.text)
+                        .font(.system(size: 15))
+                        .foregroundStyle(isMe ? Color.white : Color.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(isMe ? TandemColors.systemBlue : Color.white)
+                        .clipShape(UnevenRoundedRectangle(
+                            topLeadingRadius: 16,
+                            bottomLeadingRadius: isMe ? 16 : 6,
+                            bottomTrailingRadius: isMe ? 6 : 16,
+                            topTrailingRadius: 16,
+                            style: .continuous
+                        ))
+                        .shadow(color: isMe ? .clear : .black.opacity(0.04), radius: 1, y: 1)
+                }
+                if isMe {
+                    TandemAvatarView(userId: message.senderNickname.isEmpty ? (message.senderId ?? "?") : message.senderNickname, size: 32)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: isMe ? .trailing : .leading)
+            .padding(isMe ? .leading : .trailing, 40)
         }
     }
 
     private var chatInput: some View {
-        HStack {
-            TextField("说点什么…", text: $viewModel.draft)
-                .textFieldStyle(.roundedBorder)
-            Button("发送") {
+        HStack(spacing: 8) {
+            TextField("发个消息聊聊呗~", text: $viewModel.draft)
+                .font(.system(size: 15))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(TandemColors.groupedBackground)
+                .clipShape(Capsule())
+            Button {
                 Task { await viewModel.sendChat() }
+            } label: {
+                Text("发送")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(TandemColors.systemBlue)
+                    .clipShape(Capsule())
             }
             .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
         }
-        .padding()
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        .background(Color.white)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.08))
+                .frame(height: 1)
+        }
     }
 }
 

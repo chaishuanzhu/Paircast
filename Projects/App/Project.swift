@@ -32,6 +32,7 @@ let project = Project(
                 .project(target: "Data", path: "../Data"),
                 .project(target: "Domain", path: "../Domain"),
                 .external(name: "VLCKitSPM"),
+                .external(name: "ImSDKSPM"),
             ]
         ),
         .target(

@@ -1,6 +1,7 @@
 import XCTest
 @testable import Data
 import Domain
+import zlib
 
 final class LocalUserSigGatewayTests: XCTestCase {
     func test_generatesNonEmptySig() throws {
@@ -11,6 +12,69 @@ final class LocalUserSigGatewayTests: XCTestCase {
         )
         let sig = try gateway.generateUserSig(userId: "alice", config: config)
         XCTAssertFalse(sig.isEmpty)
+        XCTAssertFalse(sig.contains("+"))
+        XCTAssertFalse(sig.contains("/"))
+        XCTAssertFalse(sig.contains("="))
+    }
+
+    func test_sigIsZlibCompressedJSONWithOfficialFieldNames() throws {
+        let gateway = LocalUserSigGateway()
+        let config = AppCloudConfig(
+            im: .init(sdkAppId: 1_400_000_000, secretKey: "eJx*test-secret-key-for-hmac"),
+            qiniu: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d"),
+            userSigExpireSeconds: 86_400
+        )
+        let sig = try gateway.generateUserSig(userId: "bob", config: config)
+        // Reverse base64url → inflate → JSON
+        let padded = sig
+            .replacingOccurrences(of: "*", with: "+")
+            .replacingOccurrences(of: "-", with: "/")
+            .replacingOccurrences(of: "_", with: "=")
+        guard let compressed = Data(base64Encoded: padded) else {
+            return XCTFail("not base64")
+        }
+        let jsonData = try zlibInflate(compressed)
+        let obj = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+        XCTAssertEqual(obj?["TLS.ver"] as? String, "2.0")
+        XCTAssertEqual(obj?["TLS.identifier"] as? String, "bob")
+        XCTAssertEqual((obj?["TLS.sdkappid"] as? NSNumber)?.intValue, 1_400_000_000)
+        XCTAssertEqual((obj?["TLS.expire"] as? NSNumber)?.intValue, 86_400)
+        XCTAssertNotNil((obj?["TLS.time"] as? NSNumber)?.intValue)
+        XCTAssertNotNil(obj?["TLS.sig"] as? String)
+        XCTAssertNil(obj?["TLS.sdkAppID"]) // must not use camelCase AppID
+    }
+
+    private func zlibInflate(_ data: Data) throws -> Data {
+        var stream = z_stream()
+        var status = inflateInit_(&stream, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
+        guard status == Z_OK else {
+            throw NSError(domain: "zlib", code: Int(status))
+        }
+        defer { inflateEnd(&stream) }
+
+        let input = [UInt8](data)
+        var output = Data()
+        var buffer = [UInt8](repeating: 0, count: 64 * 1024)
+
+        input.withUnsafeBufferPointer { inBuf in
+            stream.next_in = UnsafeMutablePointer(mutating: inBuf.baseAddress!)
+            stream.avail_in = uInt(inBuf.count)
+        }
+
+        repeat {
+            let produced: Int = buffer.withUnsafeMutableBufferPointer { outBuf in
+                stream.next_out = outBuf.baseAddress
+                stream.avail_out = uInt(outBuf.count)
+                status = inflate(&stream, Z_NO_FLUSH)
+                return outBuf.count - Int(stream.avail_out)
+            }
+            guard status == Z_OK || status == Z_STREAM_END else {
+                throw NSError(domain: "zlib", code: Int(status))
+            }
+            output.append(buffer, count: produced)
+        } while status != Z_STREAM_END
+
+        return output
     }
 }
 
@@ -210,6 +274,49 @@ final class QiniuPlayURLTests: XCTestCase {
         )
         XCTAssertEqual(QiniuMovieCatalogGateway.defaultPresignExpiresSeconds, 6 * 3600)
         XCTAssertFalse(url.host?.contains("cdn.example.com") == true)
+    }
+}
+
+final class WatchRoomDTOTests: XCTestCase {
+    func test_roundTripPreservesMembersAndStatus() throws {
+        let room = WatchRoom(
+            id: "r1",
+            movieId: "画江湖.mkv",
+            hostUserId: "alice",
+            memberIds: ["alice", "bob"],
+            joinOrder: ["alice", "bob"],
+            status: .active,
+            lastAppliedSeq: 3,
+            hostTransferSeq: 1
+        )
+        let data = try JSONEncoder().encode(WatchRoomDTO(room))
+        let decoded = try JSONDecoder().decode(WatchRoomDTO.self, from: data).toDomain()
+        XCTAssertEqual(decoded, room)
+        XCTAssertEqual(QiniuRoomGateway.objectKeyPrefix, "_tandem/rooms/")
+    }
+}
+
+final class TencentIMGroupIDTests: XCTestCase {
+    func test_groupIDUsesTandemPrefix() {
+        XCTAssertEqual(TencentIMClient.groupID(forRoomId: "AbC"), "tandem_abc")
+        XCTAssertEqual(TencentIMClient.groupID(forRoomId: "tandem_xyz"), "tandem_xyz")
+        XCTAssertEqual(TencentIMClient.roomId(fromGroupID: "tandem_abc"), "abc")
+    }
+
+    func test_playbackSignalJSONRoundTrip() throws {
+        let signal = PlaybackSyncSignal(
+            action: .pause,
+            positionMs: 1_200,
+            movieId: "film.mkv",
+            hostUserId: "alice",
+            senderId: "alice",
+            seq: 9
+        )
+        let data = try JSONEncoder().encode(signal)
+        let decoded = try JSONDecoder().decode(PlaybackSyncSignal.self, from: data)
+        XCTAssertEqual(decoded, signal)
+        XCTAssertEqual(TencentIMClient.systemPrefix, "[sys]")
+        XCTAssertEqual(TencentIMClient.groupTypeMeeting, "Meeting")
     }
 }
 

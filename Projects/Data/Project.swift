@@ -14,7 +14,10 @@ let project = Project(
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Sources/**"],
-            dependencies: [.project(target: "Domain", path: "../Domain")]
+            dependencies: [
+                .project(target: "Domain", path: "../Domain"),
+                .external(name: "ImSDKSPM"),
+            ]
         ),
         .target(
             name: "DataTests",
