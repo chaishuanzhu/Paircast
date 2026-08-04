@@ -20,6 +20,10 @@ public final class WatchViewModel: ObservableObject {
     @Published public var subtitleState = SubtitleState(movieId: "")
     @Published public var onlineQuery = ""
     @Published public var onlineResults: [SubtitleTrack] = []
+    @Published public var isSearchingOnline = false
+    @Published public var didSearchOnline = false
+    @Published public var onlineSearchError: String?
+    @Published public var isApplyingSubtitle = false
     @Published public var errorMessage: String?
     @Published public var libraryMovies: [Movie] = []
     @Published public var switchQuery = ""
@@ -61,6 +65,12 @@ public final class WatchViewModel: ObservableObject {
         }
     }
 
+    public var selectedSubtitleTrack: SubtitleTrack? {
+        guard let trackId = subtitleState.trackId, trackId != "off" else { return nil }
+        return subtitleTracks.first(where: { $0.id == trackId })
+            ?? onlineResults.first(where: { $0.id == trackId })
+    }
+
     public func start() async {
         do {
             if let roomId = initialRoomId, let user = session.currentUser {
@@ -77,14 +87,17 @@ public final class WatchViewModel: ObservableObject {
             guard let room, let movie else { return }
             playback = PlaybackState(movieId: movie.id, lastSeq: room.lastAppliedSeq)
             seq = max(seq, room.lastAppliedSeq + 1)
-            subtitleState = SubtitleState(movieId: movie.id)
+            subtitleState = SubtitleState(
+                movieId: movie.id,
+                offsetMs: SubtitleOffsetStore.load(movieId: movie.id)
+            )
             syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
-            onlineQuery = movie.title
+            onlineQuery = [movie.title, movie.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
             await preparePlayer()
             listen()
             startHeartbeatIfNeeded()
             await refreshMemberProfiles()
-            await refreshSubtitles()
+            await refreshSubtitles(autoSelectChinese: true)
         } catch let error as AppError {
             errorMessage = error.userMessage
         } catch {
@@ -298,9 +311,10 @@ public final class WatchViewModel: ObservableObject {
                     }
                     Task {
                         await loadMovie(id: movieId)
-                        subtitleState = SubtitleState.resetForMovieChange(movieId: movieId)
+                        let offset = SubtitleOffsetStore.load(movieId: movieId)
+                        subtitleState = SubtitleState(movieId: movieId, offsetMs: offset)
                         await preparePlayer()
-                        await refreshSubtitles()
+                        await refreshSubtitles(autoSelectChinese: true)
                     }
                 }
             }
@@ -460,14 +474,15 @@ public final class WatchViewModel: ObservableObject {
             )
             self.room = updated
             movie = target
-            onlineQuery = target.title
+            onlineQuery = [target.title, target.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
             playback = PlaybackState(positionMs: 0, isPaused: true, movieId: target.id, lastSeq: seq)
-            subtitleState = SubtitleState.resetForMovieChange(movieId: target.id)
+            let offset = SubtitleOffsetStore.load(movieId: target.id)
+            subtitleState = SubtitleState(movieId: target.id, offsetMs: offset)
             player.pause()
             await preparePlayer()
             pendingMovie = nil
             showSwitchMovie = false
-            await refreshSubtitles()
+            await refreshSubtitles(autoSelectChinese: true)
         } catch let error as AppError {
             errorMessage = error.userMessage
             session.showToast(error.userMessage)
@@ -485,27 +500,133 @@ public final class WatchViewModel: ObservableObject {
         _ = try? await session.chatGateway.send(roomId: room.id, text: text, sender: user)
     }
 
-    public func refreshSubtitles() async {
+    public func refreshSubtitles(autoSelectChinese: Bool = false) async {
         guard let movie else { return }
         let harness = SubtitleHarness(session: session)
-        subtitleTracks = (try? await harness.listSubtitleTracks(for: movie)) ?? []
+        let listed = (try? await harness.listSubtitleTracks(for: movie)) ?? [
+            SubtitleTrack(id: "off", label: "关闭字幕", source: .off),
+        ]
+        // Give VLC a moment to parse embedded tracks after prepare.
+        if player.embeddedSubtitleTracks().isEmpty {
+            try? await Task.sleep(nanoseconds: 400_000_000)
+        }
+        let embedded = player.embeddedSubtitleTracks()
+        let off = listed.filter { $0.source == .off }
+        let qiniu = listed.filter { $0.source == .qiniu }
+        subtitleTracks = off + embedded + qiniu
+
+        if autoSelectChinese,
+           subtitleState.source == .off || subtitleState.trackId == nil || subtitleState.trackId == "off",
+           let preferred = subtitleTracks.first(where: { $0.source != .off && $0.isChinesePreferred }) {
+            await selectTrack(preferred)
+        } else if subtitleState.source != .off {
+            player.applySubtitleOffsetMs(subtitleState.offsetMs)
+        }
     }
 
-    public func selectTrack(_ track: SubtitleTrack) {
-        subtitleState.source = track.source
-        subtitleState.trackId = track.id
-        subtitleState.url = track.url
-        showSubtitlePanel = false
+    public func selectTrack(_ track: SubtitleTrack) async {
+        guard !isApplyingSubtitle else { return }
+        isApplyingSubtitle = true
+        defer { isApplyingSubtitle = false }
+
+        let movieId = movie?.id ?? subtitleState.movieId
+        let retainedOffset = subtitleState.offsetMs
+
+        if track.source == .off {
+            player.disableSubtitles()
+            subtitleState = SubtitleState(
+                movieId: movieId,
+                source: .off,
+                trackId: "off",
+                offsetMs: retainedOffset
+            )
+            showSubtitlePanel = false
+            return
+        }
+
+        do {
+            switch track.source {
+            case .embedded:
+                guard let index = track.embeddedIndex else {
+                    throw AppError.subtitleUnavailable
+                }
+                player.selectEmbeddedSubtitle(index: index)
+                // Re-apply after index change; some VLC builds reset delay on track switch.
+                player.applySubtitleOffsetMs(retainedOffset)
+            case .qiniu, .online:
+                let config = try? await session.configGateway.load()
+                let localURL = try await session.subtitleGateway.download(
+                    track,
+                    apiKey: config?.subtitleApiKey
+                )
+                guard player.loadExternalSubtitle(fileURL: localURL) else {
+                    throw AppError.subtitleUnavailable
+                }
+            case .off:
+                break
+            }
+
+            subtitleState = SubtitleState(
+                movieId: movieId,
+                source: track.source,
+                trackId: track.id,
+                url: track.url,
+                embeddedIndex: track.embeddedIndex,
+                offsetMs: retainedOffset
+            )
+            player.applySubtitleOffsetMs(retainedOffset)
+
+            if track.source == .online, !subtitleTracks.contains(where: { $0.id == track.id }) {
+                // Keep selected online track visible under「当前」.
+                subtitleTracks.insert(track, at: min(1, subtitleTracks.count))
+            }
+            showSubtitlePanel = false
+        } catch let error as AppError {
+            session.showToast(error.userMessage)
+        } catch {
+            session.showToast(AppError.subtitleUnavailable.userMessage)
+        }
     }
 
     public func adjustSubtitle(deltaMs: Int) {
         let harness = OffsetHarness()
         subtitleState = harness.applyOffset(state: subtitleState, deltaMs: deltaMs)
+        persistAndApplyOffset()
+    }
+
+    public func resetSubtitleOffset() {
+        var next = subtitleState
+        next.resetOffset()
+        subtitleState = next
+        persistAndApplyOffset()
+    }
+
+    private func persistAndApplyOffset() {
+        if let movieId = movie?.id ?? Optional(subtitleState.movieId), !movieId.isEmpty {
+            SubtitleOffsetStore.save(movieId: movieId, offsetMs: subtitleState.offsetMs)
+        }
+        if subtitleState.source != .off {
+            player.applySubtitleOffsetMs(subtitleState.offsetMs)
+        }
     }
 
     public func searchOnline() async {
+        isSearchingOnline = true
+        onlineSearchError = nil
+        defer { isSearchingOnline = false }
         let harness = SubtitleHarness(session: session)
-        onlineResults = (try? await harness.searchOnlineSubtitles(query: onlineQuery, year: movie?.year)) ?? []
+        do {
+            onlineResults = try await harness.searchOnlineSubtitles(query: onlineQuery, year: movie?.year)
+            didSearchOnline = true
+        } catch let error as AppError {
+            onlineResults = []
+            didSearchOnline = true
+            onlineSearchError = error.userMessage
+        } catch {
+            onlineResults = []
+            didSearchOnline = true
+            onlineSearchError = AppError.subtitleUnavailable.userMessage
+        }
     }
 
     public func inviteURL() -> URL {
@@ -651,7 +772,7 @@ public struct WatchView: View {
         }
         .sheet(isPresented: $viewModel.showSubtitleSync) {
             SubtitleSyncView(viewModel: viewModel)
-                .presentationDetents([.height(260)])
+                .presentationDetents([.height(340)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showInvite) {
@@ -853,8 +974,8 @@ public struct WatchView: View {
 
     private var playerBottomChrome: some View {
         VStack(spacing: 8) {
-            if viewModel.subtitleState.source != .off {
-                Text("字幕偏移 \(String(format: "%.1f", Double(viewModel.subtitleState.offsetMs) / 1000))s")
+            if viewModel.subtitleState.source != .off, viewModel.subtitleState.offsetMs != 0 {
+                Text("字幕 \(viewModel.subtitleState.offsetLabel)")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.85), radius: 2, y: 1)
@@ -1256,96 +1377,6 @@ private struct SwitchMovieRow: View {
             parts.append("播放中")
         }
         return parts.joined(separator: " · ")
-    }
-}
-
-private struct SubtitlePanelView: View {
-    @ObservedObject var viewModel: WatchViewModel
-    @State private var showSearch = false
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section("当前") {
-                    ForEach(viewModel.subtitleTracks) { track in
-                        Button {
-                            viewModel.selectTrack(track)
-                        } label: {
-                            HStack {
-                                Text(track.label)
-                                Spacer()
-                                if viewModel.subtitleState.trackId == track.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(TandemColors.systemBlue)
-                                }
-                            }
-                        }
-                    }
-                }
-                Section {
-                    Button("在线搜索") { showSearch = true }
-                    Button("字幕同步") {
-                        viewModel.showSubtitlePanel = false
-                        viewModel.showSubtitleSync = true
-                    }
-                }
-            }
-            .navigationTitle("字幕")
-            .sheet(isPresented: $showSearch) {
-                OnlineSubtitleSearchView(viewModel: viewModel)
-            }
-        }
-    }
-}
-
-private struct SubtitleSyncView: View {
-    @ObservedObject var viewModel: WatchViewModel
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("字幕同步")
-                .font(.headline)
-            Text(String(format: "%+.1fs", Double(viewModel.subtitleState.offsetMs) / 1000))
-                .font(.largeTitle.monospacedDigit())
-            HStack(spacing: 20) {
-                Button("-0.5s") { viewModel.adjustSubtitle(deltaMs: -500) }
-                Button("-0.1s") { viewModel.adjustSubtitle(deltaMs: -100) }
-                Button("重置") {
-                    viewModel.subtitleState.resetOffset()
-                }
-                Button("+0.1s") { viewModel.adjustSubtitle(deltaMs: 100) }
-                Button("+0.5s") { viewModel.adjustSubtitle(deltaMs: 500) }
-            }
-            .buttonStyle(.bordered)
-        }
-        .padding()
-    }
-}
-
-private struct OnlineSubtitleSearchView: View {
-    @ObservedObject var viewModel: WatchViewModel
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    TextField("片名", text: $viewModel.onlineQuery)
-                    Button("搜索") { Task { await viewModel.searchOnline() } }
-                }
-                Section("结果") {
-                    if viewModel.onlineResults.isEmpty {
-                        Text("无结果").foregroundStyle(.secondary)
-                    } else {
-                        ForEach(viewModel.onlineResults) { track in
-                            Button(track.label) {
-                                viewModel.selectTrack(track)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("在线搜字幕")
-        }
     }
 }
 

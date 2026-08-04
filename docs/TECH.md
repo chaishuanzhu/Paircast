@@ -81,6 +81,7 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 - 兼容：若 IM 里仍是旧的 HTTPS 签名链接，会尝试从 path 解析出 key 再重新签名
 - 观影页成员条：批量 `getUsersInfo` → 解析头像；头像外圈环形进度条反映播放进度
 - 播放器控件：顶/底栏 5s 无操作自动隐藏，点画面再显示；全屏进/出并自动横屏（退出回竖屏）；房主拖动进度条发 `.seek` 信令
+- 字幕：内嵌（VLC 轨）/ 七牛同目录外挂（srt/vtt/ass）/ OpenSubtitles 在线搜索；本机时间轴偏移（±30s，按 movieId 记忆）
 
 ## Deep Link
 

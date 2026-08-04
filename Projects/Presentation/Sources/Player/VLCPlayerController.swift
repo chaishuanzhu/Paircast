@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreText
 import Foundation
 import UIKit
 import VLCKitSPM // re-exports MobileVLCKit
@@ -18,6 +19,9 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     @Published public private(set) var positionMs: Int64 = 0
     @Published public private(set) var durationMs: Int64 = 0
 
+    private let subtitleFontName: String
+    private let subtitleFontPath: String?
+
     public override init() {
         _ = VLCLibrary.shared()
         Self.configureAudioSession()
@@ -27,17 +31,38 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         view.clipsToBounds = true
         view.isUserInteractionEnabled = false
         self.videoView = view
+
+        let font = Self.resolveCJKSubtitleFont()
+        self.subtitleFontName = font.name
+        self.subtitleFontPath = font.path
+
         // Prefer software decode for stability on high-bitrate MKV over HTTP —
         // VideoToolbox 花屏 is common with certain H.264/HEVC annex streams.
-        self.mediaPlayer = VLCMediaPlayer(options: [
+        var options = [
             "--avcodec-hw=none",
             "--clock-synchro=0",
             "--clock-jitter=0",
-        ])
+            // External files are normalized to UTF-8 before addPlaybackSlave.
+            "--subsdec-encoding=UTF-8",
+            // FreeType relative size: smaller divisor => larger glyphs (16 ≈ VLC "Larger").
+            "--freetype-rel-fontsize=16",
+        ]
+        // FreeType needs an explicit CJK-capable font on iOS 18+ (otherwise □□□).
+        if let path = font.path {
+            options.append("--freetype-font=\(path)")
+            TandemLog.playback.info("subtitle freetype-font=\(path, privacy: .public)")
+        } else {
+            TandemLog.playback.warning(
+                "subtitle font path unresolved name=\(font.name, privacy: .public); relying on setTextRendererFont"
+            )
+        }
+
+        self.mediaPlayer = VLCMediaPlayer(options: options)
         super.init()
         mediaPlayer.delegate = self
         mediaPlayer.drawable = videoView
         mediaPlayer.rate = 1.0
+        applySubtitleTextRendererFont()
     }
 
     public func prepare(url: URL) async throws {
@@ -68,6 +93,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         loadProgress = 1
         positionMs = 0
         durationMs = Int64(media.length.intValue)
+        applySubtitleTextRendererFont()
         TandemLog.playback.info("prepare ready MobileVLCKit stream media set")
     }
 
@@ -79,6 +105,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         Self.configureAudioSession()
         mediaPlayer.drawable = videoView
         mediaPlayer.rate = 1.0
+        applySubtitleTextRendererFont()
         mediaPlayer.play()
         isPaused = false
         TandemLog.playback.info("play rate=\(self.mediaPlayer.rate, privacy: .public)")
@@ -113,6 +140,158 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         Int64(mediaPlayer.time.intValue)
     }
 
+    // MARK: - Subtitles (VLC)
+
+    /// Embedded subtitle tracks discovered after media is parsed.
+    public func embeddedSubtitleTracks() -> [SubtitleTrack] {
+        let names = (mediaPlayer.videoSubTitlesNames as? [Any]) ?? []
+        let indexes = (mediaPlayer.videoSubTitlesIndexes as? [Any]) ?? []
+        var tracks: [SubtitleTrack] = []
+        let count = min(names.count, indexes.count)
+        for i in 0..<count {
+            let rawIndex = (indexes[i] as? NSNumber)?.intValue ?? (indexes[i] as? Int) ?? -1
+            if rawIndex < 0 { continue }
+            let rawName = (names[i] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let label = rawName.isEmpty ? "内嵌轨 \(rawIndex)" : rawName
+            let lang = Self.guessLanguage(from: label)
+            tracks.append(
+                SubtitleTrack(
+                    id: "embedded:\(rawIndex)",
+                    label: label,
+                    language: lang.code,
+                    source: .embedded,
+                    embeddedIndex: rawIndex,
+                    languageBadge: lang.badge
+                )
+            )
+        }
+        return tracks
+    }
+
+    public func disableSubtitles() {
+        mediaPlayer.currentVideoSubTitleIndex = -1
+        mediaPlayer.currentVideoSubTitleDelay = 0
+    }
+
+    public func selectEmbeddedSubtitle(index: Int) {
+        mediaPlayer.currentVideoSubTitleIndex = Int32(index)
+        applySubtitleTextRendererFont()
+    }
+
+    /// Load an external subtitle file (local file URL preferred) and select it.
+    @discardableResult
+    public func loadExternalSubtitle(fileURL: URL) -> Bool {
+        let result = mediaPlayer.addPlaybackSlave(
+            fileURL,
+            type: .subtitle,
+            enforce: true
+        )
+        applySubtitleTextRendererFont()
+        return result >= 0
+    }
+
+    /// VLC delay is in microseconds. Positive = subtitles delayed (shown later).
+    public func applySubtitleOffsetMs(_ offsetMs: Int) {
+        let clamped = SubtitleState.clamped(offsetMs)
+        mediaPlayer.currentVideoSubTitleDelay = clamped * 1000
+    }
+
+    /// Point VLC's text renderer at a CJK-capable font (fixes □□□ on iOS 18+).
+    private func applySubtitleTextRendererFont() {
+        let sel = NSSelectorFromString("setTextRendererFont:")
+        if mediaPlayer.responds(to: sel) {
+            _ = mediaPlayer.perform(sel, with: subtitleFontName)
+        }
+        let sizeSel = NSSelectorFromString("setTextRendererFontSize:")
+        if mediaPlayer.responds(to: sizeSel) {
+            // Same scale as freetype-rel-fontsize: smaller number => bigger text.
+            _ = mediaPlayer.perform(sizeSel, with: NSNumber(value: 16))
+        }
+    }
+
+    /// Resolve a CJK font FreeType can actually open.
+    /// iOS 26 sim only ships PingFangUI in PrivateFrameworks — FreeType often fails on it (blank subs).
+    private static func resolveCJKSubtitleFont() -> (name: String, path: String?) {
+        if let bundled = bundledNotoSansSCPath() {
+            registerFontIfNeeded(atPath: bundled)
+            return ("NotoSansSC-Regular", bundled)
+        }
+
+        // Prefer classic public font files FreeType handles; never PingFangUI PrivateFrameworks.
+        let safePaths: [(name: String, path: String)] = [
+            ("STHeitiSC-Medium", "/System/Library/Fonts/STHeiti Medium.ttc"),
+            ("STHeitiSC-Light", "/System/Library/Fonts/STHeiti Light.ttc"),
+            ("HiraginoSansGB-W3", "/System/Library/Fonts/Hiragino Sans GB.ttc"),
+            ("Arial Unicode MS", "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+        ]
+        for item in safePaths where FileManager.default.isReadableFile(atPath: item.path) {
+            return item
+        }
+
+        // CoreText lookup — reject PrivateFrameworks / PingFangUI (known FreeType blank-subtitle path).
+        let preferredNames = [
+            "PingFangSC-Regular",
+            "PingFangSC-Medium",
+            "STHeitiSC-Medium",
+            "HiraginoSansGB-W3",
+            "Arial Unicode MS",
+        ]
+        for name in preferredNames {
+            guard UIFont(name: name, size: 16) != nil else { continue }
+            if let path = fontFilePath(named: name),
+               FileManager.default.isReadableFile(atPath: path),
+               isFreeTypeFriendlyFontPath(path) {
+                return (name, path)
+            }
+            return (name, nil)
+        }
+        return ("NotoSansSC-Regular", nil)
+    }
+
+    private static func bundledNotoSansSCPath() -> String? {
+        let bundle = Bundle.main
+        if let path = bundle.path(forResource: "NotoSansSC-Regular", ofType: "otf", inDirectory: "Fonts") {
+            return path
+        }
+        return bundle.path(forResource: "NotoSansSC-Regular", ofType: "otf")
+    }
+
+    private static func registerFontIfNeeded(atPath path: String) {
+        let url = URL(fileURLWithPath: path) as CFURL
+        CTFontManagerRegisterFontsForURL(url, .process, nil)
+    }
+
+    private static func isFreeTypeFriendlyFontPath(_ path: String) -> Bool {
+        let lowered = path.lowercased()
+        if lowered.contains("privateframeworks") { return false }
+        if lowered.contains("pingfangui") { return false }
+        if lowered.contains("lastresort") { return false }
+        return true
+    }
+
+    private static func fontFilePath(named name: String) -> String? {
+        let font = CTFontCreateWithName(name as CFString, 16, nil)
+        let descriptor = CTFontCopyFontDescriptor(font)
+        guard let url = CTFontDescriptorCopyAttribute(descriptor, kCTFontURLAttribute) as? URL else {
+            return nil
+        }
+        return url.path
+    }
+
+    private static func guessLanguage(from name: String) -> (code: String?, badge: String) {
+        let lower = name.lowercased()
+        if lower.contains("zh") || lower.contains("chi") || lower.contains("中文") || lower.contains("简") {
+            return ("zh", "简中")
+        }
+        if lower.contains("繁") {
+            return ("zh-tw", "繁中")
+        }
+        if lower.contains("en") || lower.contains("eng") || lower.contains("english") {
+            return ("en", "English")
+        }
+        return (nil, "")
+    }
+
     private static func configureAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
@@ -145,6 +324,8 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
             case .paused:
                 isPaused = true
             case .playing, .buffering:
+                // VLC resets text renderer when opening media — re-apply CJK font.
+                applySubtitleTextRendererFont()
                 TandemLog.playback.debug(
                     "vlc state=\(String(describing: self.mediaPlayer.state), privacy: .public) rate=\(self.mediaPlayer.rate, privacy: .public)"
                 )
@@ -155,7 +336,8 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
                     loadProgress = 1
                 }
             default:
-                break
+                // opening / esadding etc.
+                applySubtitleTextRendererFont()
             }
         }
     }

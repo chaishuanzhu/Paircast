@@ -435,3 +435,38 @@ final class QiniuAvatarStorageTests: XCTestCase {
         XCTAssertEqual(QiniuAvatarStorage.sigV4MaxExpiresSeconds, 7 * 24 * 3600)
     }
 }
+
+final class SubtitleEncodingNormalizerTests: XCTestCase {
+    func test_convertsGBKChineseSRTToUTF8() throws {
+        let sample = """
+        1
+        00:00:01,000 --> 00:00:03,000
+        你残余的记忆，就是最好的证据。
+        """
+        let cfEnc = CFStringEncodings.GB_18030_2000.rawValue
+        let ns = CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(cfEnc))
+        guard ns != kCFStringEncodingInvalidId,
+              let raw = (sample as NSString).data(using: ns) else {
+            return XCTFail("failed to encode GB18030 sample")
+        }
+        // Confirm raw is not valid UTF-8 (typical legacy Chinese SRT).
+        XCTAssertNil(String(data: raw, encoding: .utf8))
+
+        let utf8 = SubtitleEncodingNormalizer.utf8Data(from: raw)
+        let text = String(data: utf8, encoding: .utf8)
+        XCTAssertEqual(text, sample)
+        XCTAssertTrue(text?.contains("记忆") == true)
+    }
+
+    func test_keepsUTF8ChineseSRT() {
+        let sample = """
+        1
+        00:00:01,000 --> 00:00:03,000
+        简体中文字幕
+        """
+        let raw = Data(sample.utf8)
+        let out = SubtitleEncodingNormalizer.utf8Data(from: raw)
+        XCTAssertEqual(String(data: out, encoding: .utf8), sample)
+    }
+}
+
