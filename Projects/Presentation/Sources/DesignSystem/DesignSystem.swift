@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 public enum TandemColors {
     public static let systemBlue = Color(red: 0, green: 122 / 255, blue: 1)
@@ -99,41 +100,86 @@ public struct TandemTextField: View {
     }
 }
 
-/// Circular initial avatar matching design preview (blue pill / circle with letter).
+/// Circular avatar: remote/local image when available, otherwise letter initial.
 public struct TandemAvatarView: View {
     public var initial: String
     public var size: CGFloat = 36
     public var color: Color = TandemColors.systemBlue
     public var isHost: Bool = false
+    public var avatarURL: URL? = nil
+    public var localImage: UIImage? = nil
 
-    public init(initial: String, size: CGFloat = 36, color: Color = TandemColors.systemBlue, isHost: Bool = false) {
+    public init(
+        initial: String,
+        size: CGFloat = 36,
+        color: Color = TandemColors.systemBlue,
+        isHost: Bool = false,
+        avatarURL: URL? = nil,
+        localImage: UIImage? = nil
+    ) {
         self.initial = initial
         self.size = size
         self.color = color
         self.isHost = isHost
+        self.avatarURL = avatarURL
+        self.localImage = localImage
     }
 
-    public init(userId: String, size: CGFloat = 36, color: Color? = nil, isHost: Bool = false) {
+    public init(
+        userId: String,
+        size: CGFloat = 36,
+        color: Color? = nil,
+        isHost: Bool = false,
+        avatarURL: URL? = nil,
+        localImage: UIImage? = nil
+    ) {
         let trimmed = userId.trimmingCharacters(in: .whitespacesAndNewlines)
         self.initial = trimmed.first.map { String($0).uppercased() } ?? "?"
         self.size = size
         self.color = color ?? TandemColors.avatarColor(for: trimmed)
         self.isHost = isHost
+        self.avatarURL = avatarURL
+        self.localImage = localImage
     }
 
     public var body: some View {
+        ZStack {
+            if let localImage {
+                Image(uiImage: localImage)
+                    .resizable()
+                    .scaledToFill()
+            } else if let avatarURL {
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .failure:
+                        initialView
+                    case .empty:
+                        ProgressView()
+                    @unknown default:
+                        initialView
+                    }
+                }
+            } else {
+                initialView
+            }
+        }
+        .frame(width: size, height: size)
+        .background(color)
+        .clipShape(Circle())
+        .overlay {
+            if isHost {
+                Circle()
+                    .stroke(Color(red: 1, green: 107 / 255, blue: 129 / 255), lineWidth: 2)
+            }
+        }
+    }
+
+    private var initialView: some View {
         Text(initial)
             .font(.system(size: size * 0.42, weight: .semibold))
             .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(color)
-            .clipShape(Circle())
-            .overlay {
-                if isHost {
-                    Circle()
-                        .stroke(Color(red: 1, green: 107 / 255, blue: 129 / 255), lineWidth: 2)
-                }
-            }
     }
 }
 

@@ -90,6 +90,9 @@ private final class FakeAuth: AuthGateway, @unchecked Sendable {
     func currentUserId() async -> String? { nil }
     func updateProfile(nickname: String, avatarData: Data?) async throws -> User { User(id: "u", nickname: nickname) }
     func fetchProfile() async throws -> User { User(id: "u", nickname: "n") }
+    func fetchUsers(userIds: [String]) async throws -> [User] {
+        userIds.map { User(id: $0, nickname: $0) }
+    }
 }
 private final class FakeSig: UserSigGateway, @unchecked Sendable {
     func generateUserSig(userId: String, config: AppCloudConfig) throws -> String { "sig" }

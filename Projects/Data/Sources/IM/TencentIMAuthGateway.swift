@@ -3,12 +3,18 @@ import Domain
 
 public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
     private let configGateway: ConfigGateway
+    private let avatarStorage: AvatarStorageGateway
     private let client: TencentIMClient
     private let lock = NSLock()
     private var cachedUser: User?
 
-    public init(configGateway: ConfigGateway, client: TencentIMClient = .shared) {
+    public init(
+        configGateway: ConfigGateway,
+        avatarStorage: AvatarStorageGateway = QiniuAvatarStorage(),
+        client: TencentIMClient = .shared
+    ) {
         self.configGateway = configGateway
+        self.avatarStorage = avatarStorage
         self.client = client
     }
 
@@ -17,7 +23,7 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
             throw AppError.notConfigured
         }
         try await client.login(userId: userId, userSig: userSig, sdkAppId: config.im.sdkAppId)
-        let profile = try await client.fetchProfile(userId: userId)
+        let profile = try await resolveAvatar(try await client.fetchProfile(userId: userId))
         lock.lock()
         cachedUser = profile
         lock.unlock()
@@ -39,23 +45,78 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
     }
 
     public func updateProfile(nickname: String, avatarData: Data?) async throws -> User {
-        // Avatar upload to object storage is out of MVP scope; nickname syncs to IM profile.
-        _ = avatarData
-        let user = try await client.updateProfile(nickname: nickname, avatarURL: nil)
+        guard let userId = await currentUserId() else {
+            throw AppError.userSigExpired
+        }
         lock.lock()
-        cachedUser = user
+        let previousKey = cachedUser?.avatarKey
         lock.unlock()
-        return user
+
+        var uploadedKey: String?
+        if let avatarData {
+            guard let config = try await configGateway.load(), config.qiniu.isComplete else {
+                throw AppError.notConfigured
+            }
+            do {
+                uploadedKey = try await avatarStorage.uploadAvatar(
+                    imageData: avatarData,
+                    userId: userId,
+                    config: config
+                )
+            } catch let error as AppError {
+                throw error
+            } catch is URLError {
+                throw AppError.network
+            } catch {
+                throw AppError.avatarUploadFailed
+            }
+        }
+
+        // Only touch IM faceURL when a new avatar was uploaded.
+        let user = try await client.updateProfile(nickname: nickname, avatarKey: uploadedKey)
+        var merged = user
+        merged.avatarKey = uploadedKey ?? previousKey
+        let resolved = try await resolveAvatar(merged)
+        lock.lock()
+        cachedUser = resolved
+        lock.unlock()
+        return resolved
     }
 
     public func fetchProfile() async throws -> User {
         guard let userId = await currentUserId() else {
             throw AppError.userSigExpired
         }
-        let profile = try await client.fetchProfile(userId: userId)
+        let resolved = try await resolveAvatar(try await client.fetchProfile(userId: userId))
         lock.lock()
-        cachedUser = profile
+        cachedUser = resolved
         lock.unlock()
-        return profile
+        return resolved
+    }
+
+    public func fetchUsers(userIds: [String]) async throws -> [User] {
+        let profiles = try await client.fetchProfiles(userIds: userIds)
+        var resolved: [User] = []
+        resolved.reserveCapacity(profiles.count)
+        for profile in profiles {
+            resolved.append(try await resolveAvatar(profile))
+        }
+        return resolved
+    }
+
+    /// Mints a SigV4 URL from the key stored in IM.
+    private func resolveAvatar(_ user: User) async throws -> User {
+        guard let key = user.avatarKey else { return user }
+        guard let config = try await configGateway.load(), config.qiniu.isComplete else {
+            return user
+        }
+        var copy = user
+        do {
+            copy.avatarURL = try avatarStorage.signedURL(objectKey: key, config: config)
+        } catch {
+            TandemLog.catalog.error("avatar resolve failed key=\(key, privacy: .public) error=\(String(describing: error), privacy: .public)")
+            copy.avatarURL = nil
+        }
+        return copy
     }
 }

@@ -13,7 +13,11 @@ public enum DataAssembly {
     }
 
     public static func makeAuthGateway(configGateway: ConfigGateway = makeConfigGateway()) -> AuthGateway {
-        TencentIMAuthGateway(configGateway: configGateway, client: imClient)
+        TencentIMAuthGateway(
+            configGateway: configGateway,
+            avatarStorage: QiniuAvatarStorage(),
+            client: imClient
+        )
     }
 
     public static func makeCatalogGateway() -> MovieCatalogGateway {

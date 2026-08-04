@@ -157,7 +157,8 @@ public struct LibraryView: View {
                     } label: {
                         TandemAvatarView(
                             userId: session.currentUser?.nickname ?? session.currentUser?.id ?? "?",
-                            size: 36
+                            size: 36,
+                            avatarURL: session.currentUser?.avatarURL
                         )
                         .accessibilityLabel("我的")
                     }

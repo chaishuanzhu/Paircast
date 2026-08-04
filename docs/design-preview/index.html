@@ -778,21 +778,33 @@
       flex-direction: column;
       align-items: center;
       gap: 0;
+      position: relative;
+    }
+    .member .ring {
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      background:
+        conic-gradient(#007AFF calc(var(--p, 0) * 1%), rgba(60,60,67,0.3) 0);
+      padding: 2.5px;
+    }
+    .member.host .ring {
+      background:
+        conic-gradient(#FF6B81 calc(var(--p, 0) * 1%), rgba(60,60,67,0.3) 0);
     }
     .member .av {
       width: 40px; height: 40px; border-radius: 50%;
       display: grid; place-items: center;
       font-size: 14px; font-weight: 600; color: #fff;
       box-sizing: border-box;
-      border: 2px solid transparent;
+      border: none;
     }
     .member.host .av {
-      border-color: #FF6B81;
-      box-shadow: 0 0 0 1px rgba(255,107,129,0.25);
+      box-shadow: none;
     }
     .member .tag { display: none; }
     .invite-plus {
-      width: 40px; height: 40px; border-radius: 50%;
+      width: 46px; height: 46px; border-radius: 50%;
       border: 1.5px dashed #C7C7CC;
       background: #F2F2F7;
       color: #8E8E93;
@@ -1317,10 +1329,10 @@
           </div>
           <div class="people">
             <div class="member host">
-              <div class="av" style="background:#007AFF">S</div>
+              <div class="ring" style="--p:62"><div class="av" style="background:#007AFF">S</div></div>
             </div>
             <div class="member">
-              <div class="av" style="background:#5B8DEF">L</div>
+              <div class="ring" style="--p:62"><div class="av" style="background:#5B8DEF">L</div></div>
             </div>
             <div class="invite-plus" title="邀请">+</div>
           </div>
@@ -1716,8 +1728,8 @@
         <div class="members">
           <div class="members-head"><div class="count">当前 2 人</div></div>
           <div class="people">
-            <div class="member host"><div class="av" style="background:#007AFF">S</div></div>
-            <div class="member"><div class="av" style="background:#5B8DEF">L</div></div>
+            <div class="member host"><div class="ring" style="--p:38"><div class="av" style="background:#007AFF">S</div></div></div>
+            <div class="member"><div class="ring" style="--p:38"><div class="av" style="background:#5B8DEF">L</div></div></div>
             <div class="invite-plus" title="邀请">+</div>
           </div>
         </div>

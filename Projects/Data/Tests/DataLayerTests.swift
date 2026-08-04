@@ -372,3 +372,66 @@ final class MetadataGatewayHelpersTests: XCTestCase {
         XCTAssertNil(CascadingMetadataGateway.pickIMDbSuggestion(dto.d ?? [], preferringYear: "2023"))
     }
 }
+
+final class QiniuDownloadURLTests: XCTestCase {
+    func test_signedURLContainsDeadlineAndToken() throws {
+        let base = URL(string: "https://cdn.example.com/_tandem/avatars/alice/a.jpg")!
+        let signed = try QiniuDownloadURL.signedURL(
+            resourceURL: base,
+            accessKey: "AKID",
+            secretKey: "secret",
+            expiresInSeconds: QiniuDownloadURL.oneYearSeconds,
+            now: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let items = URLComponents(url: signed, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let e = items.first(where: { $0.name == "e" })?.value
+        let token = items.first(where: { $0.name == "token" })?.value
+        XCTAssertEqual(e, String(1_700_000_000 + QiniuDownloadURL.oneYearSeconds))
+        XCTAssertEqual(token?.hasPrefix("AKID:"), true)
+        XCTAssertFalse(token?.contains("+") == true)
+        XCTAssertFalse(token?.contains("/") == true)
+    }
+
+    func test_roundTripStableForSameInputs() throws {
+        let base = URL(string: "https://cdn.example.com/key.jpg")!
+        let a = try QiniuDownloadURL.signedURL(
+            resourceURL: base,
+            accessKey: "ak",
+            secretKey: "sk",
+            expiresInSeconds: 3600,
+            now: Date(timeIntervalSince1970: 100)
+        )
+        let b = try QiniuDownloadURL.signedURL(
+            resourceURL: base,
+            accessKey: "ak",
+            secretKey: "sk",
+            expiresInSeconds: 3600,
+            now: Date(timeIntervalSince1970: 100)
+        )
+        XCTAssertEqual(a, b)
+    }
+}
+
+final class QiniuAvatarStorageTests: XCTestCase {
+    func test_signedURLUsesEndpointPresign() {
+        let storage = QiniuAvatarStorage()
+        let config = AppCloudConfig(
+            im: .init(sdkAppId: 1, secretKey: "im"),
+            qiniu: .init(
+                accessKey: "AK",
+                secretKey: "SK",
+                bucket: "b",
+                endpoint: "s3.cn-south-1.qiniucs.com"
+            )
+        )
+        XCTAssertThrowsError(try storage.signedURL(objectKey: "films/a.jpg", config: config))
+        let url = try? storage.signedURL(
+            objectKey: "_tandem/avatars/alice/x.jpg",
+            config: config
+        )
+        XCTAssertNotNil(url)
+        XCTAssertTrue(url?.absoluteString.contains("X-Amz-Signature=") == true)
+        XCTAssertEqual(url?.host, "s3.cn-south-1.qiniucs.com")
+        XCTAssertEqual(QiniuAvatarStorage.sigV4MaxExpiresSeconds, 7 * 24 * 3600)
+    }
+}

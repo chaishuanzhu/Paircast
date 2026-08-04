@@ -46,6 +46,9 @@ public protocol UpdateProfileUseCase {
 public extension UpdateProfileUseCase {
     func updateProfile(nickname: String, avatarData: Data?) async throws -> User {
         let name = try ProfileRules.validatedNickname(nickname)
+        if let avatarData {
+            _ = try ProfileRules.validatedAvatarData(avatarData)
+        }
         return try await authGateway.updateProfile(nickname: name, avatarData: avatarData)
     }
 }

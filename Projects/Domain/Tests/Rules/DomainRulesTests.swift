@@ -132,6 +132,69 @@ final class ProfileRulesTests: XCTestCase {
     func test_rejectsTooLong() {
         XCTAssertThrowsError(try ProfileRules.validatedNickname(String(repeating: "a", count: 17)))
     }
+
+    func test_rejectsOversizedAvatar() {
+        let huge = Data(repeating: 1, count: ProfileRules.avatarMaxBytes + 1)
+        XCTAssertThrowsError(try ProfileRules.validatedAvatarData(huge))
+    }
+}
+
+final class ConfigValidationTests: XCTestCase {
+    func test_rejectsCustomDomainAsEndpoint() {
+        let config = AppCloudConfig(
+            im: .init(sdkAppId: 1, secretKey: "s"),
+            qiniu: .init(
+                accessKey: "a",
+                secretKey: "b",
+                bucket: "c",
+                endpoint: "https://qiniu.chaisz.com",
+                domain: nil
+            )
+        )
+        XCTAssertThrowsError(try ConfigValidation.validate(config)) { error in
+            guard case AppError.validation(let message) = error else {
+                return XCTFail("expected validation, got \(error)")
+            }
+            XCTAssertTrue(message.contains("Endpoint"))
+        }
+    }
+
+    func test_normalizesSchemeAndRejectsS3AsDomain() throws {
+        let config = AppCloudConfig(
+            im: .init(sdkAppId: 1, secretKey: "s"),
+            qiniu: .init(
+                accessKey: "a",
+                secretKey: "b",
+                bucket: "c",
+                endpoint: "https://s3.cn-south-1.qiniucs.com/",
+                domain: "https://qiniu.chaisz.com/"
+            )
+        )
+        let normalized = try ConfigValidation.normalized(config)
+        XCTAssertEqual(normalized.qiniu.endpoint, "s3.cn-south-1.qiniucs.com")
+        XCTAssertEqual(normalized.qiniu.domain, "qiniu.chaisz.com")
+
+        XCTAssertThrowsError(
+            try ConfigValidation.validatedDomain("s3.cn-south-1.qiniucs.com")
+        )
+    }
+}
+
+final class AvatarObjectKeyTests: XCTestCase {
+    func test_parseRawAndLegacyHTTPS() {
+        let key = "_tandem/avatars/alice/uuid.jpg"
+        XCTAssertEqual(AvatarObjectKey.parse(fromFaceURL: key), key)
+        XCTAssertEqual(
+            AvatarObjectKey.parse(
+                fromFaceURL: "https://s3.cn-south-1.qiniucs.com/b/_tandem/avatars/alice/uuid.jpg?e=1"
+            ),
+            key
+        )
+        XCTAssertEqual(
+            AvatarObjectKey.parse(fromFaceURL: "tandem://avatar/_tandem/avatars/alice/uuid.jpg"),
+            key
+        )
+    }
 }
 
 final class SubtitleStateTests: XCTestCase {
@@ -177,34 +240,59 @@ final class PlaybackSyncRulesTests: XCTestCase {
         let current = PlaybackState(movieId: "m1", lastSeq: 1)
         let signal = PlaybackSyncSignal(action: .play, positionMs: 1500, senderId: room.hostUserId, seq: 2)
         let result = PlaybackSyncRules.shouldAccept(signal: signal, room: room, current: current)
-        guard case .applied(let state) = result else {
+        guard case .applied(let state, let seek) = result else {
             return XCTFail("expected applied")
         }
+        XCTAssertTrue(seek)
         XCTAssertFalse(state.isPaused)
         XCTAssertEqual(state.positionMs, 1500)
         XCTAssertEqual(state.lastSeq, 2)
     }
 
-    func test_heartbeatWithinThresholdDoesNotSeek() {
+    func test_heartbeatWithinThresholdDoesNotSeekAgainstLiveClock() {
+        let room = WatchRoom.fixture()
+        // Bookkeeping clock is stale (last applied), live player has advanced with the film.
+        let current = PlaybackState(positionMs: 1000, isPaused: false, movieId: "m1", lastSeq: 1)
+        let signal = PlaybackSyncSignal(action: .heartbeat, positionMs: 6_000, senderId: room.hostUserId, seq: 2)
+        let result = PlaybackSyncRules.shouldAccept(
+            signal: signal,
+            room: room,
+            current: current,
+            localPositionMs: 5_500
+        )
+        guard case .applied(let state, let seek) = result else {
+            return XCTFail("expected applied")
+        }
+        XCTAssertFalse(seek)
+        XCTAssertEqual(state.positionMs, 6_000)
+    }
+
+    func test_heartbeatBeyondThresholdSeeksAgainstLiveClock() {
+        let room = WatchRoom.fixture()
+        let current = PlaybackState(positionMs: 1000, isPaused: false, movieId: "m1", lastSeq: 1)
+        let signal = PlaybackSyncSignal(action: .heartbeat, positionMs: 3000, senderId: room.hostUserId, seq: 2)
+        let result = PlaybackSyncRules.shouldAccept(
+            signal: signal,
+            room: room,
+            current: current,
+            localPositionMs: 1000
+        )
+        guard case .applied(let state, let seek) = result else {
+            return XCTFail("expected applied")
+        }
+        XCTAssertTrue(seek)
+        XCTAssertEqual(state.positionMs, 3000)
+    }
+
+    func test_heartbeatWithoutLocalClockUsesBookkeepingFallback() {
         let room = WatchRoom.fixture()
         let current = PlaybackState(positionMs: 1000, isPaused: false, movieId: "m1", lastSeq: 1)
         let signal = PlaybackSyncSignal(action: .heartbeat, positionMs: 1500, senderId: room.hostUserId, seq: 2)
         let result = PlaybackSyncRules.shouldAccept(signal: signal, room: room, current: current)
-        guard case .applied(let state) = result else {
+        guard case .applied(_, let seek) = result else {
             return XCTFail("expected applied")
         }
-        XCTAssertEqual(state.positionMs, 1000)
-    }
-
-    func test_heartbeatBeyondThresholdSeeks() {
-        let room = WatchRoom.fixture()
-        let current = PlaybackState(positionMs: 1000, isPaused: false, movieId: "m1", lastSeq: 1)
-        let signal = PlaybackSyncSignal(action: .heartbeat, positionMs: 3000, senderId: room.hostUserId, seq: 2)
-        let result = PlaybackSyncRules.shouldAccept(signal: signal, room: room, current: current)
-        guard case .applied(let state) = result else {
-            return XCTFail("expected applied")
-        }
-        XCTAssertEqual(state.positionMs, 3000)
+        XCTAssertFalse(seek)
     }
 
     func test_movieChangeResetsPosition() {
@@ -218,9 +306,10 @@ final class PlaybackSyncRulesTests: XCTestCase {
             seq: 2
         )
         let result = PlaybackSyncRules.shouldAccept(signal: signal, room: room, current: current)
-        guard case .applied(let state) = result else {
+        guard case .applied(let state, let seek) = result else {
             return XCTFail("expected applied")
         }
+        XCTAssertTrue(seek)
         XCTAssertEqual(state.movieId, "m2")
         XCTAssertEqual(state.positionMs, 0)
         XCTAssertTrue(state.isPaused)

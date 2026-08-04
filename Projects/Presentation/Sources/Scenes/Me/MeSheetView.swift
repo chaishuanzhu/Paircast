@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 import Domain
 
 @MainActor
@@ -6,6 +8,10 @@ public final class MeViewModel: ObservableObject {
     @Published public var nickname = ""
     @Published public var statusMessage: String?
     @Published public var showLogoutConfirm = false
+    @Published public var pendingAvatarData: Data?
+    @Published public var pendingAvatarPreview: UIImage?
+    @Published public var isSaving = false
+    @Published public var pickerItem: PhotosPickerItem?
 
     private let session: AppSession
 
@@ -22,16 +28,50 @@ public final class MeViewModel: ObservableObject {
         session.config?.isComplete == true
     }
 
-    public func save() async {
+    public var displayedAvatarURL: URL? {
+        pendingAvatarPreview == nil ? session.currentUser?.avatarURL : nil
+    }
+
+    public func applyPickedItem(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        statusMessage = nil
+        do {
+            let picked = try await item.loadTransferable(type: PickedImageData.self)
+            guard let raw = picked?.data else {
+                statusMessage = "无法读取图片"
+                return
+            }
+            guard let jpeg = AvatarImageCompressor.jpegData(from: raw) else {
+                statusMessage = "无法处理该图片，或压缩后仍超过 1MB"
+                return
+            }
+            pendingAvatarData = jpeg
+            pendingAvatarPreview = UIImage(data: jpeg)
+        } catch {
+            statusMessage = "无法读取图片"
+        }
+    }
+
+    public func save() async -> Bool {
+        isSaving = true
+        defer { isSaving = false }
         do {
             let harness = MeHarness(session: session)
-            let user = try await harness.updateProfile(nickname: nickname, avatarData: nil)
+            let user = try await harness.updateProfile(
+                nickname: nickname,
+                avatarData: pendingAvatarData
+            )
             session.currentUser = user
+            pendingAvatarData = nil
+            pendingAvatarPreview = nil
             statusMessage = "已保存"
+            return true
         } catch let error as AppError {
             statusMessage = error.userMessage
+            return false
         } catch {
             statusMessage = AppError.network.userMessage
+            return false
         }
     }
 
@@ -67,18 +107,27 @@ public struct MeSheetView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    VStack(spacing: 10) {
-                        TandemAvatarView(
-                            userId: viewModel.nickname.isEmpty ? viewModel.userId : viewModel.nickname,
-                            size: 80
-                        )
-                        Text("轻点更换头像")
-                            .font(.system(size: 13))
-                            .foregroundStyle(TandemColors.secondaryLabel)
+                    PhotosPicker(selection: $viewModel.pickerItem, matching: .images, photoLibrary: .shared()) {
+                        VStack(spacing: 10) {
+                            TandemAvatarView(
+                                userId: viewModel.nickname.isEmpty ? viewModel.userId : viewModel.nickname,
+                                size: 80,
+                                avatarURL: viewModel.displayedAvatarURL,
+                                localImage: viewModel.pendingAvatarPreview
+                            )
+                            Text("轻点更换头像")
+                                .font(.system(size: 13))
+                                .foregroundStyle(TandemColors.secondaryLabel)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("更换头像")
+                    .onChange(of: viewModel.pickerItem) { _, item in
+                        Task { await viewModel.applyPickedItem(item) }
+                    }
 
                     VStack(spacing: 0) {
                         meRow(title: "昵称") {
@@ -141,10 +190,12 @@ public struct MeSheetView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") {
                         Task {
-                            await viewModel.save()
-                            dismiss()
+                            if await viewModel.save() {
+                                dismiss()
+                            }
                         }
                     }
+                    .disabled(viewModel.isSaving)
                 }
             }
             .confirmationDialog("确定退出登录？", isPresented: $viewModel.showLogoutConfirm, titleVisibility: .visible) {
@@ -154,6 +205,14 @@ public struct MeSheetView: View {
                 Button("取消", role: .cancel) {}
             } message: {
                 Text("将保留本地云服务配置")
+            }
+            .overlay {
+                if viewModel.isSaving {
+                    ProgressView("保存中…")
+                        .padding(20)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
             }
         }
     }

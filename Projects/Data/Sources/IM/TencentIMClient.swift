@@ -86,31 +86,40 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
     // MARK: - Profile
 
     public func fetchProfile(userId: String) async throws -> User {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<User, Error>) in
-            manager.getUsersInfo([userId], succ: { list in
-                guard let info = list?.first else {
-                    cont.resume(returning: User(id: userId, nickname: userId))
-                    return
+        let users = try await fetchProfiles(userIds: [userId])
+        return users.first ?? User(id: userId, nickname: userId)
+    }
+
+    public func fetchProfiles(userIds: [String]) async throws -> [User] {
+        let ids = Array(Set(userIds.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }))
+        guard !ids.isEmpty else { return [] }
+        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[User], Error>) in
+            manager.getUsersInfo(ids, succ: { list in
+                let mapped: [User] = (list ?? []).compactMap { info in
+                    guard let id = info.userID, !id.isEmpty else { return nil }
+                    let nick = info.nickName?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return User(
+                        id: id,
+                        nickname: (nick?.isEmpty == false ? nick! : id),
+                        avatarKey: AvatarObjectKey.parse(fromFaceURL: info.faceURL)
+                    )
                 }
-                let nick = info.nickName?.trimmingCharacters(in: .whitespacesAndNewlines)
-                let avatar = info.faceURL.flatMap(URL.init(string:))
-                cont.resume(returning: User(
-                    id: info.userID ?? userId,
-                    nickname: (nick?.isEmpty == false ? nick! : userId),
-                    avatarURL: avatar
-                ))
+                // Preserve request order; fill missing ids with placeholders.
+                let byId = Dictionary(uniqueKeysWithValues: mapped.map { ($0.id, $0) })
+                cont.resume(returning: ids.map { byId[$0] ?? User(id: $0, nickname: $0) })
             }, fail: { code, desc in
                 cont.resume(throwing: Self.mapError(code: code, desc: desc))
             })
         }
     }
 
-    public func updateProfile(nickname: String, avatarURL: URL?) async throws -> User {
+    /// - Parameter avatarKey: When non-nil, written to IM `faceURL` as the object key (not a signed URL).
+    public func updateProfile(nickname: String, avatarKey: String?) async throws -> User {
         guard let userId = currentUserId else { throw AppError.userSigExpired }
         let info = V2TIMUserFullInfo()
         info.nickName = nickname
-        if let avatarURL {
-            info.faceURL = avatarURL.absoluteString
+        if let avatarKey {
+            info.faceURL = AvatarObjectKey.faceURLValue(forKey: avatarKey)
         }
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             manager.setSelfInfo(info: info) {
@@ -119,7 +128,7 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
                 cont.resume(throwing: Self.mapError(code: code, desc: desc))
             }
         }
-        return User(id: userId, nickname: nickname, avatarURL: avatarURL)
+        return User(id: userId, nickname: nickname, avatarKey: avatarKey)
     }
 
     // MARK: - Groups

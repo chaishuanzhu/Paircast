@@ -70,8 +70,16 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 
 - 仅当前 `hostUserId` 的 play/pause/seek/heartbeat/movie_change 生效
 - `seq` 单调；旧序丢弃
-- 心跳偏差 > 1200ms 才 Seek
+- 心跳偏差用**本机播放器实时进度**与房主 `positionMs` 比较，> 1200ms 才 Seek（不可用上次信令里冻结的 position，否则约每 5s 必 Seek → 卡顿与重复拉流）
 - 房主离开 45s 逻辑下按 joinOrder 转让；最后一人结束房间
+
+## 头像
+
+- 上传：七牛 S3 `PUT`（**Endpoint**）→ `_tandem/avatars/{userId}/{uuid}.jpg`
+- 腾讯云 IM：`faceURL` **只存 object key**（如 `_tandem/avatars/alice/….jpg`），不存签名 URL
+- 登录 / 拉资料：用 key + Endpoint 生成 AWS SigV4 预签名 GET（最长 **7 天**）写入本地 `User.avatarURL` 供 UI 显示
+- 兼容：若 IM 里仍是旧的 HTTPS 签名链接，会尝试从 path 解析出 key 再重新签名
+- 观影页成员条：批量 `getUsersInfo` → 解析头像；头像外圈环形进度条反映播放进度
 
 ## Deep Link
 
@@ -95,7 +103,8 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 
 ## 片库（七牛 S3 兼容）
 
-- Endpoint 示例：`s3.cn-east-1.qiniucs.com`（也兼容历史写法 `s3-cn-east-1.qiniucs.com`）
+- **Endpoint**（必填）：`s3.cn-south-1.qiniucs.com` 这类 **S3 API 主机**；片库列表 / 播放 / 房间 JSON **只走 Endpoint**，不要填自定义域名
+- **自定义域名**（可选）：如 `qiniu.chaisz.com`，仅用于头像等下载凭证；保存时会去掉 `https://`。需在七牛控制台为该域名开通 **HTTPS 证书**（证书必须匹配该域名，否则 iOS 会因 ATS/证书校验失败而无法加载）
 - 列表：`ListObjectsV2` + **AWS Signature V4**；自动按 `NextContinuationToken` 翻页（每页最多 1000，最多 50 页）
 - 播放：对 `/{bucket}/{key}` 生成 **AWS SigV4 预签名 GET**（默认 **6h**）；不走未签名自定义域名，避免私有桶 403
 - 观影页播放器：**MobileVLCKit**（`VLCPlayerController`），用预签名 URL 拉取后本地解码，支持 `.mp4` / `.m4v` / `.mkv`

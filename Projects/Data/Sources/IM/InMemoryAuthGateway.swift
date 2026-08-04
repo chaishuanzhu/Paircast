@@ -38,7 +38,9 @@ public final class InMemoryAuthGateway: AuthGateway, @unchecked Sendable {
         }
         user.nickname = nickname
         if avatarData != nil {
-            user.avatarURL = URL(string: "tandem://avatar/\(user.id)")
+            let key = "\(AvatarObjectKey.prefix)\(user.id)/local.jpg"
+            user.avatarKey = key
+            user.avatarURL = URL(string: "tandem://avatar/\(key)")
         }
         currentUser = user
         return user
@@ -50,5 +52,13 @@ public final class InMemoryAuthGateway: AuthGateway, @unchecked Sendable {
             throw AppError.userSigExpired
         }
         return user
+    }
+
+    public func fetchUsers(userIds: [String]) async throws -> [User] {
+        lock.lock(); defer { lock.unlock() }
+        return userIds.map { id in
+            if let currentUser, currentUser.id == id { return currentUser }
+            return User(id: id, nickname: id)
+        }
     }
 }

@@ -128,7 +128,7 @@ public final class ServiceConfigViewModel: ObservableObject {
         guard let appId = Int(sdkAppId) else {
             throw AppError.incompleteConfig(missing: ["IM SDKAppID"])
         }
-        return AppCloudConfig(
+        let draft = AppCloudConfig(
             im: .init(sdkAppId: appId, secretKey: imSecretKey),
             qiniu: .init(
                 accessKey: accessKey,
@@ -141,6 +141,7 @@ public final class ServiceConfigViewModel: ObservableObject {
             subtitleApiKey: subtitleApiKey.isEmpty ? nil : subtitleApiKey,
             omdbApiKey: omdbApiKey.isEmpty ? nil : omdbApiKey
         )
+        return try ConfigValidation.normalized(draft)
     }
 }
 
@@ -192,13 +193,24 @@ public struct ServiceConfigView: View {
                         .keyboardType(.numberPad)
                     SecureField("SecretKey", text: $viewModel.imSecretKey)
                 }
-                Section("七牛云") {
+                Section {
                     SecureField("AccessKey", text: $viewModel.accessKey)
                     SecureField("SecretKey", text: $viewModel.secretKey)
                     TextField("Bucket", text: $viewModel.bucket)
                     TextField("Endpoint", text: $viewModel.endpoint)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                     TextField("自定义域名（可选）", text: $viewModel.domain)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
                     TextField("Prefix（可选）", text: $viewModel.prefix)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("七牛云")
+                } footer: {
+                    Text("Endpoint 填 S3 地址（如 s3.cn-south-1.qiniucs.com），片库列表/播放走这里。自定义域名只用于头像下载（如 qiniu.chaisz.com），不要填进 Endpoint。")
                 }
                 Section("扩展") {
                     SecureField("OpenSubtitles API Key", text: $viewModel.subtitleApiKey)

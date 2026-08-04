@@ -22,6 +22,8 @@ public final class WatchViewModel: ObservableObject {
     @Published public var onlineResults: [SubtitleTrack] = []
     @Published public var errorMessage: String?
     @Published public var libraryMovies: [Movie] = []
+    /// Profiles for room members (nickname + resolved avatarURL).
+    @Published public var memberProfiles: [String: User] = [:]
 
     let session: AppSession
     let initialRoomId: String?
@@ -33,6 +35,7 @@ public final class WatchViewModel: ObservableObject {
     private var chatTask: Task<Void, Never>?
     private var roomTask: Task<Void, Never>?
     private var heartbeatTask: Task<Void, Never>?
+    private var memberProfileTask: Task<Void, Never>?
 
     public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
@@ -68,6 +71,7 @@ public final class WatchViewModel: ObservableObject {
             await preparePlayer()
             listen()
             startHeartbeatIfNeeded()
+            await refreshMemberProfiles()
             await refreshSubtitles()
         } catch let error as AppError {
             errorMessage = error.userMessage
@@ -81,11 +85,67 @@ public final class WatchViewModel: ObservableObject {
         chatTask?.cancel()
         roomTask?.cancel()
         heartbeatTask?.cancel()
+        memberProfileTask?.cancel()
         signalTask = nil
         chatTask = nil
         roomTask = nil
         heartbeatTask = nil
+        memberProfileTask = nil
         player.stop()
+    }
+
+    /// Playback fraction 0...1 for a member's progress ring.
+    /// Self uses the local player; others use last applied sync position (follow model).
+    public func memberPlaybackProgress(for memberId: String) -> Double {
+        let duration = max(player.durationMs, 1)
+        let position: Int64
+        if memberId == session.currentUser?.id {
+            position = player.positionMs
+        } else {
+            position = playback.positionMs > 0 ? playback.positionMs : player.positionMs
+        }
+        return min(1, max(0, Double(position) / Double(duration)))
+    }
+
+    public func memberDisplayName(for memberId: String) -> String {
+        if let nick = memberProfiles[memberId]?.nickname, !nick.isEmpty {
+            return nick
+        }
+        if memberId == session.currentUser?.id, let nick = session.currentUser?.nickname, !nick.isEmpty {
+            return nick
+        }
+        return memberId
+    }
+
+    public func memberAvatarURL(for memberId: String) -> URL? {
+        if memberId == session.currentUser?.id {
+            return session.currentUser?.avatarURL ?? memberProfiles[memberId]?.avatarURL
+        }
+        return memberProfiles[memberId]?.avatarURL
+    }
+
+    public func refreshMemberProfiles() async {
+        guard let ids = room?.memberIds, !ids.isEmpty else {
+            memberProfiles = [:]
+            return
+        }
+        memberProfileTask?.cancel()
+        let snapshot = ids
+        memberProfileTask = Task {
+            let users = (try? await session.authGateway.fetchUsers(userIds: snapshot)) ?? []
+            guard !Task.isCancelled else { return }
+            var map: [String: User] = [:]
+            for user in users {
+                map[user.id] = user
+            }
+            if let me = session.currentUser {
+                map[me.id] = me
+            }
+            await MainActor.run {
+                self.memberProfiles = map
+            }
+        }
+        await memberProfileTask?.value
     }
 
     private func loadMovie(id: String) async {
@@ -148,12 +208,16 @@ public final class WatchViewModel: ObservableObject {
         }
         roomTask = Task {
             for await updated in session.roomGateway.observeRoom(roomId: room.id) {
+                let membersChanged = updated.memberIds != self.room?.memberIds
                 await MainActor.run {
                     self.room = updated
                     syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
                     if updated.status == .ended {
                         errorMessage = AppError.roomEnded.userMessage
                     }
+                }
+                if membersChanged {
+                    await refreshMemberProfiles()
                 }
             }
         }
@@ -195,11 +259,16 @@ public final class WatchViewModel: ObservableObject {
 
     private func applyRemote(_ signal: PlaybackSyncSignal) {
         guard var room else { return }
-        let result = PlaybackSyncRules.shouldAccept(signal: signal, room: room, current: playback)
+        let result = PlaybackSyncRules.shouldAccept(
+            signal: signal,
+            room: room,
+            current: playback,
+            localPositionMs: player.currentPositionMs
+        )
         switch result {
         case .ignored:
             return
-        case .applied(let state):
+        case .applied(let state, let shouldSeek):
             playback = state
             if signal.action == .hostTransfer, let newHost = signal.hostUserId {
                 room.hostUserId = newHost
@@ -216,10 +285,13 @@ public final class WatchViewModel: ObservableObject {
                     await preparePlayer()
                 }
             }
-            player.seek(toMs: state.positionMs)
+            if shouldSeek {
+                player.seek(toMs: state.positionMs)
+            }
+            // Avoid pause↔play thrash on heartbeat when already in the right state.
             if state.isPaused {
-                player.pause()
-            } else {
+                if !player.isPaused { player.pause() }
+            } else if player.isPaused {
                 player.play()
             }
         }
@@ -628,12 +700,14 @@ public struct WatchView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(viewModel.room?.memberIds ?? [], id: \.self) { id in
-                        TandemAvatarView(
+                        MemberPlaybackAvatar(
                             userId: id,
-                            size: 40,
-                            isHost: id == viewModel.room?.hostUserId
+                            displayName: viewModel.memberDisplayName(for: id),
+                            avatarURL: viewModel.memberAvatarURL(for: id),
+                            isHost: id == viewModel.room?.hostUserId,
+                            progress: { viewModel.memberPlaybackProgress(for: id) },
+                            size: 40
                         )
-                        .accessibilityLabel(id == viewModel.room?.hostUserId ? "\(id)，房主" : id)
                     }
                     Button {
                         viewModel.showInvite = true
@@ -650,10 +724,11 @@ public struct WatchView: View {
                                 .font(.system(size: 18, weight: .light))
                                 .foregroundStyle(Color(red: 142 / 255, green: 142 / 255, blue: 147 / 255))
                         }
-                        .frame(width: 40, height: 40)
+                        .frame(width: 48, height: 48)
                     }
                     .accessibilityLabel("邀请")
                 }
+                .padding(.vertical, 2)
             }
         }
         .padding(.horizontal, 16)

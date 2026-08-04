@@ -7,7 +7,8 @@ public enum PlaybackSyncRules {
     public static let hostDisconnectTimeoutSeconds: TimeInterval = 45
 
     public enum ApplyResult: Equatable, Sendable {
-        case applied(PlaybackState)
+        /// - Parameter seek: Whether the player should seek to `state.positionMs`.
+        case applied(PlaybackState, seek: Bool)
         case ignored(Reason)
 
         public enum Reason: Equatable, Sendable {
@@ -17,10 +18,13 @@ public enum PlaybackSyncRules {
         }
     }
 
+    /// - Parameter localPositionMs: Live player clock for heartbeat drift checks.
+    ///   When omitted, falls back to `current.positionMs` (tests / bookkeeping only).
     public static func shouldAccept(
         signal: PlaybackSyncSignal,
         room: WatchRoom,
-        current: PlaybackState
+        current: PlaybackState,
+        localPositionMs: Int64? = nil
     ) -> ApplyResult {
         guard room.status == .active else {
             return .ignored(.roomEnded)
@@ -40,7 +44,7 @@ public enum PlaybackSyncRules {
                 state.movieId = movieId
             }
             state.lastSeq = max(current.lastSeq, signal.seq)
-            return .applied(state)
+            return .applied(state, seek: true)
         }
 
         guard signal.seq > current.lastSeq else {
@@ -59,26 +63,33 @@ public enum PlaybackSyncRules {
         case .play:
             state.positionMs = signal.positionMs
             state.isPaused = false
+            return .applied(state, seek: true)
         case .pause:
             state.positionMs = signal.positionMs
             state.isPaused = true
+            return .applied(state, seek: true)
         case .seek:
             state.positionMs = signal.positionMs
+            return .applied(state, seek: true)
         case .heartbeat:
-            let delta = abs(signal.positionMs - current.positionMs)
-            if delta > syncThresholdMs {
-                state.positionMs = signal.positionMs
-            }
+            // Compare against the *live* player clock. Using frozen `current.positionMs`
+            // makes drift exceed the threshold every ~1.2s of playback and forces a seek
+            // on every heartbeat → stutter + repeated stream fetches.
+            let baseline = localPositionMs ?? current.positionMs
+            let delta = abs(signal.positionMs - baseline)
+            state.positionMs = signal.positionMs
             state.isPaused = false
+            return .applied(state, seek: delta > syncThresholdMs)
         case .movieChange:
             state.movieId = signal.movieId ?? state.movieId
             state.positionMs = 0
             state.isPaused = true
+            return .applied(state, seek: true)
         case .hostTransfer:
             break
         }
 
-        return .applied(state)
+        return .applied(state, seek: false)
     }
 
     public static func needsSmoothCorrection(localMs: Int64, hostMs: Int64) -> Bool {

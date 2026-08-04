@@ -6,8 +6,7 @@ public protocol SaveCloudConfigUseCase {
 
 public extension SaveCloudConfigUseCase {
     func saveCloudConfig(_ config: AppCloudConfig) async throws {
-        try ConfigValidation.validate(config)
-        var stored = config
+        var stored = try ConfigValidation.normalized(config)
         stored.updatedAt = Date()
         try await configGateway.save(stored)
     }
@@ -24,9 +23,9 @@ public extension ImportConfigQRUseCase {
         let existing = try await configGateway.load()
         do {
             let decoded = try ConfigShareLink.decode(raw)
-            try ConfigValidation.validate(decoded)
-            try await configGateway.save(decoded)
-            return decoded
+            let normalized = try ConfigValidation.normalized(decoded)
+            try await configGateway.save(normalized)
+            return normalized
         } catch {
             // Preserve existing config on failure.
             if let existing {

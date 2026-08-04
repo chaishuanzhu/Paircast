@@ -182,6 +182,9 @@ private final class FakeAuthGateway: AuthGateway, @unchecked Sendable {
         User(id: "u", nickname: nickname)
     }
     func fetchProfile() async throws -> User { User(id: "u", nickname: "n") }
+    func fetchUsers(userIds: [String]) async throws -> [User] {
+        userIds.map { User(id: $0, nickname: $0) }
+    }
 }
 
 private final class FakeUserSigGateway: UserSigGateway, @unchecked Sendable {
@@ -250,7 +253,12 @@ private extension AppCloudConfig {
     static func fixture() -> AppCloudConfig {
         AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "s"),
-            qiniu: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d")
+            qiniu: .init(
+                accessKey: "a",
+                secretKey: "b",
+                bucket: "c",
+                endpoint: "s3.cn-south-1.qiniucs.com"
+            )
         )
     }
 }

@@ -6,6 +6,8 @@ public protocol AuthGateway: AnyObject {
     func currentUserId() async -> String?
     func updateProfile(nickname: String, avatarData: Data?) async throws -> User
     func fetchProfile() async throws -> User
+    /// Batch profile lookup (nickname + avatar key → resolved avatarURL).
+    func fetchUsers(userIds: [String]) async throws -> [User]
 }
 
 public protocol ConfigGateway: AnyObject {
@@ -24,6 +26,14 @@ public protocol MovieCatalogGateway {
     func listMovies(config: AppCloudConfig) async throws -> [Movie]
     /// AWS SigV4 query-presigned HTTPS URL for online VLC playback (default 6h).
     func playURL(for movie: Movie, config: AppCloudConfig) async throws -> URL
+}
+
+/// Uploads profile avatars to Qiniu S3 and resolves short-lived download URLs from object keys.
+public protocol AvatarStorageGateway {
+    /// Uploads JPEG bytes; returns the object key (IM stores this, not a signed URL).
+    func uploadAvatar(imageData: Data, userId: String, config: AppCloudConfig) async throws -> String
+    /// SigV4 presigned GET against the configured S3 Endpoint.
+    func signedURL(objectKey: String, config: AppCloudConfig) throws -> URL
 }
 
 public protocol MetadataGateway {
