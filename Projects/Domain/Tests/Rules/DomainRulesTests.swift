@@ -63,6 +63,53 @@ final class ConfigQRCodecTests: XCTestCase {
     }
 }
 
+final class ConfigShareLinkTests: XCTestCase {
+    func test_shareURLRoundTrip() throws {
+        let config = AppCloudConfig.fixture()
+        let url = try ConfigShareLink.shareURL(for: config)
+        XCTAssertEqual(url.scheme, "tandem")
+        XCTAssertEqual(url.host, "config")
+        XCTAssertNotNil(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "args" })?.value)
+        let decoded = try ConfigShareLink.decode(url.absoluteString)
+        XCTAssertEqual(decoded.im.sdkAppId, config.im.sdkAppId)
+        XCTAssertEqual(decoded.qiniu.bucket, config.qiniu.bucket)
+        XCTAssertEqual(decoded.im.secretKey, config.im.secretKey)
+    }
+
+    func test_argsAreNotPlainJSON() throws {
+        let url = try ConfigShareLink.shareURL(for: .fixture())
+        let args = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first(where: { $0.name == "args" })?
+            .value
+        XCTAssertFalse(args?.contains("secretKey") == true)
+        XCTAssertFalse(args?.hasPrefix("{") == true)
+    }
+
+    func test_pasteEmbeddedURL() throws {
+        let url = try ConfigShareLink.shareURL(for: .fixture())
+        let pasted = "给你配置：\(url.absoluteString) 打开即可"
+        let decoded = try ConfigShareLink.decode(pasted)
+        XCTAssertEqual(decoded.qiniu.bucket, AppCloudConfig.fixture().qiniu.bucket)
+    }
+
+    func test_legacyJSONStillDecodes() throws {
+        let json = try ConfigQRCodec.encode(.fixture())
+        let decoded = try ConfigShareLink.decode(json)
+        XCTAssertEqual(decoded.im.sdkAppId, AppCloudConfig.fixture().im.sdkAppId)
+    }
+
+    func test_tamperedArgsFail() throws {
+        var url = try ConfigShareLink.shareURL(for: .fixture())
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "args", value: "AAAA")]
+        url = components.url!
+        XCTAssertThrowsError(try ConfigShareLink.decode(url.absoluteString)) { error in
+            XCTAssertEqual(error as? AppError, .invalidConfigQR)
+        }
+    }
+}
+
 final class LoginRulesTests: XCTestCase {
     func test_emptyPasswordFails() {
         XCTAssertThrowsError(try LoginRules.validateCredentials(userId: "u", password: ""))

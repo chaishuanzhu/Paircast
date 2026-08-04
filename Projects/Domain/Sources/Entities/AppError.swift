@@ -41,9 +41,9 @@ public enum AppError: Error, Equatable, Sendable {
         case .kickedOffline:
             return "账号在其他设备登录"
         case .invalidConfigQR:
-            return "二维码无效，未修改现有配置"
+            return "配置链接无效，未修改现有配置"
         case .configQRTooLarge:
-            return "配置码过大，导入失败"
+            return "配置过大，无法分享或导入"
         case .catalogUnauthorized:
             return "片库配置无效"
         case .playbackFailed:

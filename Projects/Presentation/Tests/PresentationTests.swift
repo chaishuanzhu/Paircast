@@ -56,6 +56,25 @@ final class AppRouteDeepLinkTests: XCTestCase {
         XCTAssertEqual(session.route, .watch(roomId: "r1", movieId: "m1", hostUserId: "host"))
         XCTAssertNil(session.pendingInvite)
     }
+
+    func test_configShareDeepLinkOpensConfigWithPendingImport() throws {
+        let session = AppSession(
+            configGateway: FakeConfig(),
+            authGateway: FakeAuth(),
+            userSigGateway: FakeSig(),
+            catalogGateway: FakeCatalog(),
+            metadataGateway: FakeMeta(),
+            roomGateway: FakeRoom(),
+            chatGateway: FakeChat(),
+            syncGateway: FakeSync(),
+            subtitleGateway: FakeSubtitle()
+        )
+        let share = try ConfigShareLink.shareURL(for: .fixture())
+        session.handleDeepLink(share)
+        XCTAssertEqual(session.route, .config(fromLogin: true))
+        XCTAssertEqual(session.consumePendingConfigImport(), share.absoluteString)
+        XCTAssertNil(session.consumePendingConfigImport())
+    }
 }
 
 private final class FakeConfig: ConfigGateway, @unchecked Sendable {
@@ -120,4 +139,18 @@ private final class FakeSubtitle: SubtitleGateway, @unchecked Sendable {
     func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] { [] }
     func searchOnline(query: String, year: String?, apiKey: String?) async throws -> [SubtitleTrack] { [] }
     func download(_ track: SubtitleTrack, apiKey: String?) async throws -> URL { URL(string: "https://example.com")! }
+}
+
+private extension AppCloudConfig {
+    static func fixture() -> AppCloudConfig {
+        AppCloudConfig(
+            im: .init(sdkAppId: 123456789, secretKey: "im-secret"),
+            qiniu: .init(
+                accessKey: "ak",
+                secretKey: "sk",
+                bucket: "movies",
+                endpoint: "s3-cn-east-1.qiniucs.com"
+            )
+        )
+    }
 }

@@ -17,7 +17,21 @@ Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App�
 - UserSig：本地 HMAC 签发；SecretKey 仅 Keychain
 - 持有 IM SecretKey 即可签任意 userID —— 配置码等同环境根密钥
 
-## 配置二维码
+## 配置分享（加密深链）
+
+分享格式：
+
+```
+tandem://config?args=<base64url(AES-GCM(JSON))>
+```
+
+- 明文 JSON 与原先配置码一致（`type=tandem-config`，UTF-8 ≤ 2KB）
+- `args`：AES-GCM sealed box（nonce ‖ ciphertext ‖ tag）的 base64url（无 padding）
+- 密钥：App 内嵌派生（`SHA256("Tandem.iOS.ConfigShare.v1")`），用于传输混淆，**不能**替代对接收方的信任
+- 导入入口：打开深链、粘贴完整 URL、或粘贴 `args`；仍兼容旧版明文 JSON
+- 非法/篡改载荷不覆盖 Keychain 现有配置；导入前脱敏确认
+
+明文载荷示例：
 
 ```json
 {
@@ -36,8 +50,6 @@ Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App�
   "omdbApiKey": null
 }
 ```
-
-编码 UTF-8 约 ≤ 2KB；非法码不覆盖现有配置。
 
 ## 播控信令 JSON
 
@@ -63,7 +75,10 @@ Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App�
 
 ## Deep Link
 
-`tandem://watch?roomId={id}&movieId={id}&hostUserId={id}`
+| URL | 行为 |
+|-----|------|
+| `tandem://watch?roomId={id}&movieId={id}&hostUserId={id}` | 加入观影房（未登录则暂存邀请） |
+| `tandem://config?args={encrypted}` | 打开服务配置并弹出脱敏确认导入 |
 
 房间状态写入七牛 `_tandem/rooms/{roomId}.json`（跨设备可加入）。
 

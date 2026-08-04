@@ -73,16 +73,16 @@
 | 01 | Login | 无注册；「服务配置」文字按钮 |
 | 02 | Library (SPA) | 主壳；**右上角头像 = 我的** |
 | 03 | Me Sheet | 头像/昵称/服务配置/退出 |
-| 04 | Service Config | IM + 七牛；扫码/导出；测试连接 |
+| 04 | Service Config | IM + 七牛；分享与导入列表行；测试连接 |
 | 05 | Watch | 沉浸播放器、成员、「+」邀请、聊天 |
 | 06 | Switch Movie | 换片 Sheet |
 | 07 | Subtitle Sync | ±0.5s 时间轴校准 |
 | 08 | Subtitle Panel | 字幕选择 |
 | 09 | Online Subtitle Search | 在线搜字幕结果 |
 | 10 | Login Unconfigured | 未配置引导 |
-| 11 | Export Config QR | 导出配置二维码 |
-| 12 | Scan Import | 扫码取景 |
-| 13 | Scan Confirm | 脱敏确认导入 |
+| 11 | Share Config | 加密深链分享（链接优先 + QR） |
+| 12 | Paste Import | 粘贴配置链接 |
+| 13 | Import Confirm | 脱敏确认导入 |
 | 14 | Invite Sheet | 分享/复制邀请 |
 | 15 | Watch Member | 成员视角 + Toast |
 | 16 | Switch Confirm | 换片二次确认 |
@@ -116,7 +116,10 @@
 ### 服务配置
 
 - 导航：返回 | 标题 | 保存  
-- 敏感字段掩码；导出码前确认风险  
+- **分享与导入**分组：列表行「粘贴导入 / 分享配置」（图标 + 标题 + 副文案 + ›）  
+- **分享配置**：加密徽章 → 说明 → 链接二维码 → 链接卡片（复制）→ 风险条 → 主按钮复制 / 次按钮系统分享+存相册  
+- **导入配置**：绿标引导 → 虚线粘贴框 → 从剪贴板 → 继续解析  
+- **确认导入**：绿 chip「加密链接已解析」+ 覆盖警告 + 脱敏卡片  
 
 ### 播放页
 

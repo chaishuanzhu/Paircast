@@ -20,6 +20,8 @@ public final class AppSession: ObservableObject {
 
     /// Deep-link invite kept until the user finishes login.
     private(set) var pendingInvite: RoomInvite?
+    /// Config share link (`tandem://config?args=…`) awaiting confirm-import on the config screen.
+    private(set) var pendingConfigImportRaw: String?
 
     public init(
         configGateway: ConfigGateway,
@@ -69,6 +71,12 @@ public final class AppSession: ObservableObject {
     }
 
     public func handleDeepLink(_ url: URL) {
+        if ConfigShareLink.isConfigShareURL(url) {
+            pendingConfigImportRaw = url.absoluteString
+            route = .config(fromLogin: currentUser == nil)
+            showToast("检测到配置链接，请确认后导入")
+            return
+        }
         guard let invite = RoomInvite(url: url) else { return }
         pendingInvite = invite
         if currentUser == nil {
@@ -77,6 +85,12 @@ public final class AppSession: ObservableObject {
         } else {
             consumePendingInviteIfPossible()
         }
+    }
+
+    /// Consumes a pending config share once the config screen is ready to preview it.
+    public func consumePendingConfigImport() -> String? {
+        defer { pendingConfigImportRaw = nil }
+        return pendingConfigImportRaw
     }
 
     /// Call after a successful login so a queued invite can open the watch scene.

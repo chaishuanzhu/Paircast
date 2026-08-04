@@ -492,6 +492,140 @@
     .field-stack .v { font-size: 17px; color: var(--label); }
     .cfg-tip { text-align: center; font-size: 12px; color: var(--tertiary); }
 
+    /* Share / Import — v1.5 encrypted link */
+    .cfg-xfer {
+      background: var(--surface);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .cfg-xfer-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      min-height: 72px;
+    }
+    .cfg-xfer-row + .cfg-xfer-row { border-top: 1px solid rgba(60,60,67,0.08); }
+    .cfg-xfer-ico {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      font-size: 18px; font-weight: 600; color: #fff;
+    }
+    .cfg-xfer-ico.import { background: #34C759; }
+    .cfg-xfer-ico.share { background: var(--blue); }
+    .cfg-xfer-copy { flex: 1; min-width: 0; }
+    .cfg-xfer-copy h4 { font-size: 16px; font-weight: 600; }
+    .cfg-xfer-copy p { margin-top: 3px; font-size: 13px; color: var(--secondary); line-height: 1.3; }
+    .cfg-xfer .chev { color: var(--tertiary); font-size: 18px; flex-shrink: 0; }
+
+    .share-body {
+      flex: 1; overflow: auto;
+      padding: 12px 20px 28px;
+      display: flex; flex-direction: column; gap: 14px;
+      align-items: stretch;
+    }
+    .share-hero {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 20px 16px 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      text-align: center;
+    }
+    .share-hero .badge {
+      font-size: 12px; font-weight: 600; color: var(--blue);
+      background: rgba(0,122,255,0.1);
+      padding: 4px 10px; border-radius: 999px;
+    }
+    .share-hero h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .share-hero .sub { font-size: 14px; color: var(--secondary); line-height: 1.4; }
+    .share-qr {
+      width: 168px; height: 168px; border-radius: 14px;
+      border: 10px solid #fff;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      background:
+        linear-gradient(#111 0 0) 0 0 / 18% 18%,
+        linear-gradient(#111 0 0) 100% 0 / 18% 18%,
+        linear-gradient(#111 0 0) 0 100% / 18% 18%,
+        linear-gradient(#111 0 0) 100% 100% / 18% 18%,
+        repeating-conic-gradient(#1a1a1a 0% 25%, #fff 0% 50%) 50% / 14px 14px;
+      background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+      background-color: #fff;
+    }
+    .link-card {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .link-card .label {
+      font-size: 12px; font-weight: 600; color: var(--secondary);
+      letter-spacing: 0.02em; text-transform: uppercase;
+    }
+    .link-card .url {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 12px; line-height: 1.45; color: var(--label);
+      word-break: break-all;
+      background: var(--grouped);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .link-card .copy-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px;
+    }
+    .link-card .copy-row span { font-size: 13px; color: var(--secondary); }
+    .link-card .copy-chip {
+      font-size: 14px; font-weight: 600; color: var(--blue);
+      padding: 6px 12px; border-radius: 8px;
+      background: rgba(0,122,255,0.08);
+    }
+    .share-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-ghost {
+      width: 100%; border: 0; border-radius: 12px;
+      background: var(--surface); color: var(--blue);
+      font-size: 15px; font-weight: 600; padding: 13px;
+    }
+
+    .paste-body {
+      flex: 1; overflow: auto;
+      padding: 8px 16px 28px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .paste-intro {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 8px; padding: 8px 8px 0;
+    }
+    .paste-intro .mark {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: #34C759; color: #fff;
+      display: grid; place-items: center;
+      font-size: 26px; font-weight: 300; line-height: 1;
+    }
+    .paste-intro h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .paste-intro p { font-size: 14px; color: var(--secondary); line-height: 1.4; max-width: 300px; }
+    .paste-box {
+      background: var(--surface);
+      border-radius: 14px;
+      min-height: 140px;
+      padding: 14px 16px;
+      font-size: 15px;
+      color: var(--tertiary);
+      line-height: 1.4;
+      border: 1.5px dashed rgba(60,60,67,0.22);
+    }
+    .paste-box.filled { color: var(--label); border-style: solid; border-color: transparent; }
+    .paste-hint {
+      font-size: 12px; color: var(--tertiary); text-align: center; line-height: 1.4;
+    }
+
+    .confirm-chip {
+      align-self: flex-start;
+      font-size: 12px; font-weight: 600; color: #248A3D;
+      background: rgba(52,199,89,0.12);
+      padding: 4px 10px; border-radius: 999px;
+    }
+
     /* 05 Watch — immersive，参考放映室样式 */
     .watch-stage {
       position: relative;
@@ -995,7 +1129,7 @@
 <body>
   <header class="page-head">
     <h1>Tandem iOS Design Preview</h1>
-    <p>本地全量预览 · Apple HIG · PRD v1.4 · 含配置扫码/邀请/成员态/空错态等补全屏</p>
+    <p>本地全量预览 · Apple HIG · PRD v1.5 · 配置加密深链分享 / 粘贴导入</p>
   </header>
 
   <div class="gallery">
@@ -1094,7 +1228,7 @@
 
     <!-- 04 Config -->
     <div class="shot">
-      <div class="caption">04 Service Config</div>
+      <div class="caption">04 Service Config · 分享与导入列表行</div>
       <div class="phone">
         <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
         <div class="nav">
@@ -1103,9 +1237,26 @@
           <div class="side right">保存</div>
         </div>
         <div class="cfg-body">
-          <div class="cfg-actions">
-            <button class="btn-secondary" type="button">扫码导入</button>
-            <button class="btn-secondary" type="button">导出二维码</button>
+          <div>
+            <div class="section-label">分享与导入</div>
+            <div class="cfg-xfer">
+              <div class="cfg-xfer-row">
+                <div class="cfg-xfer-ico import" aria-hidden="true">↓</div>
+                <div class="cfg-xfer-copy">
+                  <h4>粘贴导入</h4>
+                  <p>粘贴 tandem://config?args=… 链接</p>
+                </div>
+                <div class="chev">›</div>
+              </div>
+              <div class="cfg-xfer-row">
+                <div class="cfg-xfer-ico share" aria-hidden="true">↑</div>
+                <div class="cfg-xfer-copy">
+                  <h4>分享配置</h4>
+                  <p>生成加密链接，复制或分享给好友</p>
+                </div>
+                <div class="chev">›</div>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -1127,7 +1278,7 @@
           </div>
 
           <button class="btn-primary" type="button">测试连接</button>
-          <div class="cfg-tip">二维码含密钥，请勿发到公开群</div>
+          <div class="cfg-tip">链接含密钥，仅发给可信好友</div>
         </div>
       </div>
     </div>
@@ -1404,46 +1555,68 @@
       </div>
     </div>
 
-    <!-- 11 Export QR -->
+    <!-- 11 Share Config Link -->
     <div class="shot">
-      <div class="caption">11 Export Config QR</div>
+      <div class="caption">11 Share Config · 加密深链 + 二维码</div>
       <div class="phone">
         <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
         <div class="nav">
           <div class="side">‹ 返回</div>
-          <div class="title">导出配置</div>
+          <div class="title">分享配置</div>
           <div class="side right">分享</div>
         </div>
-        <div class="qr-wrap">
-          <div class="qr" aria-hidden="true"></div>
-          <h3 style="font-size:17px;font-weight:600">扫描以导入 Tandem 配置</h3>
-          <p style="font-size:14px;color:var(--secondary);line-height:1.4">包含腾讯云 IM 与七牛凭证</p>
-          <div class="warn">二维码含密钥，请勿发到公开群或社交平台</div>
-          <button class="btn-primary" type="button" style="margin-top:4px">保存到相册</button>
+        <div class="share-body">
+          <div class="share-hero">
+            <div class="badge">AES-GCM 加密</div>
+            <h3>发给好友即可导入</h3>
+            <p class="sub">对方打开链接或粘贴到「服务配置」即可写入同一套环境</p>
+            <div class="share-qr" aria-hidden="true" title="链接二维码"></div>
+          </div>
+          <div class="link-card">
+            <div class="label">配置链接</div>
+            <div class="url">tandem://config?args=x7Km2Qp9Rv…A3nF</div>
+            <div class="copy-row">
+              <span>含 IM / 七牛密钥</span>
+              <div class="copy-chip">复制</div>
+            </div>
+          </div>
+          <div class="warn">链接含密钥，请勿发到公开群或社交平台</div>
+          <button class="btn-primary" type="button">复制链接</button>
+          <div class="share-actions">
+            <button class="btn-ghost" type="button">系统分享</button>
+            <button class="btn-ghost" type="button">保存二维码</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 12 Scan import -->
+    <!-- 12 Paste Import -->
     <div class="shot">
-      <div class="caption">12 Scan Import</div>
-      <div class="phone dark">
+      <div class="caption">12 Paste Import · 粘贴配置链接</div>
+      <div class="phone">
         <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
         <div class="nav">
           <div class="side">取消</div>
-          <div class="title" style="color:#fff">扫码导入</div>
-          <div class="side right" style="opacity:0">占位</div>
+          <div class="title">导入配置</div>
+          <div class="side right">继续</div>
         </div>
-        <div class="scan">
-          <div class="scan-frame"></div>
-          <div class="scan-hint">将配置二维码放入框内自动识别</div>
+        <div class="paste-body">
+          <div class="paste-intro">
+            <div class="mark" aria-hidden="true">↓</div>
+            <h3>粘贴配置链接</h3>
+            <p>支持完整深链，或聊天消息中带有的 tandem://config?args=…</p>
+          </div>
+          <div class="paste-box">tandem://config?args=…</div>
+          <button class="btn-ghost" type="button">从剪贴板粘贴</button>
+          <button class="btn-primary" type="button">继续解析</button>
+          <div class="paste-hint">解析成功后会展示脱敏预览，确认才会覆盖本机配置</div>
         </div>
       </div>
     </div>
 
-    <!-- 13 Scan confirm -->
+    <!-- 13 Import confirm -->
     <div class="shot">
-      <div class="caption">13 Scan Confirm · 脱敏预览</div>
+      <div class="caption">13 Import Confirm · 脱敏预览</div>
       <div class="phone">
         <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
         <div class="nav">
@@ -1452,6 +1625,7 @@
           <div class="side right">导入</div>
         </div>
         <div class="cfg-body">
+          <div class="confirm-chip">加密链接已解析</div>
           <div class="warn">将覆盖本机现有云服务配置</div>
           <div>
             <div class="section-label">腾讯云 IM</div>

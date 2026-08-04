@@ -18,11 +18,12 @@ public protocol ImportConfigQRUseCase {
 }
 
 public extension ImportConfigQRUseCase {
-    /// Decodes and persists only after validation. Invalid payloads never overwrite.
+    /// Decodes a share link / encrypted args / legacy JSON and persists only after validation.
+    /// Invalid payloads never overwrite existing Keychain config.
     func importConfigQR(_ raw: String) async throws -> AppCloudConfig {
         let existing = try await configGateway.load()
         do {
-            let decoded = try ConfigQRCodec.decode(raw)
+            let decoded = try ConfigShareLink.decode(raw)
             try ConfigValidation.validate(decoded)
             try await configGateway.save(decoded)
             return decoded
@@ -44,11 +45,12 @@ public protocol ExportConfigQRUseCase {
 }
 
 public extension ExportConfigQRUseCase {
+    /// Returns an encrypted share deep link: `tandem://config?args=…`
     func exportConfigQR() async throws -> String {
         guard let config = try await configGateway.load() else {
             throw AppError.notConfigured
         }
-        return try ConfigQRCodec.encode(config)
+        return try ConfigShareLink.shareURL(for: config).absoluteString
     }
 }
 

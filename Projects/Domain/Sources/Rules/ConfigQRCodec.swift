@@ -123,9 +123,39 @@ public enum ConfigQRCodec {
 
     public static func maskedPreview(of config: AppCloudConfig) -> String {
         """
-        \(config.im.maskedSummary)
-        Bucket: \(config.qiniu.bucket)
-        Endpoint: \(config.qiniu.endpoint)
+        IM SDKAppID \(maskMiddle(String(config.im.sdkAppId), keepPrefix: 4, keepSuffix: 2))
+        IM SecretKey \(maskSecret(config.im.secretKey))
+        AccessKey \(maskMiddle(config.qiniu.accessKey, keepPrefix: 2, keepSuffix: 0))
+        Bucket \(config.qiniu.bucket)
+        Endpoint \(truncate(config.qiniu.endpoint, max: 18))
         """
+    }
+
+    public static func maskedSDKAppId(_ value: Int) -> String {
+        maskMiddle(String(value), keepPrefix: 4, keepSuffix: 2)
+    }
+
+    public static func maskedAccessKey(_ value: String) -> String {
+        maskMiddle(value, keepPrefix: 2, keepSuffix: 0)
+    }
+
+    public static func maskSecret(_ value: String) -> String {
+        String(repeating: "•", count: min(12, max(8, value.count)))
+    }
+
+    public static func truncate(_ value: String, max: Int) -> String {
+        guard value.count > max else { return value }
+        return String(value.prefix(max - 1)) + "…"
+    }
+
+    private static func maskMiddle(_ value: String, keepPrefix: Int, keepSuffix: Int) -> String {
+        let chars = Array(value)
+        guard chars.count > keepPrefix + keepSuffix else {
+            return String(repeating: "•", count: max(4, chars.count))
+        }
+        let head = String(chars.prefix(keepPrefix))
+        let tail = keepSuffix > 0 ? String(chars.suffix(keepSuffix)) : ""
+        let hidden = max(4, chars.count - keepPrefix - keepSuffix)
+        return head + String(repeating: "•", count: min(hidden, 8)) + tail
     }
 }

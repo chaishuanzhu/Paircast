@@ -49,10 +49,19 @@ final class ImportConfigQRUseCaseTests: XCTestCase {
         sut.fakeConfig.config = .fixture()
         var next = AppCloudConfig.fixture()
         next.qiniu.bucket = "other-bucket"
-        let raw = try ConfigQRCodec.encode(next)
+        let raw = try ConfigShareLink.shareURL(for: next).absoluteString
         let imported = try await sut.importConfigQR(raw)
         XCTAssertEqual(imported.qiniu.bucket, "other-bucket")
         XCTAssertEqual(sut.fakeConfig.config?.qiniu.bucket, "other-bucket")
+    }
+
+    func test_exportReturnsEncryptedShareLink() async throws {
+        let sut = ConfigUseCaseHarness()
+        sut.fakeConfig.config = .fixture()
+        let exported = try await sut.exportConfigQR()
+        XCTAssertTrue(exported.hasPrefix("tandem://config?args="))
+        let decoded = try ConfigShareLink.decode(exported)
+        XCTAssertEqual(decoded.qiniu.bucket, AppCloudConfig.fixture().qiniu.bucket)
     }
 }
 

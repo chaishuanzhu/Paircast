@@ -46,7 +46,7 @@ tuist generate
 
 ## 安全说明（MVP）
 
-持有配置中的 IM `SecretKey` 即可为任意 `userID` 签发 UserSig；登录密码仅为非空弱校验，真实成败以 IM login 为准。配置请存 Keychain，导出二维码勿公开分享。
+持有配置中的 IM `SecretKey` 即可为任意 `userID` 签发 UserSig；登录密码仅为非空弱校验，真实成败以 IM login 为准。配置请存 Keychain；分享链接 `tandem://config?args=…` 含加密后的密钥，勿公开传播。
 
 ## 文档
 

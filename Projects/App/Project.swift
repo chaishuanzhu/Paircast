@@ -23,6 +23,7 @@ let project = Project(
                 ],
                 "NSCameraUsageDescription": "扫描配置二维码与拍摄头像",
                 "NSPhotoLibraryUsageDescription": "选择头像与保存配置二维码",
+                "NSPhotoLibraryAddUsageDescription": "保存配置分享二维码到相册",
                 "NSLocalNetworkUsageDescription": "连接七牛云与腾讯云 IM 服务",
             ]),
             sources: ["Sources/**"],

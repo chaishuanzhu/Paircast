@@ -27,6 +27,41 @@ public struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
+public struct SecondaryButtonStyle: ButtonStyle {
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(TandemColors.systemBlue)
+            .frame(maxWidth: .infinity)
+            .frame(height: 46)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+public struct TandemWarningBanner: View {
+    public var text: String
+
+    public init(_ text: String) {
+        self.text = text
+    }
+
+    public var body: some View {
+        Text(text)
+            .font(.system(size: 13))
+            .foregroundStyle(Color(red: 179 / 255, green: 90 / 255, blue: 0))
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.orange.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
 public struct TandemTextField: View {
     let title: String
     @Binding var text: String
