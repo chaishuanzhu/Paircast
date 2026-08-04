@@ -22,6 +22,9 @@ public final class WatchViewModel: ObservableObject {
     @Published public var onlineResults: [SubtitleTrack] = []
     @Published public var errorMessage: String?
     @Published public var libraryMovies: [Movie] = []
+    @Published public var switchQuery = ""
+    @Published public var isSwitchingMovie = false
+    @Published public var isLoadingLibraryForSwitch = false
     /// Profiles for room members (nickname + resolved avatarURL).
     @Published public var memberProfiles: [String: User] = [:]
 
@@ -47,6 +50,15 @@ public final class WatchViewModel: ObservableObject {
     public var isHost: Bool {
         guard let room, let user = session.currentUser else { return false }
         return room.hostUserId == user.id
+    }
+
+    public var filteredLibraryMovies: [Movie] {
+        let query = switchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return libraryMovies }
+        return libraryMovies.filter {
+            $0.title.localizedCaseInsensitiveContains(query)
+                || ($0.year?.localizedCaseInsensitiveContains(query) == true)
+        }
     }
 
     public func start() async {
@@ -279,10 +291,17 @@ public final class WatchViewModel: ObservableObject {
                 startHeartbeatIfNeeded()
             }
             if signal.action == .movieChange, let movieId = signal.movieId {
-                Task {
-                    await loadMovie(id: movieId)
-                    subtitleState = SubtitleState.resetForMovieChange(movieId: movieId)
-                    await preparePlayer()
+                // Host already applied locally in confirmSwitch; members follow here.
+                if movie?.id != movieId {
+                    if !isHost {
+                        session.showToast("房主切换了影片…")
+                    }
+                    Task {
+                        await loadMovie(id: movieId)
+                        subtitleState = SubtitleState.resetForMovieChange(movieId: movieId)
+                        await preparePlayer()
+                        await refreshSubtitles()
+                    }
                 }
             }
             if shouldSeek {
@@ -323,6 +342,38 @@ public final class WatchViewModel: ObservableObject {
         }
     }
 
+    /// Host scrub / seek — updates local player immediately and broadcasts `.seek`.
+    public func seekTo(ms: Int64) {
+        guard isHost, let room, let user = session.currentUser else { return }
+        let duration = max(player.durationMs, 1)
+        let clamped = min(max(0, ms), duration)
+        seq += 1
+        let currentSeq = seq
+        let wasPaused = player.isPaused
+        player.seek(toMs: clamped)
+        playback.positionMs = clamped
+        playback.lastSeq = currentSeq
+        Task {
+            let harness = SyncHarness(session: session)
+            _ = try? await harness.emitHostSignal(
+                room: room,
+                hostUserId: user.id,
+                action: .seek,
+                positionMs: clamped,
+                seq: currentSeq
+            )
+            if !wasPaused {
+                player.play()
+            }
+        }
+    }
+
+    public func seekToProgress(_ progress: Double) {
+        let duration = max(player.durationMs, 1)
+        let ms = Int64(Double(duration) * min(1, max(0, progress)))
+        seekTo(ms: ms)
+    }
+
     public func requestSwitch(_ movie: Movie) {
         guard isHost else {
             session.showToast(AppError.onlyHostCanSwitchMovie.userMessage)
@@ -334,32 +385,95 @@ public final class WatchViewModel: ObservableObject {
             return
         }
         pendingMovie = movie
-        showSwitchConfirm = true
+        showSwitchMovie = false
+        // Dismiss sheet first so the confirm alert isn't buried under it.
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 280_000_000)
+            showSwitchConfirm = true
+        }
+    }
+
+    public func cancelSwitchConfirm() {
+        showSwitchConfirm = false
+        pendingMovie = nil
+    }
+
+    public func loadLibraryForSwitch() async {
+        isLoadingLibraryForSwitch = true
+        defer { isLoadingLibraryForSwitch = false }
+        switchQuery = ""
+        let harness = LibraryHarness(session: session)
+        let movies = (try? await harness.listMovies(enrichMetadata: false)) ?? []
+        if !movies.isEmpty {
+            libraryMovies = movies
+        }
+        // Enrich posters in background for the switch list thumbs.
+        Task {
+            guard let config = try? await self.session.configGateway.load() else { return }
+            let snapshot = self.libraryMovies
+            let metadataGateway = self.session.metadataGateway
+            var enriched = snapshot
+            await withTaskGroup(of: (Int, Movie).self) { group in
+                let concurrency = 4
+                var next = 0
+                func enqueue() {
+                    guard next < snapshot.count else { return }
+                    let i = next
+                    next += 1
+                    group.addTask {
+                        let movie = await metadataGateway.enrich(snapshot[i], config: config)
+                        return (i, movie)
+                    }
+                }
+                for _ in 0..<min(concurrency, snapshot.count) { enqueue() }
+                for await (i, movie) in group {
+                    enriched[i] = movie
+                    enqueue()
+                }
+            }
+            await MainActor.run {
+                // Keep list if user already refreshed to a different set.
+                if self.libraryMovies.map(\.id) == snapshot.map(\.id) {
+                    self.libraryMovies = enriched
+                }
+            }
+        }
     }
 
     public func confirmSwitch() async {
-        guard let room, let user = session.currentUser, let pendingMovie else { return }
+        // Snapshot before the alert dismisses — do not clear pendingMovie on alert close,
+        // or this guard fails and the switch silently no-ops.
+        guard let room, let user = session.currentUser else { return }
+        guard let target = pendingMovie else { return }
+        guard !isSwitchingMovie else { return }
+        isSwitchingMovie = true
+        showSwitchConfirm = false
+        defer { isSwitchingMovie = false }
         seq += 1
         do {
             let harness = RoomHarness(session: session)
             let (updated, _) = try await harness.changeMovie(
                 room: room,
                 actorUserId: user.id,
-                newMovie: pendingMovie,
+                newMovie: target,
                 seq: seq
             )
             self.room = updated
-            movie = pendingMovie
-            playback = PlaybackState(positionMs: 0, isPaused: true, movieId: pendingMovie.id, lastSeq: seq)
-            subtitleState = SubtitleState.resetForMovieChange(movieId: pendingMovie.id)
+            movie = target
+            onlineQuery = target.title
+            playback = PlaybackState(positionMs: 0, isPaused: true, movieId: target.id, lastSeq: seq)
+            subtitleState = SubtitleState.resetForMovieChange(movieId: target.id)
             player.pause()
             await preparePlayer()
+            pendingMovie = nil
             showSwitchMovie = false
-            showSwitchConfirm = false
+            await refreshSubtitles()
         } catch let error as AppError {
             errorMessage = error.userMessage
+            session.showToast(error.userMessage)
         } catch {
             errorMessage = AppError.movieChangeFailed.userMessage
+            session.showToast(AppError.movieChangeFailed.userMessage)
         }
     }
 
@@ -460,6 +574,12 @@ public struct WatchView: View {
     @ObservedObject var session: AppSession
     @StateObject private var viewModel: WatchViewModel
     @State private var showMoreMenu = false
+    @State private var showPlayerChrome = true
+    @State private var isFullscreen = false
+    @State private var scrubProgress: CGFloat?
+    @State private var chromeHideTask: Task<Void, Never>?
+
+    private static let chromeAutoHideSeconds: UInt64 = 5_000_000_000
 
     public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
@@ -472,15 +592,33 @@ public struct WatchView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            playerStage
-            membersBar
-            chatList
-            chatInput
+        Group {
+            if isFullscreen {
+                playerStage
+                    .ignoresSafeArea()
+            } else {
+                VStack(spacing: 0) {
+                    playerStage
+                    membersBar
+                    chatList
+                    chatInput
+                }
+                .background(Color(red: 247 / 255, green: 247 / 255, blue: 248 / 255).ignoresSafeArea())
+            }
         }
-        .background(Color(red: 247 / 255, green: 247 / 255, blue: 248 / 255).ignoresSafeArea())
-        .task { await viewModel.start() }
-        .onDisappear { viewModel.stop() }
+        .statusBarHidden(isFullscreen)
+        .onChange(of: isFullscreen) { _, fullscreen in
+            applyFullscreenOrientation(fullscreen)
+        }
+        .task {
+            await viewModel.start()
+            revealPlayerChrome()
+        }
+        .onDisappear {
+            chromeHideTask?.cancel()
+            OrientationLock.lock(.portrait)
+            viewModel.stop()
+        }
         .onReceive(viewModel.player.$lastError.compactMap { $0 }) { message in
             viewModel.errorMessage = message
         }
@@ -489,9 +627,22 @@ public struct WatchView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .confirmationDialog("切换后将从开头播放，全员同步换片", isPresented: $viewModel.showSwitchConfirm, titleVisibility: .visible) {
-            Button("确认换片") { Task { await viewModel.confirmSwitch() } }
-            Button("取消", role: .cancel) {}
+        .alert(
+            "切换影片？",
+            isPresented: $viewModel.showSwitchConfirm
+        ) {
+            Button("取消", role: .cancel) {
+                viewModel.cancelSwitchConfirm()
+            }
+            Button("切换") {
+                Task { await viewModel.confirmSwitch() }
+            }
+        } message: {
+            if let title = viewModel.pendingMovie?.title {
+                Text("将切换为《\(title)》，并从开头播放，全员同步换片。")
+            } else {
+                Text("切换后将从开头播放，全员同步换片。")
+            }
         }
         .sheet(isPresented: $viewModel.showSubtitlePanel) {
             SubtitlePanelView(viewModel: viewModel)
@@ -513,32 +664,101 @@ public struct WatchView: View {
             Button("字幕同步") { viewModel.showSubtitleSync = true }
             Button("取消", role: .cancel) {}
         }
+        .overlay {
+            if viewModel.isSwitchingMovie {
+                ZStack {
+                    Color.black.opacity(0.35).ignoresSafeArea()
+                    ProgressView("正在换片…")
+                        .padding(20)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .allowsHitTesting(true)
+            }
+        }
+    }
+
+    // MARK: - Player chrome visibility
+
+    private func revealPlayerChrome() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showPlayerChrome = true
+        }
+        scheduleChromeHide()
+    }
+
+    private func scheduleChromeHide() {
+        chromeHideTask?.cancel()
+        chromeHideTask = Task {
+            try? await Task.sleep(nanoseconds: Self.chromeAutoHideSeconds)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard scrubProgress == nil else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showPlayerChrome = false
+                }
+            }
+        }
+    }
+
+    private func togglePlayerChrome() {
+        if showPlayerChrome {
+            chromeHideTask?.cancel()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showPlayerChrome = false
+            }
+        } else {
+            revealPlayerChrome()
+        }
+    }
+
+    private func notePlayerInteraction() {
+        revealPlayerChrome()
+    }
+
+    private func applyFullscreenOrientation(_ fullscreen: Bool) {
+        OrientationLock.lock(fullscreen ? .landscape : .portrait)
+        if fullscreen {
+            revealPlayerChrome()
+        }
     }
 
     private var playerStage: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             VLCPlayerView(videoView: viewModel.player.videoView)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // UIViewRepresentable 会吞掉触摸，不能依赖它上面的 onTapGesture
+
+            // 透明点击层：点画面切换工具栏。必须盖在 VLC 之上，
+            // 否则自动隐藏后无法再唤出（UIKit 视频视图不转发手势给 SwiftUI）。
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { togglePlayerChrome() }
 
             LinearGradient(
                 colors: [
-                    Color.black.opacity(0.55),
+                    Color.black.opacity(showPlayerChrome ? 0.55 : 0),
                     Color.clear,
-                    Color.black.opacity(0.72),
+                    Color.black.opacity(showPlayerChrome ? 0.72 : 0),
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .allowsHitTesting(false)
+            .animation(.easeInOut(duration: 0.2), value: showPlayerChrome)
 
             VStack(spacing: 0) {
                 watchChrome
-                    .padding(.top, 8)
+                    .padding(.top, isFullscreen ? 12 : 8)
+                // 中间留空把点击交给下层，避免挡住「点视频切换工具栏」
                 Spacer(minLength: 0)
+                    .allowsHitTesting(false)
                 playerBottomChrome
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 10)
+            .padding(.bottom, isFullscreen ? 20 : 10)
+            .opacity(showPlayerChrome ? 1 : 0)
+            .allowsHitTesting(showPlayerChrome)
+            .animation(.easeInOut(duration: 0.2), value: showPlayerChrome)
 
             if !viewModel.player.isReady {
                 VStack(spacing: 8) {
@@ -548,9 +768,12 @@ public struct WatchView: View {
                         .font(.caption)
                         .foregroundStyle(.white)
                 }
+                .allowsHitTesting(false)
             }
         }
-        .frame(height: 248)
+        .frame(maxWidth: .infinity)
+        .frame(height: isFullscreen ? nil : 248)
+        .frame(maxHeight: isFullscreen ? .infinity : nil)
         .background(Color.black)
         .overlay(alignment: .top) {
             if let error = viewModel.errorMessage {
@@ -561,7 +784,7 @@ public struct WatchView: View {
                     .padding(.vertical, 6)
                     .background(TandemColors.danger.opacity(0.9))
                     .clipShape(Capsule())
-                    .padding(.top, 52)
+                    .padding(.top, isFullscreen ? 56 : 52)
             }
         }
     }
@@ -569,7 +792,14 @@ public struct WatchView: View {
     private var watchChrome: some View {
         HStack(spacing: 6) {
             Button {
-                Task { await viewModel.leave() }
+                notePlayerInteraction()
+                if isFullscreen {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isFullscreen = false
+                    }
+                } else {
+                    Task { await viewModel.leave() }
+                }
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 20, weight: .semibold))
@@ -577,7 +807,7 @@ public struct WatchView: View {
                     .frame(width: 28, height: 28)
                     .shadow(color: .black.opacity(0.45), radius: 1, y: 1)
             }
-            .accessibilityLabel("返回")
+            .accessibilityLabel(isFullscreen ? "退出全屏" : "返回")
 
             Text(viewModel.movie?.title ?? "影片")
                 .font(.system(size: 15, weight: .semibold))
@@ -587,6 +817,7 @@ public struct WatchView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Button {
+                notePlayerInteraction()
                 if viewModel.isHost {
                     viewModel.showSwitchMovie = true
                 } else {
@@ -595,18 +826,20 @@ public struct WatchView: View {
             } label: {
                 Text("换片")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.white.opacity(viewModel.isHost ? 1 : 0.55))
                     .padding(.horizontal, 12)
                     .frame(height: 28)
-                    .background(Color.black.opacity(0.18))
+                    .background(Color.black.opacity(viewModel.isHost ? 0.18 : 0.08))
                     .overlay {
-                        Capsule().stroke(Color.white.opacity(0.85), lineWidth: 1)
+                        Capsule().stroke(Color.white.opacity(viewModel.isHost ? 0.85 : 0.4), lineWidth: 1)
                     }
                     .clipShape(Capsule())
             }
             .accessibilityLabel("切换影片")
+            .accessibilityHint(viewModel.isHost ? "打开片库切换当前影片" : "仅房主可切换影片")
 
             Button {
+                notePlayerInteraction()
                 showMoreMenu = true
             } label: {
                 Image(systemName: "ellipsis")
@@ -629,7 +862,10 @@ public struct WatchView: View {
             }
 
             HStack(spacing: 10) {
-                Button { viewModel.togglePlay() } label: {
+                Button {
+                    notePlayerInteraction()
+                    viewModel.togglePlay()
+                } label: {
                     Image(systemName: viewModel.player.isPaused ? "play.fill" : "pause.fill")
                         .font(.system(size: 15))
                         .foregroundStyle(.white)
@@ -638,7 +874,10 @@ public struct WatchView: View {
                 .disabled(!viewModel.isHost)
                 .opacity(viewModel.isHost ? 0.95 : 0.45)
 
-                Button { viewModel.showSubtitlePanel = true } label: {
+                Button {
+                    notePlayerInteraction()
+                    viewModel.showSubtitlePanel = true
+                } label: {
                     Image(systemName: "captions.bubble")
                         .font(.system(size: 15))
                         .foregroundStyle(.white)
@@ -646,31 +885,77 @@ public struct WatchView: View {
                 }
                 .accessibilityLabel("字幕")
 
-                GeometryReader { geo in
-                    let progress = playbackProgress
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.white.opacity(0.28))
-                        Capsule()
-                            .fill(Color.white)
-                            .frame(width: max(3, geo.size.width * progress))
-                    }
-                }
-                .frame(height: 3)
+                progressBar
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 28)
 
                 Text(timeLabel)
                     .font(.system(size: 11).monospacedDigit())
                     .foregroundStyle(Color.white.opacity(0.88))
                     .lineLimit(1)
 
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.95))
-                    .frame(width: 28, height: 28)
-                    .accessibilityHidden(true)
+                Button {
+                    notePlayerInteraction()
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isFullscreen.toggle()
+                    }
+                } label: {
+                    Image(systemName: isFullscreen
+                          ? "arrow.down.right.and.arrow.up.left"
+                          : "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.95))
+                        .frame(width: 28, height: 28)
+                }
+                .accessibilityLabel(isFullscreen ? "退出全屏" : "全屏")
             }
             .foregroundStyle(.white)
         }
+    }
+
+    private var progressBar: some View {
+        GeometryReader { geo in
+            let width = max(geo.size.width, 1)
+            let progress = scrubProgress ?? playbackProgress
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.28))
+                    .frame(height: 3)
+                Capsule()
+                    .fill(Color.white)
+                    .frame(width: max(3, width * progress), height: 3)
+                if viewModel.isHost {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: scrubProgress == nil ? 8 : 12, height: scrubProgress == nil ? 8 : 12)
+                        .offset(x: max(0, width * progress - (scrubProgress == nil ? 4 : 6)))
+                        .animation(.easeOut(duration: 0.12), value: scrubProgress == nil)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(progressDragGesture(width: width), including: viewModel.isHost ? .gesture : .none)
+            .accessibilityLabel("播放进度")
+            .accessibilityValue("\(Int((progress * 100).rounded()))%")
+            .opacity(viewModel.isHost ? 1 : 0.9)
+        }
+    }
+
+    private func progressDragGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard viewModel.isHost else { return }
+                chromeHideTask?.cancel()
+                showPlayerChrome = true
+                scrubProgress = CGFloat(min(1, max(0, value.location.x / width)))
+            }
+            .onEnded { value in
+                guard viewModel.isHost else { return }
+                let progress = Double(min(1, max(0, value.location.x / width)))
+                scrubProgress = nil
+                viewModel.seekToProgress(progress)
+                scheduleChromeHide()
+            }
     }
 
     private var playbackProgress: CGFloat {
@@ -679,7 +964,14 @@ public struct WatchView: View {
     }
 
     private var timeLabel: String {
-        let current = TandemColors.formatPlaybackTime(viewModel.player.positionMs)
+        let duration = max(viewModel.player.durationMs, 1)
+        let position: Int64
+        if let scrubProgress {
+            position = Int64(Double(duration) * Double(scrubProgress))
+        } else {
+            position = viewModel.player.positionMs
+        }
+        let current = TandemColors.formatPlaybackTime(position)
         let total = TandemColors.formatPlaybackTime(viewModel.player.durationMs)
         return "\(current)/\(total)"
     }
@@ -846,34 +1138,124 @@ public struct WatchView: View {
 
 private struct SwitchMovieSheet: View {
     @ObservedObject var viewModel: WatchViewModel
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            List(viewModel.libraryMovies) { movie in
-                Button {
-                    viewModel.requestSwitch(movie)
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(movie.title)
-                            Text(movie.year ?? "")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            Group {
+                if viewModel.isLoadingLibraryForSwitch && viewModel.libraryMovies.isEmpty {
+                    ProgressView("加载片库…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.filteredLibraryMovies.isEmpty {
+                    ContentUnavailableView(
+                        viewModel.switchQuery.isEmpty ? "暂无影片" : "无匹配影片",
+                        systemImage: "film",
+                        description: Text(
+                            viewModel.switchQuery.isEmpty
+                                ? "确认七牛 Bucket 中有 mp4/m4v/mkv"
+                                : "试试其他关键词"
+                        )
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(viewModel.filteredLibraryMovies) { movie in
+                                SwitchMovieRow(
+                                    movie: movie,
+                                    isPlaying: movie.id == viewModel.movie?.id
+                                ) {
+                                    viewModel.requestSwitch(movie)
+                                }
+                            }
                         }
-                        Spacer()
-                        if movie.id == viewModel.movie?.id {
-                            Text("播放中").foregroundStyle(TandemColors.systemBlue)
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
                     }
                 }
             }
+            .background(TandemColors.groupedBackground.ignoresSafeArea())
+            .searchable(text: $viewModel.switchQuery, prompt: "搜索片名")
             .navigationTitle("切换影片")
-            .task {
-                if viewModel.libraryMovies.isEmpty {
-                    await viewModel.start()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("取消") { dismiss() }
+                        .foregroundStyle(TandemColors.systemBlue)
                 }
             }
+            .overlay {
+                if viewModel.isSwitchingMovie {
+                    ZStack {
+                        Color.black.opacity(0.28).ignoresSafeArea()
+                        ProgressView("正在换片…")
+                            .padding(20)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                }
+            }
+            .task {
+                await viewModel.loadLibraryForSwitch()
+            }
         }
+    }
+}
+
+private struct SwitchMovieRow: View {
+    let movie: Movie
+    let isPlaying: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.gray.opacity(0.18))
+                    .frame(width: 44, height: 66)
+                    .overlay {
+                        PosterImage(url: movie.posterURL)
+                            .frame(width: 44, height: 66)
+                            .clipped()
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(movie.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(TandemColors.secondaryLabel)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if isPlaying {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(TandemColors.systemBlue)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(movie.title)
+        .accessibilityValue(isPlaying ? "播放中" : (movie.year ?? ""))
+    }
+
+    private var subtitle: String {
+        var parts: [String] = []
+        if let year = movie.year, !year.isEmpty {
+            parts.append(year)
+        }
+        if isPlaying {
+            parts.append("播放中")
+        }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -969,28 +1351,97 @@ private struct OnlineSubtitleSearchView: View {
 
 private struct InviteSheetView: View {
     let url: URL
+    @Environment(\.dismiss) private var dismiss
     @State private var copied = false
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                Text(url.absoluteString)
-                    .textSelection(.enabled)
-                    .padding()
-                ShareLink(item: url) {
-                    Label("系统分享", systemImage: "square.and.arrow.up")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(spacing: 0) {
+                        ShareLink(item: url) {
+                            inviteRow(title: "系统分享", trailing: .chevron)
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().padding(.leading, 16)
+
+                        Button {
+                            UIPasteboard.general.string = url.absoluteString
+                            copied = true
+                        } label: {
+                            inviteRow(
+                                title: "复制邀请链接",
+                                trailing: .text(copied ? "已复制" : "复制", emphasized: copied)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    Text("链接预览")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(TandemColors.secondaryLabel)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 4)
+
+                    Text(url.absoluteString)
+                        .font(.system(size: 13))
+                        .foregroundStyle(TandemColors.secondaryLabel)
+                        .textSelection(.enabled)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                    Text("好友打开链接并登录后，将加入当前观影房间并对齐进度。")
+                        .font(.system(size: 13))
+                        .foregroundStyle(TandemColors.secondaryLabel)
+                        .lineSpacing(2)
+                        .padding(.horizontal, 4)
                 }
-                Button("复制链接") {
-                    UIPasteboard.general.string = url.absoluteString
-                    copied = true
-                }
-                if copied {
-                    Text("已复制").foregroundStyle(.secondary)
-                }
-                Spacer()
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-            .padding()
+            .background(TandemColors.groupedBackground.ignoresSafeArea())
             .navigationTitle("邀请好友")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("关闭") { dismiss() }
+                        .foregroundStyle(TandemColors.systemBlue)
+                }
+            }
         }
+    }
+
+    private enum Trailing {
+        case chevron
+        case text(String, emphasized: Bool)
+    }
+
+    private func inviteRow(title: String, trailing: Trailing) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 17))
+                .foregroundStyle(Color.primary)
+            Spacer()
+            switch trailing {
+            case .chevron:
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(TandemColors.tertiaryLabel)
+            case .text(let value, let emphasized):
+                Text(value)
+                    .font(.system(size: 15, weight: emphasized ? .semibold : .regular))
+                    .foregroundStyle(emphasized ? Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255) : TandemColors.systemBlue)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
     }
 }
