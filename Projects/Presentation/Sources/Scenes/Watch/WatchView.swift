@@ -1463,8 +1463,7 @@ private struct SwitchMovieSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("取消") { dismiss() }
-                        .foregroundStyle(TandemColors.systemBlue)
+                    ToolbarCloseButton { dismiss() }
                 }
             }
             .overlay {
@@ -1604,8 +1603,7 @@ private struct InviteSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("关闭") { dismiss() }
-                        .foregroundStyle(TandemColors.systemBlue)
+                    ToolbarCloseButton(accessibilityLabel: "关闭") { dismiss() }
                 }
             }
         }

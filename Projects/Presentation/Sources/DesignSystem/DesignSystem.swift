@@ -209,3 +209,75 @@ extension TandemColors {
     }
 }
 
+// MARK: - Toolbar icon actions
+
+public enum TandemToolbarIcon {
+    public static let done = "checkmark"
+    public static let back = "chevron.backward"
+    public static let close = "xmark"
+}
+
+/// Navigation bar “完成 / 保存 / 继续” — checkmark.
+public struct ToolbarDoneButton: View {
+    public var accessibilityLabel: String
+    public var disabled: Bool
+    public var action: () -> Void
+
+    public init(
+        accessibilityLabel: String = "完成",
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.accessibilityLabel = accessibilityLabel
+        self.disabled = disabled
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            Image(systemName: TandemToolbarIcon.done)
+                .font(.system(size: 17, weight: .semibold))
+        }
+        .disabled(disabled)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+/// Navigation bar “返回” — chevron.
+public struct ToolbarBackButton: View {
+    public var accessibilityLabel: String
+    public var action: () -> Void
+
+    public init(accessibilityLabel: String = "返回", action: @escaping () -> Void) {
+        self.accessibilityLabel = accessibilityLabel
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            Image(systemName: TandemToolbarIcon.back)
+                .font(.system(size: 17, weight: .semibold))
+        }
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+/// Navigation bar “取消 / 关闭” — xmark.
+public struct ToolbarCloseButton: View {
+    public var accessibilityLabel: String
+    public var action: () -> Void
+
+    public init(accessibilityLabel: String = "取消", action: @escaping () -> Void) {
+        self.accessibilityLabel = accessibilityLabel
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            Image(systemName: TandemToolbarIcon.close)
+                .font(.system(size: 15, weight: .semibold))
+        }
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+

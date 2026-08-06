@@ -188,14 +188,13 @@ public struct MeSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") {
+                    ToolbarDoneButton(disabled: viewModel.isSaving) {
                         Task {
                             if await viewModel.save() {
                                 dismiss()
                             }
                         }
                     }
-                    .disabled(viewModel.isSaving)
                 }
             }
             .confirmationDialog("确定退出登录？", isPresented: $viewModel.showLogoutConfirm, titleVisibility: .visible) {

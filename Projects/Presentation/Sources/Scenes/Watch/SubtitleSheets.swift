@@ -98,9 +98,7 @@ struct SubtitlePanelView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
-                        .fontWeight(.semibold)
-                        .foregroundStyle(TandemColors.systemBlue)
+                    ToolbarDoneButton { dismiss() }
                 }
             }
             .overlay {
@@ -381,8 +379,7 @@ struct OnlineSubtitleSearchView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("取消") { dismiss() }
-                        .foregroundStyle(TandemColors.systemBlue)
+                    ToolbarCloseButton { dismiss() }
                 }
             }
             .overlay {

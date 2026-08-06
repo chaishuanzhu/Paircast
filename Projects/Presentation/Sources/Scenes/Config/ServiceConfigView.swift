@@ -225,12 +225,12 @@ public struct ServiceConfigView: View {
             .navigationTitle("服务配置")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("返回") {
+                    ToolbarBackButton {
                         session.route = fromLogin ? .login : .library
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    ToolbarDoneButton(accessibilityLabel: "保存") {
                         Task {
                             if await viewModel.save() {
                                 session.showToast("已保存")
@@ -444,13 +444,15 @@ private struct ConfigExportShareView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("返回") { dismiss() }
+                    ToolbarBackButton { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if let url = URL(string: shareURL) {
                         ShareLink(item: url) {
-                            Text("分享")
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 17, weight: .semibold))
                         }
+                        .accessibilityLabel("分享")
                     }
                 }
             }
@@ -548,11 +550,12 @@ private struct ConfigPasteImportView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消", action: onCancel)
+                    ToolbarCloseButton(action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("继续") { onContinue() }
-                        .disabled(!canContinue)
+                    ToolbarDoneButton(accessibilityLabel: "继续", disabled: !canContinue) {
+                        onContinue()
+                    }
                 }
             }
             .onAppear { focused = true }
@@ -603,10 +606,10 @@ private struct ConfigImportConfirmView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消", action: onCancel)
+                    ToolbarCloseButton(action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("导入", action: onConfirm)
+                    ToolbarDoneButton(accessibilityLabel: "导入", action: onConfirm)
                 }
             }
             .accessibilityHint(preview)

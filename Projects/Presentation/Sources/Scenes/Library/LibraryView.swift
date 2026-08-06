@@ -123,7 +123,11 @@ public struct LibraryView: View {
                         Button("去配置") { session.route = .config(fromLogin: false) }
                     }
                 } else if viewModel.movies.isEmpty {
-                    ContentUnavailableView("暂无影片", systemImage: "film", description: Text("确认七牛 Bucket 中有 mp4/m4v/mkv"))
+                    ContentUnavailableView(
+                        "暂无影片",
+                        systemImage: "film",
+                        description: Text("确认七牛 Bucket 中有 mp4/m4v/mkv")
+                    )
                 } else {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 16) {
@@ -144,13 +148,9 @@ public struct LibraryView: View {
                 }
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
+            .navigationTitle("Tandem")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Text("Tandem")
-                        .font(.system(size: 28, weight: .bold))
-                        .tracking(-0.4)
-                        .accessibilityAddTraits(.isHeader)
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.showMe = true
@@ -165,7 +165,6 @@ public struct LibraryView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $viewModel.showMe) {
                 MeSheetView(session: session)
                     .presentationDetents([.medium, .large])

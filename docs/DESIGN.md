@@ -103,7 +103,7 @@
 
 ### 片库 SPA
 
-- 无 Tab；右上角 36pt 圆形头像  
+- 无 Tab；**大标题**「Tandem」（滚动收起）；右上角 36pt 圆形头像  
 - 下拉刷新（标准 `UIRefreshControl`）  
 - 点海报 → 全屏 Push/Cover 进 Watch  
 
