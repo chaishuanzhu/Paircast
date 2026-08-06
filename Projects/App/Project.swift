@@ -10,14 +10,14 @@ let project = Project(
             name: "Tandem",
             destinations: .iOS,
             product: .app,
-            bundleId: "app.tandem.ios",
+            bundleId: "com.chaisz.tandem",
             deploymentTargets: deploymentTargets,
             infoPlist: .extendingDefault(with: [
                 "UILaunchScreen": [:],
                 "CFBundleDisplayName": "Tandem",
                 "CFBundleURLTypes": [
                     [
-                        "CFBundleURLName": "app.tandem.ios",
+                        "CFBundleURLName": "com.chaisz.tandem",
                         "CFBundleURLSchemes": ["tandem"],
                     ],
                 ],
@@ -39,13 +39,19 @@ let project = Project(
                 .project(target: "Domain", path: "../Domain"),
                 .external(name: "VLCKitSPM"),
                 .external(name: "ImSDKSPM"),
-            ]
+            ],
+            settings: .settings(base: [
+                "CODE_SIGN_STYLE": "Manual",
+                "DEVELOPMENT_TEAM": "8PHCHYD8X3",
+                "CODE_SIGN_IDENTITY": "Apple Distribution",
+                "PROVISIONING_PROFILE_SPECIFIER": "Tandem AppStore",
+            ])
         ),
         .target(
             name: "TandemTests",
             destinations: .iOS,
             product: .unitTests,
-            bundleId: "app.tandem.ios.tests",
+            bundleId: "com.chaisz.tandem.tests",
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/**"],

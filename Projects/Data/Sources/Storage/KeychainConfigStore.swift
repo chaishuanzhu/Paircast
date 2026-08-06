@@ -3,8 +3,8 @@ import Security
 import Domain
 
 public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
-    private let configService = "app.tandem.config"
-    private let sessionService = "app.tandem.session"
+    private let configService = "com.chaisz.config"
+    private let sessionService = "com.chaisz.session"
     private let configAccount = "cloud-config"
     private let sessionAccount = "user-id"
     private let lock = NSLock()

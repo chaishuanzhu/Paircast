@@ -10,16 +10,24 @@ public struct RootView: View {
     public var body: some View {
         Group {
             switch session.route {
+            case .splash:
+                SplashView()
+                    .transition(.opacity)
             case .login:
                 LoginView(session: session)
+                    .transition(.opacity)
             case .config(let fromLogin):
                 ServiceConfigView(session: session, fromLogin: fromLogin)
+                    .transition(.opacity)
             case .library:
                 LibraryView(session: session)
+                    .transition(.opacity)
             case .watch(let roomId, let movieId, let hostUserId):
                 WatchView(session: session, roomId: roomId, movieId: movieId, hostUserId: hostUserId)
+                    .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.35), value: session.route)
         .overlay(alignment: .bottom) {
             if let toast = session.toast {
                 Text(toast)

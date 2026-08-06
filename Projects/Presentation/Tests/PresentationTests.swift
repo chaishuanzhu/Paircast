@@ -19,48 +19,58 @@ private struct InviteHarness: InviteToRoomUseCase {}
 
 @MainActor
 final class AppRouteDeepLinkTests: XCTestCase {
+    override func setUp() async throws {
+        AppSession.minimumSplashDuration = .milliseconds(0)
+    }
+
+    override func tearDown() async throws {
+        AppSession.minimumSplashDuration = .milliseconds(1_400)
+    }
+
     func test_watchDeepLinkRequiresLoginAndKeepsPendingInvite() async {
-        let session = AppSession(
-            configGateway: FakeConfig(),
-            authGateway: FakeAuth(),
-            userSigGateway: FakeSig(),
-            catalogGateway: FakeCatalog(),
-            metadataGateway: FakeMeta(),
-            roomGateway: FakeRoom(),
-            chatGateway: FakeChat(),
-            syncGateway: FakeSync(),
-            subtitleGateway: FakeSubtitle(),
-            sharedSubtitleStorage: FakeSharedSubtitle()
-        )
+        let session = makeSession()
         session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
-        XCTAssertEqual(session.route, .login)
-        XCTAssertEqual(session.toast, "请先登录再加入房间")
+        XCTAssertEqual(session.route, .splash)
         XCTAssertEqual(session.pendingInvite?.roomId, "r1")
         XCTAssertEqual(session.pendingInvite?.movieId, "m1")
         XCTAssertEqual(session.pendingInvite?.hostUserId, "host")
+
+        await session.bootstrap()
+        XCTAssertEqual(session.route, .login)
+        XCTAssertEqual(session.toast, "请先登录再加入房间")
+        XCTAssertEqual(session.pendingInvite?.roomId, "r1")
     }
 
     func test_watchDeepLinkOpensWatchWhenLoggedIn() async {
-        let session = AppSession(
-            configGateway: FakeConfig(),
-            authGateway: FakeAuth(),
-            userSigGateway: FakeSig(),
-            catalogGateway: FakeCatalog(),
-            metadataGateway: FakeMeta(),
-            roomGateway: FakeRoom(),
-            chatGateway: FakeChat(),
-            syncGateway: FakeSync(),
-            subtitleGateway: FakeSubtitle(),
-            sharedSubtitleStorage: FakeSharedSubtitle()
-        )
+        let session = makeSession()
         session.currentUser = User(id: "bob", nickname: "bob")
         session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         XCTAssertEqual(session.route, .watch(roomId: "r1", movieId: "m1", hostUserId: "host"))
         XCTAssertNil(session.pendingInvite)
     }
 
-    func test_configShareDeepLinkOpensConfigWithPendingImport() throws {
-        let session = AppSession(
+    func test_configShareDeepLinkOpensConfigAfterSplash() async throws {
+        let session = makeSession()
+        let share = try ConfigShareLink.shareURL(for: .fixture())
+        session.handleDeepLink(share)
+        XCTAssertEqual(session.route, .splash)
+
+        await session.bootstrap()
+        XCTAssertEqual(session.route, .config(fromLogin: true))
+        XCTAssertEqual(session.toast, "检测到配置链接，请确认后导入")
+        XCTAssertEqual(session.consumePendingConfigImport(), share.absoluteString)
+        XCTAssertNil(session.consumePendingConfigImport())
+    }
+
+    func test_bootstrapLeavesSplashForLoginWhenUnauthenticated() async {
+        let session = makeSession()
+        XCTAssertEqual(session.route, .splash)
+        await session.bootstrap()
+        XCTAssertEqual(session.route, .login)
+    }
+
+    private func makeSession() -> AppSession {
+        AppSession(
             configGateway: FakeConfig(),
             authGateway: FakeAuth(),
             userSigGateway: FakeSig(),
@@ -72,11 +82,6 @@ final class AppRouteDeepLinkTests: XCTestCase {
             subtitleGateway: FakeSubtitle(),
             sharedSubtitleStorage: FakeSharedSubtitle()
         )
-        let share = try ConfigShareLink.shareURL(for: .fixture())
-        session.handleDeepLink(share)
-        XCTAssertEqual(session.route, .config(fromLogin: true))
-        XCTAssertEqual(session.consumePendingConfigImport(), share.absoluteString)
-        XCTAssertNil(session.consumePendingConfigImport())
     }
 }
 

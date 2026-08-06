@@ -10,7 +10,7 @@ let project = Project(
             name: "Domain",
             destinations: .iOS,
             product: .staticFramework,
-            bundleId: "app.tandem.domain",
+            bundleId: "com.chaisz.domain",
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Sources/**"]
@@ -19,7 +19,7 @@ let project = Project(
             name: "DomainTests",
             destinations: .iOS,
             product: .unitTests,
-            bundleId: "app.tandem.domain.tests",
+            bundleId: "com.chaisz.domain.tests",
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/**"],

@@ -46,12 +46,15 @@ public final class AppSession: ObservableObject {
         self.syncGateway = syncGateway
         self.subtitleGateway = subtitleGateway
         self.sharedSubtitleStorage = sharedSubtitleStorage
-        self.route = .login
+        self.route = .splash
         installIMSessionObservers()
     }
 
     public func bootstrap() async {
+        let started = ContinuousClock.now
         config = try? await configGateway.load()
+
+        var next: AppRoute = .login
         if let userId = try? await configGateway.loadSessionUserId(),
            let config,
            config.isComplete {
@@ -59,13 +62,45 @@ public final class AppSession: ObservableObject {
                 let sig = try userSigGateway.generateUserSig(userId: userId, config: config)
                 try await authGateway.login(userId: userId, userSig: sig)
                 currentUser = try await authGateway.fetchProfile()
-                route = .library
-                consumePendingInviteIfPossible()
+                next = .library
             } catch {
-                route = .login
+                next = .login
             }
-        } else {
-            route = .login
+        }
+
+        // Deep links received during splash win over the default destination.
+        if pendingConfigImportRaw != nil {
+            next = .config(fromLogin: currentUser == nil)
+        } else if currentUser != nil, let invite = pendingInvite {
+            pendingInvite = nil
+            next = .watch(
+                roomId: invite.roomId,
+                movieId: invite.movieId,
+                hostUserId: invite.hostUserId
+            )
+        }
+
+        await Self.waitMinimumSplash(since: started)
+
+        // A logged-in watch deep link may already have left splash.
+        guard route == .splash else { return }
+        route = next
+        if case .login = next, pendingInvite != nil {
+            showToast("请先登录再加入房间")
+        }
+        if case .config = next {
+            showToast("检测到配置链接，请确认后导入")
+        }
+    }
+
+    /// Overridable for tests (default ~1.4s brand beat).
+    public static var minimumSplashDuration: Duration = .milliseconds(1_400)
+
+    private static func waitMinimumSplash(since started: ContinuousClock.Instant) async {
+        let minimum = minimumSplashDuration
+        let elapsed = started.duration(to: .now)
+        if elapsed < minimum {
+            try? await Task.sleep(for: minimum - elapsed)
         }
     }
 
@@ -76,17 +111,26 @@ public final class AppSession: ObservableObject {
     public func handleDeepLink(_ url: URL) {
         if ConfigShareLink.isConfigShareURL(url) {
             pendingConfigImportRaw = url.absoluteString
-            route = .config(fromLogin: currentUser == nil)
-            showToast("检测到配置链接，请确认后导入")
+            if route != .splash {
+                route = .config(fromLogin: currentUser == nil)
+                showToast("检测到配置链接，请确认后导入")
+            }
             return
         }
         guard let invite = RoomInvite(url: url) else { return }
-        pendingInvite = invite
         if currentUser == nil {
-            route = .login
-            showToast("请先登录再加入房间")
+            pendingInvite = invite
+            if route != .splash {
+                route = .login
+                showToast("请先登录再加入房间")
+            }
         } else {
-            consumePendingInviteIfPossible()
+            pendingInvite = nil
+            route = .watch(
+                roomId: invite.roomId,
+                movieId: invite.movieId,
+                hostUserId: invite.hostUserId
+            )
         }
     }
 
@@ -159,6 +203,7 @@ public struct RoomInvite: Equatable, Sendable {
 }
 
 public enum AppRoute: Equatable, Hashable {
+    case splash
     case login
     case config(fromLogin: Bool)
     case library

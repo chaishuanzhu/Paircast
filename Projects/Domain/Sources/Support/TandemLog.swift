@@ -3,8 +3,8 @@ import os
 
 /// Shared app loggers. Prefer these over `print` so Console.app can filter by category.
 public enum TandemLog {
-    public static let catalog = Logger(subsystem: "app.tandem", category: "catalog")
-    public static let playback = Logger(subsystem: "app.tandem", category: "playback")
+    public static let catalog = Logger(subsystem: "com.chaisz.tandem", category: "catalog")
+    public static let playback = Logger(subsystem: "com.chaisz.tandem", category: "playback")
 
     /// Host + path + safe query keys only (no Signature / Credential secrets).
     /// Note: `X-Amz-Credential` is shown as `<present>` so logs are not mistaken for usable URLs.

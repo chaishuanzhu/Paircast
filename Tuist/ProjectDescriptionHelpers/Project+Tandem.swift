@@ -2,7 +2,7 @@ import ProjectDescription
 
 public extension Project {
     static let tandemOrganizationName = "Tandem"
-    static let tandemBundlePrefix = "app.tandem"
+    static let tandemBundlePrefix = "com.chaisz"
     static let tandemDeploymentTargets: DeploymentTargets = .iOS("26.0")
     static let tandemDestinations: Destinations = .iOS
 
