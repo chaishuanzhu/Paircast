@@ -7,6 +7,9 @@ public enum PlaybackAction: String, Equatable, Sendable, Codable {
     case heartbeat
     case movieChange = "movie_change"
     case hostTransfer = "host_transfer"
+    /// Host uploaded a subtitle to Qiniu; members should load `subtitleObjectKey`.
+    /// Empty / missing key means host turned shared subtitles off.
+    case subtitleChange = "subtitle_change"
 }
 
 public struct PlaybackSyncSignal: Equatable, Sendable, Codable {
@@ -18,6 +21,10 @@ public struct PlaybackSyncSignal: Equatable, Sendable, Codable {
     public var clientTs: Int64
     public var playbackRate: Double
     public var seq: UInt64
+    /// Qiniu object key for a host-shared subtitle (sidecar next to the movie).
+    public var subtitleObjectKey: String?
+    /// Display label for the shared track (e.g. language / file name).
+    public var subtitleLabel: String?
 
     public init(
         action: PlaybackAction,
@@ -27,7 +34,9 @@ public struct PlaybackSyncSignal: Equatable, Sendable, Codable {
         senderId: String? = nil,
         clientTs: Int64 = Int64(Date().timeIntervalSince1970 * 1000),
         playbackRate: Double = 1.0,
-        seq: UInt64
+        seq: UInt64,
+        subtitleObjectKey: String? = nil,
+        subtitleLabel: String? = nil
     ) {
         self.action = action
         self.positionMs = positionMs
@@ -37,6 +46,8 @@ public struct PlaybackSyncSignal: Equatable, Sendable, Codable {
         self.clientTs = clientTs
         self.playbackRate = playbackRate
         self.seq = seq
+        self.subtitleObjectKey = subtitleObjectKey
+        self.subtitleLabel = subtitleLabel
     }
 }
 

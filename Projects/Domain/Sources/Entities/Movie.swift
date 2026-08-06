@@ -7,6 +7,7 @@ public struct Movie: Equatable, Sendable, Identifiable {
     public var year: String?
     public var overview: String?
     public var posterURL: URL?
+    public var backdropURL: URL?
     public var format: VideoFormat
     public var playURL: URL?
 
@@ -17,6 +18,7 @@ public struct Movie: Equatable, Sendable, Identifiable {
         year: String? = nil,
         overview: String? = nil,
         posterURL: URL? = nil,
+        backdropURL: URL? = nil,
         format: VideoFormat,
         playURL: URL? = nil
     ) {
@@ -26,6 +28,7 @@ public struct Movie: Equatable, Sendable, Identifiable {
         self.year = year
         self.overview = overview
         self.posterURL = posterURL
+        self.backdropURL = backdropURL
         self.format = format
         self.playURL = playURL
     }

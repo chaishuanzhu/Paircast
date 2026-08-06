@@ -40,6 +40,15 @@ public protocol MetadataGateway {
     func enrich(_ movie: Movie, config: AppCloudConfig) async -> Movie
 }
 
+/// Reads/writes Kodi-style NFO + poster/fanart sidecars beside the movie on Qiniu.
+public protocol MovieMetadataStorageGateway {
+    /// Returns metadata from existing `{base}.nfo` (+ art) when present; otherwise `nil`.
+    func load(for movie: Movie, config: AppCloudConfig) async -> Movie?
+    /// Persists NFO and downloads remote art into `{base}-poster.jpg` / `{base}-fanart.jpg`.
+    /// Returns a movie whose art URLs are Qiniu SigV4 GET links when upload succeeded.
+    func save(_ movie: Movie, config: AppCloudConfig) async -> Movie
+}
+
 public protocol RoomGateway: AnyObject {
     func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom
     /// - Parameters:
@@ -70,7 +79,21 @@ public protocol SubtitleGateway {
     func listEmbedded(for movie: Movie) async throws -> [SubtitleTrack]
     func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack]
     func searchOnline(query: String, year: String?, apiKey: String?) async throws -> [SubtitleTrack]
-    func download(_ track: SubtitleTrack, apiKey: String?) async throws -> URL
+    /// Downloads a track. Pass cloud config so Qiniu sidecars can be re-presigned at download time.
+    func download(_ track: SubtitleTrack, config: AppCloudConfig?) async throws -> URL
+}
+
+/// Host uploads a downloaded subtitle beside the movie object; members pull via SigV4 GET.
+public protocol SharedSubtitleStorageGateway {
+    /// Uploads local subtitle bytes next to the movie (`{movieBase}.{ext}`); returns object key.
+    func upload(
+        fileURL: URL,
+        roomId: String,
+        movieId: String,
+        config: AppCloudConfig
+    ) async throws -> String
+    /// Downloads a shared / sidecar subtitle to a sandbox file (UTF-8 normalized).
+    func download(objectKey: String, config: AppCloudConfig) async throws -> URL
 }
 
 @MainActor

@@ -29,7 +29,8 @@ final class AppRouteDeepLinkTests: XCTestCase {
             roomGateway: FakeRoom(),
             chatGateway: FakeChat(),
             syncGateway: FakeSync(),
-            subtitleGateway: FakeSubtitle()
+            subtitleGateway: FakeSubtitle(),
+            sharedSubtitleStorage: FakeSharedSubtitle()
         )
         session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         XCTAssertEqual(session.route, .login)
@@ -49,7 +50,8 @@ final class AppRouteDeepLinkTests: XCTestCase {
             roomGateway: FakeRoom(),
             chatGateway: FakeChat(),
             syncGateway: FakeSync(),
-            subtitleGateway: FakeSubtitle()
+            subtitleGateway: FakeSubtitle(),
+            sharedSubtitleStorage: FakeSharedSubtitle()
         )
         session.currentUser = User(id: "bob", nickname: "bob")
         session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
@@ -67,7 +69,8 @@ final class AppRouteDeepLinkTests: XCTestCase {
             roomGateway: FakeRoom(),
             chatGateway: FakeChat(),
             syncGateway: FakeSync(),
-            subtitleGateway: FakeSubtitle()
+            subtitleGateway: FakeSubtitle(),
+            sharedSubtitleStorage: FakeSharedSubtitle()
         )
         let share = try ConfigShareLink.shareURL(for: .fixture())
         session.handleDeepLink(share)
@@ -141,7 +144,23 @@ private final class FakeSubtitle: SubtitleGateway, @unchecked Sendable {
     func listEmbedded(for movie: Movie) async throws -> [SubtitleTrack] { [] }
     func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] { [] }
     func searchOnline(query: String, year: String?, apiKey: String?) async throws -> [SubtitleTrack] { [] }
-    func download(_ track: SubtitleTrack, apiKey: String?) async throws -> URL { URL(string: "https://example.com")! }
+    func download(_ track: SubtitleTrack, config: AppCloudConfig?) async throws -> URL {
+        URL(string: "https://example.com")!
+    }
+}
+private final class FakeSharedSubtitle: SharedSubtitleStorageGateway, @unchecked Sendable {
+    func upload(
+        fileURL: URL,
+        roomId: String,
+        movieId: String,
+        config: AppCloudConfig
+    ) async throws -> String {
+        SharedSubtitleObjectKey.sidecarKey(movieObjectKey: movieId, fileExtension: "srt")
+            ?? "\(movieId).srt"
+    }
+    func download(objectKey: String, config: AppCloudConfig) async throws -> URL {
+        URL(fileURLWithPath: "/tmp/fake.srt")
+    }
 }
 
 private extension AppCloudConfig {

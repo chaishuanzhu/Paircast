@@ -4,15 +4,28 @@ import Domain
 public struct CascadingMetadataGateway: MetadataGateway {
     private let session: URLSession
     private let cache: MetadataCache
+    private let storage: MovieMetadataStorageGateway?
 
-    public init(session: URLSession = .shared, cache: MetadataCache = .shared) {
+    public init(
+        session: URLSession = .shared,
+        cache: MetadataCache = .shared,
+        storage: MovieMetadataStorageGateway? = nil
+    ) {
         self.session = session
         self.cache = cache
+        self.storage = storage
     }
 
     public func enrich(_ movie: Movie, config: AppCloudConfig) async -> Movie {
         if let cached = await cache.movie(for: movie.objectKey) {
             return cached
+        }
+
+        // Prefer existing Qiniu NFO / art sidecars — skip live scrape when present.
+        if let storage,
+           let stored = await storage.load(for: movie, config: config) {
+            await cache.store(stored, for: movie.objectKey)
+            return stored
         }
 
         let parsed = MovieCatalogRules.parseFilenameMetadata(from: movie.objectKey)
@@ -56,6 +69,11 @@ public struct CascadingMetadataGateway: MetadataGateway {
             TandemLog.catalog.info(
                 "metadata filename-only movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public)"
             )
+        }
+
+        // Persist to Qiniu so the next launch reads sidecars instead of re-scraping.
+        if let storage, result.posterURL != nil || !(result.overview ?? "").isEmpty {
+            result = await storage.save(result, config: config)
         }
 
         // Only cache successful scrapes so missing keys / transient Douban fails can retry.
@@ -278,6 +296,7 @@ public struct CascadingMetadataGateway: MetadataGateway {
         if let year = meta.year, !year.isEmpty { next.year = year }
         if let overview = meta.overview, !overview.isEmpty { next.overview = overview }
         if let poster = meta.posterURL { next.posterURL = poster }
+        if let backdrop = meta.backdropURL { next.backdropURL = backdrop }
         return next
     }
 
@@ -306,6 +325,7 @@ private struct PartialMetadata {
     var year: String?
     var overview: String?
     var posterURL: URL?
+    var backdropURL: URL?
 }
 
 private struct DoubanSuggestDTO: Decodable {

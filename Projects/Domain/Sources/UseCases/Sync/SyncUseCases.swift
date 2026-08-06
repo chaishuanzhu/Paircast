@@ -23,7 +23,9 @@ public extension EmitHostPlaybackUseCase {
         action: PlaybackAction,
         positionMs: Int64,
         seq: UInt64,
-        movieId: String? = nil
+        movieId: String? = nil,
+        subtitleObjectKey: String? = nil,
+        subtitleLabel: String? = nil
     ) async throws -> PlaybackSyncSignal {
         guard hostUserId == room.hostUserId else {
             throw AppError.onlyHostCanSwitchMovie
@@ -34,7 +36,9 @@ public extension EmitHostPlaybackUseCase {
             movieId: movieId ?? room.movieId,
             hostUserId: hostUserId,
             senderId: hostUserId,
-            seq: seq
+            seq: seq,
+            subtitleObjectKey: subtitleObjectKey,
+            subtitleLabel: subtitleLabel
         )
         try await syncGateway.send(roomId: room.id, signal: signal)
         return signal

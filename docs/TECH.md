@@ -55,23 +55,26 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 
 ```json
 {
-  "action": "play|pause|seek|heartbeat|movie_change|host_transfer",
+  "action": "play|pause|seek|heartbeat|movie_change|host_transfer|subtitle_change",
   "positionMs": 0,
   "movieId": "films/Inception.2010.mp4",
   "hostUserId": "alice",
   "senderId": "alice",
   "clientTs": 1710000000000,
   "playbackRate": 1.0,
-  "seq": 12
+  "seq": 12,
+  "subtitleObjectKey": "films/Inception.2010.srt",
+  "subtitleLabel": "简体中文"
 }
 ```
 
 规则：
 
-- 仅当前 `hostUserId` 的 play/pause/seek/heartbeat/movie_change 生效
+- 仅当前 `hostUserId` 的 play/pause/seek/heartbeat/movie_change/subtitle_change 生效
 - `seq` 单调；旧序丢弃
 - 心跳偏差用**本机播放器实时进度**与房主 `positionMs` 比较，> 1200ms 才 Seek（不可用上次信令里冻结的 position，否则约每 5s 必 Seek → 卡顿与重复拉流）
 - 房主离开 45s 逻辑下按 joinOrder 转让；最后一人结束房间
+- **字幕共享**：房主下载外挂/在线字幕后上传到影片同目录同名文件（如 `films/Inception.2010.mkv` → `films/Inception.2010.srt`），发 `subtitle_change`；成员按 key 拉文件加载。成员自行选字幕仅本机。时间轴偏移始终本机。内嵌轨无法导出，不同步。
 
 ## 头像
 
@@ -81,7 +84,7 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 - 兼容：若 IM 里仍是旧的 HTTPS 签名链接，会尝试从 path 解析出 key 再重新签名
 - 观影页成员条：批量 `getUsersInfo` → 解析头像；头像外圈环形进度条反映播放进度
 - 播放器控件：顶/底栏 5s 无操作自动隐藏，点画面再显示；全屏进/出并自动横屏（退出回竖屏）；房主拖动进度条发 `.seek` 信令
-- 字幕：内嵌（VLC 轨）/ 七牛同目录外挂（srt/vtt/ass）/ OpenSubtitles 在线搜索；本机时间轴偏移（±30s，按 movieId 记忆）
+- 字幕：内嵌（VLC 轨）/ 七牛同目录外挂（srt/vtt/ass）/ OpenSubtitles 在线搜索；房主下载后可共享；本机时间轴偏移（±30s，按 movieId 记忆）
 
 ## Deep Link
 
@@ -101,7 +104,11 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 - 踢下线 / UserSig 过期：`Notification.Name.tandemIMKickedOffline` / `.tandemIMUserSigExpired` → 回登录页
 ## 元数据
 
-缓存 → 豆瓣 → IMDb suggestion（无 Key，补海报）→ OMDb（需 `omdbApiKey`）→ 文件名 `{Title}.{Year}` / `{Title} (Year)`。
+1. **七牛 sidecar 优先**：同目录 `{base}.nfo` + `{base}-poster.jpg` + `{base}-fanart.jpg` 存在则直接读取，**不再刮削**
+2. 否则：内存缓存 → 豆瓣 → IMDb suggestion（无 Key，补海报）→ OMDb（需 `omdbApiKey`）→ 文件名 `{Title}.{Year}` / `{Title} (Year)`
+3. 刮削成功后写回七牛（NFO + 海报；无独立背景图时用海报兼作 fanart）
+
+命名示例：`films/Inception.2010.mkv` → `films/Inception.2010.nfo` / `films/Inception.2010-poster.jpg` / `films/Inception.2010-fanart.jpg`
 
 ## 片库（七牛 S3 兼容）
 

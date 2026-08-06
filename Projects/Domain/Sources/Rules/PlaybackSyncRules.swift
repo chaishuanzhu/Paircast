@@ -85,6 +85,9 @@ public enum PlaybackSyncRules {
             state.positionMs = 0
             state.isPaused = true
             return .applied(state, seek: true)
+        case .subtitleChange:
+            // Subtitle share does not move the playhead or pause state.
+            return .applied(state, seek: false)
         case .hostTransfer:
             break
         }

@@ -25,7 +25,11 @@ public enum DataAssembly {
     }
 
     public static func makeMetadataGateway() -> MetadataGateway {
-        CascadingMetadataGateway()
+        CascadingMetadataGateway(storage: QiniuMovieMetadataStorage())
+    }
+
+    public static func makeMovieMetadataStorage() -> MovieMetadataStorageGateway {
+        QiniuMovieMetadataStorage()
     }
 
     public static func makeRoomGateway(configGateway: ConfigGateway = makeConfigGateway()) -> RoomGateway {
@@ -45,5 +49,9 @@ public enum DataAssembly {
 
     public static func makeSubtitleGateway() -> SubtitleGateway {
         OpenSubtitlesGateway()
+    }
+
+    public static func makeSharedSubtitleStorage() -> SharedSubtitleStorageGateway {
+        QiniuSharedSubtitleStorage()
     }
 }

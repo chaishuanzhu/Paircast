@@ -43,6 +43,8 @@ public final class WatchViewModel: ObservableObject {
     private var roomTask: Task<Void, Never>?
     private var heartbeatTask: Task<Void, Never>?
     private var memberProfileTask: Task<Void, Never>?
+    /// Last object key the host successfully shared this session; used to clear members only when needed.
+    private var lastHostSharedSubtitleKey: String?
 
     public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
@@ -318,6 +320,12 @@ public final class WatchViewModel: ObservableObject {
                     }
                 }
             }
+            if signal.action == .subtitleChange {
+                // Host already loaded locally before broadcasting; skip self-echo.
+                if signal.senderId != session.currentUser?.id {
+                    Task { await applyHostSharedSubtitle(signal) }
+                }
+            }
             if shouldSeek {
                 player.seek(toMs: state.positionMs)
             }
@@ -513,7 +521,15 @@ public final class WatchViewModel: ObservableObject {
         let embedded = player.embeddedSubtitleTracks()
         let off = listed.filter { $0.source == .off }
         let qiniu = listed.filter { $0.source == .qiniu }
-        subtitleTracks = off + embedded + qiniu
+        // Keep host-shared / online selections that aren't in the fresh Qiniu sidecar list.
+        let preserved = subtitleTracks.filter { track in
+            guard track.source != .off, track.source != .embedded else { return false }
+            if qiniu.contains(where: { $0.id == track.id }) { return false }
+            if track.id.hasPrefix("shared:") { return true }
+            if track.source == .online, track.id == subtitleState.trackId { return true }
+            return false
+        }
+        subtitleTracks = off + embedded + qiniu + preserved
 
         if autoSelectChinese,
            subtitleState.source == .off || subtitleState.trackId == nil || subtitleState.trackId == "off",
@@ -541,10 +557,16 @@ public final class WatchViewModel: ObservableObject {
                 offsetMs: retainedOffset
             )
             showSubtitlePanel = false
+            // Only clear members if this host previously shared a file-based subtitle.
+            if isHost, lastHostSharedSubtitleKey != nil {
+                lastHostSharedSubtitleKey = nil
+                await broadcastHostSubtitleShare(objectKey: nil, label: nil, movieId: movieId)
+            }
             return
         }
 
         do {
+            var sharedLocalURL: URL?
             switch track.source {
             case .embedded:
                 guard let index = track.embeddedIndex else {
@@ -557,11 +579,12 @@ public final class WatchViewModel: ObservableObject {
                 let config = try? await session.configGateway.load()
                 let localURL = try await session.subtitleGateway.download(
                     track,
-                    apiKey: config?.subtitleApiKey
+                    config: config
                 )
                 guard player.loadExternalSubtitle(fileURL: localURL) else {
                     throw AppError.subtitleUnavailable
                 }
+                sharedLocalURL = localURL
             case .off:
                 break
             }
@@ -581,6 +604,145 @@ public final class WatchViewModel: ObservableObject {
                 subtitleTracks.insert(track, at: min(1, subtitleTracks.count))
             }
             showSubtitlePanel = false
+
+            // Host: upload downloaded file to Qiniu and instruct members to load it.
+            // Member downloads remain local-only (no upload / no signal).
+            // Embedded tracks have no portable file — host-only, not shared.
+            if isHost, let localURL = sharedLocalURL {
+                await shareDownloadedSubtitleWithRoom(
+                    localURL: localURL,
+                    track: track,
+                    movieId: movieId
+                )
+            }
+        } catch let error as AppError {
+            session.showToast(error.userMessage)
+        } catch {
+            session.showToast(AppError.subtitleUnavailable.userMessage)
+        }
+    }
+
+    /// Host uploads a downloaded subtitle and broadcasts `subtitle_change`.
+    private func shareDownloadedSubtitleWithRoom(
+        localURL: URL,
+        track: SubtitleTrack,
+        movieId: String
+    ) async {
+        guard let room, session.currentUser != nil, isHost else { return }
+        guard let config = try? await session.configGateway.load(), config.qiniu.isComplete else {
+            session.showToast("字幕已加载（片库未配置，无法同步给成员）")
+            return
+        }
+        do {
+            let movieObjectKey = movie?.objectKey ?? movieId
+            let key = try await session.sharedSubtitleStorage.upload(
+                fileURL: localURL,
+                roomId: room.id,
+                movieId: movieObjectKey,
+                config: config
+            )
+            await broadcastHostSubtitleShare(
+                objectKey: key,
+                label: track.label,
+                movieId: movieObjectKey
+            )
+            lastHostSharedSubtitleKey = key
+            _ = try? await session.chatGateway.postSystemMessage(
+                roomId: room.id,
+                text: "房主共享了字幕：\(track.label)"
+            )
+            // Sidecar now lives beside the movie — refresh「片库外挂」and mark it current.
+            await refreshSubtitles()
+            if let sidecar = subtitleTracks.first(where: { $0.id == "qiniu:\(key)" }) {
+                subtitleState = SubtitleState(
+                    movieId: movieObjectKey,
+                    source: .qiniu,
+                    trackId: sidecar.id,
+                    url: sidecar.url,
+                    offsetMs: subtitleState.offsetMs
+                )
+            }
+        } catch {
+            session.showToast(AppError.subtitleShareFailed.userMessage)
+        }
+    }
+
+    private func broadcastHostSubtitleShare(
+        objectKey: String?,
+        label: String?,
+        movieId: String
+    ) async {
+        guard let room, let user = session.currentUser, isHost else { return }
+        seq += 1
+        let harness = SyncHarness(session: session)
+        _ = try? await harness.emitHostSignal(
+            room: room,
+            hostUserId: user.id,
+            action: .subtitleChange,
+            positionMs: player.currentPositionMs,
+            seq: seq,
+            movieId: movieId,
+            subtitleObjectKey: objectKey,
+            subtitleLabel: label
+        )
+        playback.lastSeq = seq
+    }
+
+    /// Member follows host-shared subtitle from Qiniu (local offset retained).
+    private func applyHostSharedSubtitle(_ signal: PlaybackSyncSignal) async {
+        if let signalMovie = signal.movieId, let current = movie?.id, !signalMovie.isEmpty, signalMovie != current {
+            return
+        }
+        let movieId = signal.movieId ?? movie?.id ?? subtitleState.movieId
+        let retainedOffset = subtitleState.offsetMs
+
+        guard let key = signal.subtitleObjectKey, !key.isEmpty else {
+            player.disableSubtitles()
+            subtitleState = SubtitleState(
+                movieId: movieId,
+                source: .off,
+                trackId: "off",
+                offsetMs: retainedOffset
+            )
+            return
+        }
+
+        guard let config = try? await session.configGateway.load(), config.qiniu.isComplete else {
+            session.showToast(AppError.subtitleUnavailable.userMessage)
+            return
+        }
+
+        do {
+            let localURL = try await session.sharedSubtitleStorage.download(
+                objectKey: key,
+                config: config
+            )
+            guard player.loadExternalSubtitle(fileURL: localURL) else {
+                throw AppError.subtitleUnavailable
+            }
+            let label = (signal.subtitleLabel?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
+                $0.isEmpty ? nil : $0
+            } ?? "房主共享"
+            let track = SubtitleTrack(
+                id: "shared:\(key)",
+                label: label,
+                language: nil,
+                source: .qiniu,
+                detail: "房主共享",
+                languageBadge: nil,
+                format: (key as NSString).pathExtension.uppercased()
+            )
+            subtitleState = SubtitleState(
+                movieId: movieId,
+                source: .qiniu,
+                trackId: track.id,
+                offsetMs: retainedOffset
+            )
+            player.applySubtitleOffsetMs(retainedOffset)
+            if !subtitleTracks.contains(where: { $0.id == track.id }) {
+                subtitleTracks.insert(track, at: min(1, subtitleTracks.count))
+            }
+            session.showToast("已加载房主共享的字幕")
         } catch let error as AppError {
             session.showToast(error.userMessage)
         } catch {

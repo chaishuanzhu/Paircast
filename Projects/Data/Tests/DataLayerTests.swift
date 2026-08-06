@@ -305,18 +305,36 @@ final class TencentIMGroupIDTests: XCTestCase {
 
     func test_playbackSignalJSONRoundTrip() throws {
         let signal = PlaybackSyncSignal(
-            action: .pause,
+            action: .subtitleChange,
             positionMs: 1_200,
             movieId: "film.mkv",
             hostUserId: "alice",
             senderId: "alice",
-            seq: 9
+            seq: 9,
+            subtitleObjectKey: "_tandem/subtitles/r1/abc.srt",
+            subtitleLabel: "简体"
         )
         let data = try JSONEncoder().encode(signal)
         let decoded = try JSONDecoder().decode(PlaybackSyncSignal.self, from: data)
         XCTAssertEqual(decoded, signal)
         XCTAssertEqual(TencentIMClient.systemPrefix, "[sys]")
         XCTAssertEqual(TencentIMClient.groupTypeMeeting, "Meeting")
+    }
+
+    func test_sharedSubtitleObjectKeyPrefix() {
+        XCTAssertEqual(
+            SharedSubtitleObjectKey.sidecarKey(movieObjectKey: "films/Inception.2010.mkv", fileExtension: "srt"),
+            "films/Inception.2010.srt"
+        )
+        XCTAssertEqual(
+            SharedSubtitleObjectKey.sidecarKey(movieObjectKey: "films/Inception.2010.mkv", fileExtension: "ASS"),
+            "films/Inception.2010.ass"
+        )
+        XCTAssertNil(SharedSubtitleObjectKey.sidecarKey(movieObjectKey: "_tandem/rooms/x.json", fileExtension: "srt"))
+        XCTAssertTrue(SharedSubtitleObjectKey.isValid("films/Inception.2010.srt"))
+        XCTAssertTrue(SharedSubtitleObjectKey.isValid("_tandem/subtitles/r1/a.srt")) // legacy keys still downloadable
+        XCTAssertFalse(SharedSubtitleObjectKey.isValid("_tandem/avatars/u/a.jpg"))
+        XCTAssertFalse(SharedSubtitleObjectKey.isValid("films/Inception.2010.mkv"))
     }
 }
 
@@ -467,6 +485,69 @@ final class SubtitleEncodingNormalizerTests: XCTestCase {
         let raw = Data(sample.utf8)
         let out = SubtitleEncodingNormalizer.utf8Data(from: raw)
         XCTAssertEqual(String(data: out, encoding: .utf8), sample)
+    }
+}
+
+final class MovieNFOCodecTests: XCTestCase {
+    func test_roundTripPreservesFields() throws {
+        let payload = MovieNFOCodec.Payload(
+            title: "盗梦空间",
+            year: "2010",
+            overview: "你残余的记忆，就是最好的证据。",
+            posterFileName: "Inception.2010-poster.jpg",
+            fanartFileName: "Inception.2010-fanart.jpg"
+        )
+        let data = MovieNFOCodec.encode(payload)
+        let decoded = try XCTUnwrap(MovieNFOCodec.decode(data))
+        XCTAssertEqual(decoded.title, payload.title)
+        XCTAssertEqual(decoded.year, payload.year)
+        XCTAssertEqual(decoded.overview, payload.overview)
+        XCTAssertEqual(decoded.posterFileName, payload.posterFileName)
+        XCTAssertEqual(decoded.fanartFileName, payload.fanartFileName)
+    }
+
+    func test_metadataObjectKeys() {
+        let movie = "films/Inception.2010.mkv"
+        XCTAssertEqual(MovieMetadataObjectKey.nfoKey(for: movie), "films/Inception.2010.nfo")
+        XCTAssertEqual(MovieMetadataObjectKey.posterKey(for: movie), "films/Inception.2010-poster.jpg")
+        XCTAssertEqual(MovieMetadataObjectKey.fanartKey(for: movie), "films/Inception.2010-fanart.jpg")
+        XCTAssertNil(MovieMetadataObjectKey.nfoKey(for: "_tandem/rooms/x.json"))
+    }
+}
+
+final class QiniuSidecarMatchingTests: XCTestCase {
+    func test_matchesSameBasenameAndLanguageSuffixes() {
+        let movie = "films/Inception.2010.mkv"
+        let keys = [
+            movie,
+            "films/Inception.2010.srt",
+            "films/Inception.2010.zh.srt",
+            "films/Inception.2010.chi.ass",
+            "films/Inception.2010.en.vtt",
+            "films/Inception.2010_extra.srt",
+            "films/Other.Movie.srt",
+            "films/Inception.2010.nfo",
+        ]
+        let matched = OpenSubtitlesGateway.matchingSidecarKeys(from: keys, movieObjectKey: movie)
+        XCTAssertEqual(
+            Set(matched),
+            Set([
+                "films/Inception.2010.srt",
+                "films/Inception.2010.zh.srt",
+                "films/Inception.2010.chi.ass",
+                "films/Inception.2010.en.vtt",
+                "films/Inception.2010_extra.srt",
+            ])
+        )
+    }
+
+    func test_parsesObjectKeyFromTrackId() {
+        let track = SubtitleTrack(
+            id: "qiniu:films/a.zh.srt",
+            label: "简中（外挂）",
+            source: .qiniu
+        )
+        XCTAssertEqual(OpenSubtitlesGateway.qiniuObjectKey(from: track), "films/a.zh.srt")
     }
 }
 

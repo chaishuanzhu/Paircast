@@ -15,7 +15,8 @@ struct TandemApp: App {
         roomGateway: DataAssembly.makeRoomGateway(),
         chatGateway: DataAssembly.makeChatGateway(),
         syncGateway: DataAssembly.makeSyncGateway(),
-        subtitleGateway: DataAssembly.makeSubtitleGateway()
+        subtitleGateway: DataAssembly.makeSubtitleGateway(),
+        sharedSubtitleStorage: DataAssembly.makeSharedSubtitleStorage()
     )
 
     var body: some Scene {

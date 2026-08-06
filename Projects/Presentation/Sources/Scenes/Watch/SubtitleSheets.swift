@@ -55,6 +55,7 @@ struct SubtitlePanelView: View {
                                 if index > 0 { Divider().padding(.leading, 16) }
                                 trackRow(
                                     title: track.label,
+                                    subtitle: track.detail,
                                     selected: viewModel.subtitleState.trackId == track.id
                                 ) {
                                     Task { await viewModel.selectTrack(track) }
@@ -138,6 +139,7 @@ struct SubtitlePanelView: View {
 
     private func trackRow(
         title: String,
+        subtitle: String? = nil,
         selected: Bool,
         showsChevron: Bool = false,
         action: @escaping () -> Void
@@ -145,6 +147,7 @@ struct SubtitlePanelView: View {
         Button(action: action) {
             rowContent(
                 title: title,
+                subtitle: subtitle,
                 trailing: selected ? .check : (showsChevron ? .chevron : .none)
             )
         }
@@ -158,12 +161,20 @@ struct SubtitlePanelView: View {
         case value(String)
     }
 
-    private func rowContent(title: String, trailing: Trailing) -> some View {
+    private func rowContent(title: String, subtitle: String? = nil, trailing: Trailing) -> some View {
         HStack {
-            Text(title)
-                .font(.system(size: 17))
-                .foregroundStyle(Color.primary)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 17))
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(TandemColors.secondaryLabel)
+                        .lineLimit(1)
+                }
+            }
             Spacer()
             switch trailing {
             case .none:

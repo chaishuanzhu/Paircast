@@ -23,34 +23,29 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
 
     public func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] {
         let base = (movie.objectKey as NSString).deletingPathExtension
-        let parent = (movie.objectKey as NSString).deletingLastPathComponent
-        let prefix: String
-        if parent.isEmpty || parent == "." {
-            prefix = ""
-        } else {
-            prefix = parent.hasSuffix("/") ? parent : parent + "/"
-        }
+        guard !base.isEmpty else { return [] }
 
-        let keys: [String]
+        // Prefer listing by movie basename prefix so we don't miss sidecars in large folders
+        // (directory-wide ListObjects is capped and may truncate before subtitle keys).
+        var keys: [String] = []
         do {
-            keys = try await listObjectKeys(config: config, prefix: prefix.isEmpty ? nil : prefix)
+            keys = try await listAllObjectKeys(config: config, prefix: base)
         } catch {
-            // Fallback: probe common sidecar names next to the video.
-            keys = Self.candidateSidecarKeys(base: base)
+            TandemLog.catalog.error(
+                "listQiniuSidecars list failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
+            )
+            keys = []
         }
 
-        let movieLeaf = (movie.objectKey as NSString).lastPathComponent
-        let baseLeaf = (base as NSString).lastPathComponent
-        let sidecarKeys = keys.filter { key in
-            let leaf = (key as NSString).lastPathComponent
-            guard leaf != movieLeaf else { return false }
-            guard Self.isSubtitleFilename(leaf) else { return false }
-            let leafBase = (leaf as NSString).deletingPathExtension.lowercased()
-            let movieBase = baseLeaf.lowercased()
-            return leafBase == movieBase
-                || leafBase.hasPrefix(movieBase + ".")
-                || leafBase.hasPrefix(movieBase + "_")
-                || leafBase.hasPrefix(movieBase + "-")
+        var sidecarKeys = Self.matchingSidecarKeys(from: keys, movieObjectKey: movie.objectKey)
+
+        // Fallback: HEAD common sidecar names next to the video.
+        if sidecarKeys.isEmpty {
+            for key in Self.candidateSidecarKeys(base: base) {
+                if let _ = try? await probeAndPresign(objectKey: key, config: config) {
+                    sidecarKeys.append(key)
+                }
+            }
         }
 
         var tracks: [SubtitleTrack] = []
@@ -72,29 +67,9 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
                 )
             )
         }
-
-        // If directory listing failed or returned nothing, probe HEAD for common names.
-        if tracks.isEmpty {
-            for key in Self.candidateSidecarKeys(base: base) {
-                if let url = try? await probeAndPresign(objectKey: key, config: config) {
-                    let leaf = (key as NSString).lastPathComponent
-                    let ext = (leaf as NSString).pathExtension.uppercased()
-                    let lang = Self.guessLanguage(from: leaf)
-                    tracks.append(
-                        SubtitleTrack(
-                            id: "qiniu:\(key)",
-                            label: Self.displayLabel(for: leaf, language: lang),
-                            language: lang.code,
-                            source: .qiniu,
-                            url: url,
-                            detail: "片库外挂 · \(ext)",
-                            languageBadge: lang.badge,
-                            format: ext
-                        )
-                    )
-                }
-            }
-        }
+        TandemLog.catalog.info(
+            "listQiniuSidecars movie=\(movie.objectKey, privacy: .public) tracks=\(tracks.count, privacy: .public)"
+        )
         return tracks
     }
 
@@ -164,12 +139,19 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         }
     }
 
-    public func download(_ track: SubtitleTrack, apiKey: String?) async throws -> URL {
+    public func download(_ track: SubtitleTrack, config: AppCloudConfig?) async throws -> URL {
         switch track.source {
         case .qiniu:
+            if let key = Self.qiniuObjectKey(from: track),
+               let config,
+               config.qiniu.isComplete,
+               let fresh = try? makePresignedGetURL(objectKey: key, config: config) {
+                return try await downloadRemoteFile(fresh, suggestedName: track.label)
+            }
             guard let remote = track.url else { throw AppError.subtitleUnavailable }
             return try await downloadRemoteFile(remote, suggestedName: track.label)
         case .online:
+            let apiKey = config?.subtitleApiKey
             guard let apiKey, !apiKey.isEmpty else {
                 throw AppError.validation("请先在服务配置中填写 OpenSubtitles API Key")
             }
@@ -182,6 +164,38 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
     }
 
     // MARK: - Qiniu helpers
+
+    /// Object keys that are sidecar subtitles for `movieObjectKey`.
+    public static func matchingSidecarKeys(from keys: [String], movieObjectKey: String) -> [String] {
+        let movieLeaf = (movieObjectKey as NSString).lastPathComponent
+        let baseLeaf = ((movieObjectKey as NSString).deletingPathExtension as NSString).lastPathComponent
+        let movieBase = baseLeaf.lowercased()
+        guard !movieBase.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        var result: [String] = []
+        for key in keys {
+            let leaf = (key as NSString).lastPathComponent
+            guard leaf != movieLeaf else { continue }
+            guard isSubtitleFilename(leaf) else { continue }
+            let leafBase = (leaf as NSString).deletingPathExtension.lowercased()
+            let matched = leafBase == movieBase
+                || leafBase.hasPrefix(movieBase + ".")
+                || leafBase.hasPrefix(movieBase + "_")
+                || leafBase.hasPrefix(movieBase + "-")
+            guard matched else { continue }
+            if seen.insert(key).inserted {
+                result.append(key)
+            }
+        }
+        return result
+    }
+
+    public static func qiniuObjectKey(from track: SubtitleTrack) -> String? {
+        guard track.source == .qiniu, track.id.hasPrefix("qiniu:") else { return nil }
+        let key = String(track.id.dropFirst("qiniu:".count))
+        return key.isEmpty ? nil : key
+    }
 
     private static func candidateSidecarKeys(base: String) -> [String] {
         let suffixes = [
@@ -224,7 +238,33 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         return (nil, "")
     }
 
-    private func listObjectKeys(config: AppCloudConfig, prefix: String?) async throws -> [String] {
+    private func listAllObjectKeys(config: AppCloudConfig, prefix: String) async throws -> [String] {
+        var allKeys: [String] = []
+        var continuationToken: String?
+        var pageCount = 0
+        repeat {
+            pageCount += 1
+            if pageCount > 20 { break }
+            let page = try await listObjectKeysPage(
+                config: config,
+                prefix: prefix,
+                continuationToken: continuationToken
+            )
+            allKeys.append(contentsOf: page.keys)
+            if page.isTruncated, let next = page.nextContinuationToken, !next.isEmpty {
+                continuationToken = next
+            } else {
+                continuationToken = nil
+            }
+        } while continuationToken != nil
+        return allKeys
+    }
+
+    private func listObjectKeysPage(
+        config: AppCloudConfig,
+        prefix: String,
+        continuationToken: String?
+    ) async throws -> S3ListObjectsV2Page {
         let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
         let region = AWSV4Signer.region(fromEndpoint: host)
         let credentials = AWSV4Signer.Credentials(
@@ -238,12 +278,11 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         components.path = "/\(config.qiniu.bucket)"
         var query: [URLQueryItem] = [
             URLQueryItem(name: "list-type", value: "2"),
-            URLQueryItem(name: "max-keys", value: "200"),
+            URLQueryItem(name: "max-keys", value: "1000"),
+            URLQueryItem(name: "prefix", value: prefix),
         ]
-        if let prefix, !prefix.isEmpty {
-            query.append(URLQueryItem(name: "prefix", value: prefix))
-        } else if let configured = config.qiniu.prefix, !configured.isEmpty {
-            query.append(URLQueryItem(name: "prefix", value: configured))
+        if let continuationToken, !continuationToken.isEmpty {
+            query.append(URLQueryItem(name: "continuation-token", value: continuationToken))
         }
         components.queryItems = query
         guard let url = components.url else { throw AppError.catalogUnauthorized }
@@ -263,8 +302,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw AppError.catalogUnauthorized
         }
-        let page = try S3ListObjectsV2Parser.parsePage(from: data)
-        return page.keys
+        return try S3ListObjectsV2Parser.parsePage(from: data)
     }
 
     private func probeAndPresign(objectKey: String, config: AppCloudConfig) async throws -> URL? {

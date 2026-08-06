@@ -19,6 +19,7 @@ public enum AppError: Error, Equatable, Sendable {
     case roomEnded
     case roomNotFound
     case subtitleUnavailable
+    case subtitleShareFailed
     case avatarUploadFailed
     case validation(String)
     case unknown(String)
@@ -61,6 +62,8 @@ public enum AppError: Error, Equatable, Sendable {
             return "房间不存在或邀请已失效"
         case .subtitleUnavailable:
             return "暂无可用字幕"
+        case .subtitleShareFailed:
+            return "字幕同步给成员失败"
         case .avatarUploadFailed:
             return "头像上传失败，请重试"
         case .validation(let message):

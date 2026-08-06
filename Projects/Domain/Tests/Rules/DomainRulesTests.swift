@@ -314,6 +314,28 @@ final class PlaybackSyncRulesTests: XCTestCase {
         XCTAssertEqual(state.positionMs, 0)
         XCTAssertTrue(state.isPaused)
     }
+
+    func test_subtitleChangeAdvancesSeqWithoutSeek() {
+        let room = WatchRoom.fixture()
+        let current = PlaybackState(positionMs: 4_200, isPaused: false, movieId: "m1", lastSeq: 3)
+        let signal = PlaybackSyncSignal(
+            action: .subtitleChange,
+            positionMs: 4_200,
+            movieId: "m1",
+            senderId: room.hostUserId,
+            seq: 4,
+            subtitleObjectKey: "_tandem/subtitles/r1/abc.srt",
+            subtitleLabel: "简体中文"
+        )
+        let result = PlaybackSyncRules.shouldAccept(signal: signal, room: room, current: current)
+        guard case .applied(let state, let seek) = result else {
+            return XCTFail("expected applied")
+        }
+        XCTAssertFalse(seek)
+        XCTAssertEqual(state.positionMs, 4_200)
+        XCTAssertFalse(state.isPaused)
+        XCTAssertEqual(state.lastSeq, 4)
+    }
 }
 
 final class HostTransferRulesTests: XCTestCase {
