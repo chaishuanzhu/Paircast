@@ -2,9 +2,11 @@ import SwiftUI
 
 public struct RootView: View {
     @ObservedObject var session: AppSession
+    @ObservedObject var theme: ThemeStore
 
-    public init(session: AppSession) {
+    public init(session: AppSession, theme: ThemeStore) {
         self.session = session
+        self.theme = theme
     }
 
     public var body: some View {
@@ -20,12 +22,17 @@ public struct RootView: View {
                 ServiceConfigView(session: session, fromLogin: fromLogin)
                     .transition(.opacity)
             case .library:
-                LibraryView(session: session)
+                LibraryView(session: session, theme: theme)
                     .transition(.opacity)
             case .watch(let roomId, let movieId, let hostUserId):
-                WatchView(session: session, roomId: roomId, movieId: movieId, hostUserId: hostUserId)
+                WatchView(session: session, theme: theme, roomId: roomId, movieId: movieId, hostUserId: hostUserId)
                     .transition(.opacity)
             }
+        }
+        .preferredColorScheme(theme.appearance.preferredColorScheme)
+        .onAppear { ThemeWindowApplier.apply(theme.appearance) }
+        .onChange(of: theme.appearance) { _, appearance in
+            ThemeWindowApplier.apply(appearance)
         }
         .animation(.easeInOut(duration: 0.35), value: session.route)
         .overlay(alignment: .bottom) {

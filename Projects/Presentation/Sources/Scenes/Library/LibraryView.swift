@@ -96,10 +96,12 @@ private struct LibraryHarness: ListMoviesUseCase {
 
 public struct LibraryView: View {
     @ObservedObject var session: AppSession
+    @ObservedObject var theme: ThemeStore
     @StateObject private var viewModel: LibraryViewModel
 
-    public init(session: AppSession) {
+    public init(session: AppSession, theme: ThemeStore) {
         self.session = session
+        self.theme = theme
         _viewModel = StateObject(wrappedValue: LibraryViewModel(session: session))
     }
 
@@ -166,7 +168,8 @@ public struct LibraryView: View {
                 }
             }
             .sheet(isPresented: $viewModel.showMe) {
-                MeSheetView(session: session)
+                MeSheetView(session: session, theme: theme)
+                    .preferredColorScheme(theme.appearance.preferredColorScheme)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }

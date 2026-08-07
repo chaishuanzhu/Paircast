@@ -363,6 +363,94 @@
       flex-shrink: 0;
     }
 
+    /* Theme settings */
+    .theme-body {
+      flex: 1;
+      padding: 12px 16px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow: auto;
+      background: var(--grouped);
+    }
+    .phone.theme-dark {
+      background: #000;
+      color: #fff;
+      --grouped: #000;
+      --surface: #1C1C1E;
+      --label: #fff;
+      --secondary: rgba(235, 235, 245, 0.6);
+      --tertiary: rgba(235, 235, 245, 0.3);
+      --separator: rgba(84, 84, 88, 0.65);
+      --blue: #0A84FF;
+    }
+    .phone.theme-dark .nav {
+      background: #000;
+      color: #fff;
+      border-bottom-color: transparent;
+    }
+    .phone.theme-dark .nav .side { color: var(--blue); }
+    .theme-preview {
+      display: flex;
+      gap: 10px;
+      padding: 14px;
+      background: var(--surface);
+      border-radius: 12px;
+    }
+    .theme-swatch {
+      flex: 1;
+      height: 72px;
+      border-radius: 10px;
+      border: 1px solid var(--separator);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .theme-swatch .bar {
+      height: 18px;
+      background: rgba(0,0,0,0.06);
+    }
+    .theme-swatch.light { background: #F2F2F7; }
+    .theme-swatch.light .card {
+      margin: 8px;
+      flex: 1;
+      background: #fff;
+      border-radius: 6px;
+    }
+    .theme-swatch.dark { background: #000; }
+    .theme-swatch.dark .bar { background: rgba(255,255,255,0.08); }
+    .theme-swatch.dark .card {
+      margin: 8px;
+      flex: 1;
+      background: #1C1C1E;
+      border-radius: 6px;
+    }
+    .theme-options .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--surface);
+      font-size: 17px;
+    }
+    .theme-options .row + .row { border-top: 1px solid var(--separator); }
+    .theme-options .group {
+      background: var(--surface);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .theme-options .check {
+      color: var(--blue);
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .theme-foot {
+      font-size: 13px;
+      color: var(--secondary);
+      padding: 0 4px;
+      line-height: 1.4;
+    }
+
     /* 01 Login */
     .login-body {
       flex: 1;
@@ -1141,7 +1229,7 @@
 <body>
   <header class="page-head">
     <h1>Tandem iOS Design Preview</h1>
-    <p>本地全量预览 · Apple HIG · PRD v1.5 · 配置加密深链分享 / 粘贴导入</p>
+    <p>本地全量预览 · Apple HIG · designtoken.md 主题（跟随系统 / 浅色 / 深色）· 配置加密深链分享 / 粘贴导入</p>
   </header>
 
   <div class="gallery">
@@ -1208,7 +1296,7 @@
 
     <!-- 03 Me Sheet -->
     <div class="shot">
-      <div class="caption">03 Me Sheet</div>
+      <div class="caption">03 Me Sheet · 含主题入口</div>
       <div class="phone">
         <div class="fade-lib" aria-hidden="true">
           <div class="block"></div><div class="block"></div>
@@ -1230,6 +1318,7 @@
                 <div class="row"><span>昵称</span><span class="value">shuanzhu <span class="chev">›</span></span></div>
                 <div class="row"><span>用户名</span><span class="value">shuanzhu</span></div>
                 <div class="row"><span>服务配置</span><span class="value">已配置 <span class="chev">›</span></span></div>
+                <div class="row"><span>主题</span><span class="value">跟随系统 <span class="chev">›</span></span></div>
               </div>
               <div class="logout">退出登录</div>
             </div>
@@ -1880,9 +1969,65 @@
       </div>
     </div>
 
-    <!-- 21 Logout confirm -->
+    <!-- 21 Theme Settings · light -->
     <div class="shot">
-      <div class="caption">21 Logout Confirm</div>
+      <div class="caption">21 Theme Settings · 浅色稿 · 跟随系统</div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
+        <div class="nav">
+          <div class="side">‹ 我的</div>
+          <div class="title">主题设置</div>
+          <div class="side right"></div>
+        </div>
+        <div class="theme-body">
+          <div class="theme-preview" aria-hidden="true">
+            <div class="theme-swatch light"><div class="bar"></div><div class="card"></div></div>
+            <div class="theme-swatch dark"><div class="bar"></div><div class="card"></div></div>
+          </div>
+          <div class="theme-options">
+            <div class="section-label">外观</div>
+            <div class="group">
+              <div class="row"><span>跟随系统</span><span class="check">✓</span></div>
+              <div class="row"><span>浅色</span><span></span></div>
+              <div class="row"><span>深色</span><span></span></div>
+            </div>
+          </div>
+          <p class="theme-foot">选择「跟随系统」时，Tandem 会与 iOS 外观设置保持一致。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 22 Theme Settings · dark phone -->
+    <div class="shot">
+      <div class="caption">22 Theme Settings · 深色稿 · 深色已选</div>
+      <div class="phone theme-dark">
+        <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
+        <div class="nav">
+          <div class="side">‹ 我的</div>
+          <div class="title">主题设置</div>
+          <div class="side right"></div>
+        </div>
+        <div class="theme-body">
+          <div class="theme-preview" aria-hidden="true">
+            <div class="theme-swatch light"><div class="bar"></div><div class="card"></div></div>
+            <div class="theme-swatch dark"><div class="bar"></div><div class="card"></div></div>
+          </div>
+          <div class="theme-options">
+            <div class="section-label">外观</div>
+            <div class="group">
+              <div class="row"><span>跟随系统</span><span></span></div>
+              <div class="row"><span>浅色</span><span></span></div>
+              <div class="row"><span>深色</span><span class="check">✓</span></div>
+            </div>
+          </div>
+          <p class="theme-foot">选择「跟随系统」时，Tandem 会与 iOS 外观设置保持一致。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 23 Logout confirm -->
+    <div class="shot">
+      <div class="caption">23 Logout Confirm</div>
       <div class="phone">
         <div class="fade-lib" aria-hidden="true">
           <div class="block"></div><div class="block"></div>

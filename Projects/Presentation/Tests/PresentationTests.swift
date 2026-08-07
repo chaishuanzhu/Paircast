@@ -3,6 +3,32 @@ import XCTest
 import Domain
 
 @MainActor
+final class ThemeStoreTests: XCTestCase {
+    func test_defaultsToSystem() {
+        let suite = "tandem.theme.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = ThemeStore(defaults: defaults)
+        XCTAssertEqual(store.appearance, .system)
+        XCTAssertNil(store.appearance.preferredColorScheme)
+    }
+
+    func test_persistsAppearance() {
+        let suite = "tandem.theme.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let store = ThemeStore(defaults: defaults)
+        store.appearance = .dark
+        XCTAssertEqual(store.appearance.preferredColorScheme, .dark)
+
+        let reloaded = ThemeStore(defaults: defaults)
+        XCTAssertEqual(reloaded.appearance, .dark)
+        XCTAssertEqual(reloaded.appearance.title, "深色")
+    }
+}
+
+@MainActor
 final class InviteUseCasePresentationTests: XCTestCase {
     func test_inviteURLFormat() {
         let url = InviteHarness().inviteURL(roomId: "abc", movieId: "film.mkv", hostUserId: "alice")

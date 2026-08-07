@@ -18,10 +18,11 @@ struct TandemApp: App {
         subtitleGateway: DataAssembly.makeSubtitleGateway(),
         sharedSubtitleStorage: DataAssembly.makeSharedSubtitleStorage()
     )
+    @StateObject private var theme = ThemeStore()
 
     var body: some Scene {
         WindowGroup {
-            RootView(session: session)
+            RootView(session: session, theme: theme)
                 .task { await session.bootstrap() }
                 .onOpenURL { session.handleDeepLink($0) }
         }

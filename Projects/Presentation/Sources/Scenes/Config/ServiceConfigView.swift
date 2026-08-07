@@ -356,7 +356,7 @@ private struct ConfigExportShareView: View {
 
                         QRCodeView(payload: shareURL, dimension: 168)
                             .padding(10)
-                            .background(Color.white)
+                            .background(TandemColors.secondaryGrouped)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
                     }
@@ -364,7 +364,7 @@ private struct ConfigExportShareView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 20)
                     .padding(.bottom, 16)
-                    .background(Color.white)
+                    .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -401,7 +401,7 @@ private struct ConfigExportShareView: View {
                         }
                     }
                     .padding(14)
-                    .background(Color.white)
+                    .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                     TandemWarningBanner("链接含密钥，请勿发到公开群或社交平台")
@@ -511,7 +511,7 @@ private struct ConfigPasteImportView: View {
                         .focused($focused)
                         .padding(14)
                         .frame(minHeight: 140, alignment: .topLeading)
-                        .background(Color.white)
+                        .background(TandemColors.secondaryGrouped)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -638,7 +638,7 @@ private struct ConfigImportConfirmView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color.white)
+            .background(TandemColors.secondaryGrouped)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }

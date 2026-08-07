@@ -131,7 +131,7 @@ struct SubtitlePanelView: View {
 
     private func groupCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(spacing: 0, content: content)
-            .background(Color.white)
+            .background(TandemColors.secondaryGrouped)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
@@ -262,7 +262,7 @@ struct SubtitleSyncView: View {
                 .foregroundStyle(primary ? Color.white : TandemColors.systemBlue)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(primary ? TandemColors.systemBlue : Color.white)
+                .background(primary ? TandemColors.systemBlue : TandemColors.secondaryGrouped)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -285,7 +285,7 @@ struct OnlineSubtitleSearchView: View {
                         .autocorrectionDisabled()
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
-                        .background(Color.white)
+                        .background(TandemColors.secondaryGrouped)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                     Button("搜索") {
@@ -363,7 +363,7 @@ struct OnlineSubtitleSearchView: View {
                                         }
                                     }
                                     .padding(12)
-                                    .background(Color.white)
+                                    .background(TandemColors.secondaryGrouped)
                                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 }
                                 .buttonStyle(.plain)

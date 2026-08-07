@@ -95,11 +95,13 @@ private struct MeHarness: UpdateProfileUseCase, LogoutUseCase {
 
 public struct MeSheetView: View {
     @ObservedObject var session: AppSession
+    @ObservedObject var theme: ThemeStore
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: MeViewModel
 
-    public init(session: AppSession) {
+    public init(session: AppSession, theme: ThemeStore) {
         self.session = session
+        self.theme = theme
         _viewModel = StateObject(wrappedValue: MeViewModel(session: session))
     }
 
@@ -157,8 +159,23 @@ public struct MeSheetView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        Divider().padding(.leading, 16)
+                        NavigationLink {
+                            ThemeSettingsView(theme: theme)
+                        } label: {
+                            meRow(title: "主题") {
+                                HStack(spacing: 4) {
+                                    Text(theme.appearance.title)
+                                        .foregroundStyle(TandemColors.secondaryLabel)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(TandemColors.tertiaryLabel)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .background(Color.white)
+                    .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     Button {
@@ -169,7 +186,7 @@ public struct MeSheetView: View {
                             .foregroundStyle(TandemColors.danger)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.white)
+                            .background(TandemColors.secondaryGrouped)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                     .buttonStyle(.plain)
@@ -213,6 +230,11 @@ public struct MeSheetView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
+        }
+        .preferredColorScheme(theme.appearance.preferredColorScheme)
+        .onAppear { ThemeWindowApplier.apply(theme.appearance) }
+        .onChange(of: theme.appearance) { _, appearance in
+            ThemeWindowApplier.apply(appearance)
         }
     }
 

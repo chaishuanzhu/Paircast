@@ -13,6 +13,8 @@ let project = Project(
             bundleId: "com.chaisz.tandem",
             deploymentTargets: deploymentTargets,
             infoPlist: .extendingDefault(with: [
+                "CFBundleShortVersionString": "$(MARKETING_VERSION)",
+                "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
                 "UILaunchScreen": [:],
                 "CFBundleDisplayName": "Tandem",
                 "CFBundleURLTypes": [
@@ -30,6 +32,7 @@ let project = Project(
                 "NSPhotoLibraryUsageDescription": "选择头像与保存配置二维码",
                 "NSPhotoLibraryAddUsageDescription": "保存配置分享二维码到相册",
                 "NSLocalNetworkUsageDescription": "连接七牛云与腾讯云 IM 服务",
+                "ITSAppUsesNonExemptEncryption": false,
             ]),
             sources: ["Sources/**"],
             resources: ["Resources/**"],
@@ -45,6 +48,9 @@ let project = Project(
                 "DEVELOPMENT_TEAM": "8PHCHYD8X3",
                 "CODE_SIGN_IDENTITY": "Apple Distribution",
                 "PROVISIONING_PROFILE_SPECIFIER": "Tandem AppStore",
+                "EXCLUDED_ARCHS[sdk=iphoneos*]": "armv7 armv7s",
+                "MARKETING_VERSION": "1.0",
+                "CURRENT_PROJECT_VERSION": "2",
             ])
         ),
         .target(

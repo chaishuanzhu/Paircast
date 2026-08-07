@@ -71,9 +71,12 @@ public struct LoginView: View {
             VStack(spacing: 28) {
                 Spacer(minLength: 24)
                 VStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(TandemColors.systemBlue)
+                    Image("BrandMark", bundle: .main)
+                        .resizable()
+                        .aspectRatio(1, contentMode: .fit)
                         .frame(width: 72, height: 72)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .shadow(color: TandemColors.systemBlue.opacity(0.28), radius: 12, y: 6)
                         .accessibilityHidden(true)
                     Text("Tandem")
                         .font(.system(size: 34, weight: .bold))

@@ -2,14 +2,22 @@ import SwiftUI
 import UIKit
 
 public enum TandemColors {
-    public static let systemBlue = Color(red: 0, green: 122 / 255, blue: 1)
-    public static let groupedBackground = Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
-    public static let secondaryGrouped = Color.white
+    /// Primary-500 / dark fill.brand (designtoken.md).
+    public static let systemBlue = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 10 / 255, green: 132 / 255, blue: 1, alpha: 1)
+            : UIColor(red: 0, green: 122 / 255, blue: 1, alpha: 1)
+    })
+
+    public static let groupedBackground = Color(uiColor: .systemGroupedBackground)
+    public static let secondaryGrouped = Color(uiColor: .secondarySystemGroupedBackground)
     public static let watchBackground = Color.black
     public static let watchPanel = Color(red: 44 / 255, green: 44 / 255, blue: 46 / 255)
-    public static let danger = Color(red: 1, green: 59 / 255, blue: 48 / 255)
-    public static let secondaryLabel = Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.6)
-    public static let tertiaryLabel = Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.3)
+    public static let danger = Color(uiColor: .systemRed)
+    public static let secondaryLabel = Color(uiColor: .secondaryLabel)
+    public static let tertiaryLabel = Color(uiColor: .tertiaryLabel)
+    public static let separator = Color(uiColor: .separator)
+    public static let opaqueSeparator = Color(uiColor: .opaqueSeparator)
     public static let avatarAccent = Color(red: 91 / 255, green: 141 / 255, blue: 239 / 255)
 }
 
@@ -36,7 +44,7 @@ public struct SecondaryButtonStyle: ButtonStyle {
             .foregroundStyle(TandemColors.systemBlue)
             .frame(maxWidth: .infinity)
             .frame(height: 46)
-            .background(Color.white)
+            .background(TandemColors.secondaryGrouped)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.easeOut(duration: 0.1), value: configuration.isPressed)

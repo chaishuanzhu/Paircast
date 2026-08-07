@@ -855,6 +855,7 @@ private struct InviteHarness: InviteToRoomUseCase {}
 
 public struct WatchView: View {
     @ObservedObject var session: AppSession
+    @ObservedObject var theme: ThemeStore
     @StateObject private var viewModel: WatchViewModel
     @State private var showMoreMenu = false
     @State private var showPlayerChrome = true
@@ -864,8 +865,9 @@ public struct WatchView: View {
 
     private static let chromeAutoHideSeconds: UInt64 = 5_000_000_000
 
-    public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
+    public init(session: AppSession, theme: ThemeStore, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
+        self.theme = theme
         _viewModel = StateObject(wrappedValue: WatchViewModel(
             session: session,
             roomId: roomId,
@@ -886,7 +888,7 @@ public struct WatchView: View {
                     chatList
                     chatInput
                 }
-                .background(Color(red: 247 / 255, green: 247 / 255, blue: 248 / 255).ignoresSafeArea())
+                .background(TandemColors.groupedBackground.ignoresSafeArea())
             }
         }
         .statusBarHidden(isFullscreen)
@@ -907,6 +909,7 @@ public struct WatchView: View {
         }
         .sheet(isPresented: $viewModel.showSwitchMovie) {
             SwitchMovieSheet(viewModel: viewModel)
+                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -929,16 +932,19 @@ public struct WatchView: View {
         }
         .sheet(isPresented: $viewModel.showSubtitlePanel) {
             SubtitlePanelView(viewModel: viewModel)
+                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showSubtitleSync) {
             SubtitleSyncView(viewModel: viewModel)
+                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.height(340)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showInvite) {
             InviteSheetView(url: viewModel.inviteURL())
+                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
@@ -1264,7 +1270,7 @@ public struct WatchView: View {
             HStack {
                 Text("当前 \(viewModel.room?.memberIds.count ?? 0) 人")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.72))
+                    .foregroundStyle(TandemColors.secondaryLabel)
                 Spacer()
                 Text(viewModel.syncLabel)
                     .font(.system(size: 12))
@@ -1292,12 +1298,12 @@ public struct WatchView: View {
                                 .fill(TandemColors.groupedBackground)
                             Circle()
                                 .strokeBorder(
-                                    Color(red: 199 / 255, green: 199 / 255, blue: 204 / 255),
+                                    TandemColors.opaqueSeparator,
                                     style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
                                 )
                             Image(systemName: "plus")
                                 .font(.system(size: 18, weight: .light))
-                                .foregroundStyle(Color(red: 142 / 255, green: 142 / 255, blue: 147 / 255))
+                                .foregroundStyle(TandemColors.secondaryLabel)
                         }
                         .frame(width: 48, height: 48)
                     }
@@ -1309,10 +1315,10 @@ public struct WatchView: View {
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 12)
-        .background(Color.white)
+        .background(TandemColors.secondaryGrouped)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.08))
+                .fill(TandemColors.separator)
                 .frame(height: 1)
         }
     }
@@ -1338,7 +1344,7 @@ public struct WatchView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(red: 247 / 255, green: 247 / 255, blue: 248 / 255))
+        .background(TandemColors.groupedBackground)
     }
 
     @ViewBuilder
@@ -1346,7 +1352,7 @@ public struct WatchView: View {
         if message.kind == .system {
             Text(message.text)
                 .font(.system(size: 12))
-                .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.4))
+                .foregroundStyle(TandemColors.tertiaryLabel)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
         } else {
@@ -1359,14 +1365,14 @@ public struct WatchView: View {
                     if !isMe {
                         Text(message.senderNickname)
                             .font(.system(size: 12))
-                            .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.45))
+                            .foregroundStyle(TandemColors.secondaryLabel)
                     }
                     Text(message.text)
                         .font(.system(size: 15))
                         .foregroundStyle(isMe ? Color.white : Color.primary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(isMe ? TandemColors.systemBlue : Color.white)
+                        .background(isMe ? TandemColors.systemBlue : TandemColors.secondaryGrouped)
                         .clipShape(UnevenRoundedRectangle(
                             topLeadingRadius: 16,
                             bottomLeadingRadius: isMe ? 16 : 6,
@@ -1374,7 +1380,7 @@ public struct WatchView: View {
                             topTrailingRadius: 16,
                             style: .continuous
                         ))
-                        .shadow(color: isMe ? .clear : .black.opacity(0.04), radius: 1, y: 1)
+                        .shadow(color: isMe ? .clear : Color.primary.opacity(0.06), radius: 1, y: 1)
                 }
                 if isMe {
                     TandemAvatarView(userId: message.senderNickname.isEmpty ? (message.senderId ?? "?") : message.senderNickname, size: 32)
@@ -1410,10 +1416,10 @@ public struct WatchView: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 12)
-        .background(Color.white)
+        .background(TandemColors.secondaryGrouped)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.08))
+                .fill(TandemColors.separator)
                 .frame(height: 1)
         }
     }
@@ -1521,7 +1527,7 @@ private struct SwitchMovieRow: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color.white)
+            .background(TandemColors.secondaryGrouped)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -1569,7 +1575,7 @@ private struct InviteSheetView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    .background(Color.white)
+                    .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     Text("链接预览")
@@ -1585,7 +1591,7 @@ private struct InviteSheetView: View {
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
-                        .background(Color.white)
+                        .background(TandemColors.secondaryGrouped)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     Text("好友打开链接并登录后，将加入当前观影房间并对齐进度。")
