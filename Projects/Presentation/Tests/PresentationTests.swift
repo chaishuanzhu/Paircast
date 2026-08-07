@@ -3,6 +3,27 @@ import XCTest
 import Domain
 
 @MainActor
+final class WaterfallLayoutTests: XCTestCase {
+    func test_columnCount_phonePortrait() {
+        XCTAssertEqual(WaterfallLayout.columnCount(for: 361), 2) // 393 - 32 padding
+    }
+
+    func test_columnCount_scalesForIPadWidths() {
+        XCTAssertEqual(WaterfallLayout.columnCount(for: 500), 2)
+        XCTAssertEqual(WaterfallLayout.columnCount(for: 700), 3)
+        XCTAssertEqual(WaterfallLayout.columnCount(for: 900), 5)
+        XCTAssertEqual(WaterfallLayout.columnCount(for: 1200), 5)
+    }
+
+    func test_columnCount_respectsMaxColumns() {
+        XCTAssertEqual(
+            WaterfallLayout.columnCount(for: 2000, minColumnWidth: 168, maxColumns: 4),
+            4
+        )
+    }
+}
+
+@MainActor
 final class ThemeStoreTests: XCTestCase {
     func test_defaultsToSystem() {
         let suite = "tandem.theme.test.\(UUID().uuidString)"

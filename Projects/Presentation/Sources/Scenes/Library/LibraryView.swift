@@ -98,6 +98,7 @@ public struct LibraryView: View {
     @ObservedObject var session: AppSession
     @ObservedObject var theme: ThemeStore
     @StateObject private var viewModel: LibraryViewModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     public init(session: AppSession, theme: ThemeStore) {
         self.session = session
@@ -105,10 +106,9 @@ public struct LibraryView: View {
         _viewModel = StateObject(wrappedValue: LibraryViewModel(session: session))
     }
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-    ]
+    private var contentHorizontalPadding: CGFloat {
+        horizontalSizeClass == .regular ? 24 : 16
+    }
 
     public var body: some View {
         NavigationStack {
@@ -132,7 +132,7 @@ public struct LibraryView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: columns, spacing: 16) {
+                        WaterfallLayout(minColumnWidth: 168, maxColumns: 5, spacing: 12) {
                             ForEach(viewModel.movies) { movie in
                                 Button {
                                     Task { await viewModel.openMovie(movie) }
@@ -142,13 +142,14 @@ public struct LibraryView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, contentHorizontalPadding)
                         .padding(.top, 8)
                         .padding(.bottom, 24)
                     }
                     .refreshable { await viewModel.load() }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(TandemColors.groupedBackground.ignoresSafeArea())
             .navigationTitle("Tandem")
             .navigationBarTitleDisplayMode(.large)
@@ -192,19 +193,29 @@ private struct MovieCardView: View {
                         .clipped()
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
             Text(movie.title)
                 .font(.system(size: 15, weight: .semibold))
-                .lineLimit(1)
-            Text(movie.year ?? "未知")
-                .font(.system(size: 13))
-                .foregroundStyle(TandemColors.secondaryLabel)
+                .foregroundStyle(Color.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let year = movie.year, !year.isEmpty {
+                Text(year)
+                    .font(.system(size: 13))
+                    .foregroundStyle(TandemColors.secondaryLabel)
+            }
+
             if let overview = movie.overview, !overview.isEmpty {
                 Text(overview)
                     .font(.system(size: 12))
-                    .foregroundStyle(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.45))
-                    .lineLimit(2)
-                    .frame(minHeight: 32, alignment: .topLeading)
+                    .foregroundStyle(TandemColors.tertiaryLabel)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

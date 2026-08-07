@@ -28,6 +28,12 @@ let project = Project(
                     "UIInterfaceOrientationLandscapeLeft",
                     "UIInterfaceOrientationLandscapeRight",
                 ],
+                "UISupportedInterfaceOrientations~ipad": [
+                    "UIInterfaceOrientationPortrait",
+                    "UIInterfaceOrientationPortraitUpsideDown",
+                    "UIInterfaceOrientationLandscapeLeft",
+                    "UIInterfaceOrientationLandscapeRight",
+                ],
                 "NSCameraUsageDescription": "扫描配置二维码与拍摄头像",
                 "NSPhotoLibraryUsageDescription": "选择头像与保存配置二维码",
                 "NSPhotoLibraryAddUsageDescription": "保存配置分享二维码到相册",
