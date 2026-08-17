@@ -6,6 +6,13 @@ public enum OrientationLock {
     public private(set) static var mask: UIInterfaceOrientationMask = .portrait
 
     public static func lock(_ orientations: UIInterfaceOrientationMask) {
+        // Multitasking-capable iPad apps can't drive orientation; requesting it only
+        // leaves UIKit and the app's declared mask disagreeing. Let iPad rotate freely.
+        guard UIDevice.current.userInterfaceIdiom != .pad else {
+            mask = .all
+            return
+        }
+
         mask = orientations
         guard let scene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })

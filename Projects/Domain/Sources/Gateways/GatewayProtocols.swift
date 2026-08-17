@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol AuthGateway: AnyObject {
+public protocol AuthGateway: AnyObject, Sendable {
     func login(userId: String, userSig: String) async throws
     func logout() async throws
     func currentUserId() async -> String?
@@ -10,7 +10,7 @@ public protocol AuthGateway: AnyObject {
     func fetchUsers(userIds: [String]) async throws -> [User]
 }
 
-public protocol ConfigGateway: AnyObject {
+public protocol ConfigGateway: AnyObject, Sendable {
     func load() async throws -> AppCloudConfig?
     func save(_ config: AppCloudConfig) async throws
     func clearSessionUserId() async throws
@@ -18,30 +18,30 @@ public protocol ConfigGateway: AnyObject {
     func loadSessionUserId() async throws -> String?
 }
 
-public protocol UserSigGateway {
+public protocol UserSigGateway: Sendable {
     func generateUserSig(userId: String, config: AppCloudConfig) throws -> String
 }
 
-public protocol MovieCatalogGateway {
+public protocol MovieCatalogGateway: Sendable {
     func listMovies(config: AppCloudConfig) async throws -> [Movie]
     /// AWS SigV4 query-presigned HTTPS URL for online VLC playback (default 6h).
     func playURL(for movie: Movie, config: AppCloudConfig) async throws -> URL
 }
 
 /// Uploads profile avatars to Qiniu S3 and resolves short-lived download URLs from object keys.
-public protocol AvatarStorageGateway {
+public protocol AvatarStorageGateway: Sendable {
     /// Uploads JPEG bytes; returns the object key (IM stores this, not a signed URL).
     func uploadAvatar(imageData: Data, userId: String, config: AppCloudConfig) async throws -> String
     /// SigV4 presigned GET against the configured S3 Endpoint.
     func signedURL(objectKey: String, config: AppCloudConfig) throws -> URL
 }
 
-public protocol MetadataGateway {
+public protocol MetadataGateway: Sendable {
     func enrich(_ movie: Movie, config: AppCloudConfig) async -> Movie
 }
 
 /// Reads/writes Kodi-style NFO + poster/fanart sidecars beside the movie on Qiniu.
-public protocol MovieMetadataStorageGateway {
+public protocol MovieMetadataStorageGateway: Sendable {
     /// Returns metadata from existing `{base}.nfo` (+ art) when present; otherwise `nil`.
     func load(for movie: Movie, config: AppCloudConfig) async -> Movie?
     /// Persists NFO and downloads remote art into `{base}-poster.jpg` / `{base}-fanart.jpg`.
@@ -49,7 +49,7 @@ public protocol MovieMetadataStorageGateway {
     func save(_ movie: Movie, config: AppCloudConfig) async -> Movie
 }
 
-public protocol RoomGateway: AnyObject {
+public protocol RoomGateway: AnyObject, Sendable {
     func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom
     /// - Parameters:
     ///   - movieId/hostUserId: optional invite bootstrap when the room record is not found yet.
@@ -64,18 +64,18 @@ public protocol RoomGateway: AnyObject {
     func observeRoom(roomId: String) -> AsyncStream<WatchRoom>
 }
 
-public protocol ChatGateway: AnyObject {
+public protocol ChatGateway: AnyObject, Sendable {
     func send(roomId: String, text: String, sender: User) async throws -> ChatMessage
     func messages(roomId: String) -> AsyncStream<ChatMessage>
     func postSystemMessage(roomId: String, text: String) async throws -> ChatMessage
 }
 
-public protocol PlaybackSyncGateway: AnyObject {
+public protocol PlaybackSyncGateway: AnyObject, Sendable {
     func send(roomId: String, signal: PlaybackSyncSignal) async throws
     func signals(roomId: String) -> AsyncStream<PlaybackSyncSignal>
 }
 
-public protocol SubtitleGateway {
+public protocol SubtitleGateway: Sendable {
     func listEmbedded(for movie: Movie) async throws -> [SubtitleTrack]
     func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack]
     func searchOnline(query: String, year: String?, apiKey: String?) async throws -> [SubtitleTrack]
@@ -84,7 +84,7 @@ public protocol SubtitleGateway {
 }
 
 /// Host uploads a downloaded subtitle beside the movie object; members pull via SigV4 GET.
-public protocol SharedSubtitleStorageGateway {
+public protocol SharedSubtitleStorageGateway: Sendable {
     /// Uploads local subtitle bytes next to the movie (`{movieBase}.{ext}`); returns object key.
     func upload(
         fileURL: URL,

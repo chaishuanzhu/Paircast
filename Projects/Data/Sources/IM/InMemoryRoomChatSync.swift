@@ -9,12 +9,12 @@ public final class InMemoryRoomGateway: RoomGateway, @unchecked Sendable {
     public init() {}
 
     public func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom {
-        lock.lock()
-        let id = UUID().uuidString.lowercased()
-        let room = WatchRoom(id: id, movieId: movieId, hostUserId: hostUserId)
-        rooms[id] = room
-        let conts = continuations[id]?.values.map { $0 } ?? []
-        lock.unlock()
+        let (room, conts) = lock.withLock {
+            let id = UUID().uuidString.lowercased()
+            let room = WatchRoom(id: id, movieId: movieId, hostUserId: hostUserId)
+            rooms[id] = room
+            return (room, continuations[id]?.values.map { $0 } ?? [])
+        }
         conts.forEach { $0.yield(room) }
         return room
     }
@@ -25,67 +25,64 @@ public final class InMemoryRoomGateway: RoomGateway, @unchecked Sendable {
         movieId: String?,
         hostUserId: String?
     ) async throws -> WatchRoom {
-        lock.lock()
         let id = roomId.lowercased()
-        let room: WatchRoom
-        if var existing = rooms[id] {
-            guard existing.status == .active else {
-                lock.unlock()
-                throw AppError.roomEnded
+        let (room, conts) = try lock.withLock {
+            let room: WatchRoom
+            if var existing = rooms[id] {
+                guard existing.status == .active else {
+                    throw AppError.roomEnded
+                }
+                if !existing.memberIds.contains(userId) {
+                    existing.memberIds.append(userId)
+                    existing.joinOrder.append(userId)
+                }
+                rooms[id] = existing
+                room = existing
+            } else if let movieId, let hostUserId, !movieId.isEmpty, !hostUserId.isEmpty {
+                var created = WatchRoom(id: id, movieId: movieId, hostUserId: hostUserId)
+                if userId != hostUserId, !created.memberIds.contains(userId) {
+                    created.memberIds.append(userId)
+                    created.joinOrder.append(userId)
+                }
+                rooms[id] = created
+                room = created
+            } else {
+                throw AppError.roomNotFound
             }
-            if !existing.memberIds.contains(userId) {
-                existing.memberIds.append(userId)
-                existing.joinOrder.append(userId)
-            }
-            rooms[id] = existing
-            room = existing
-        } else if let movieId, let hostUserId, !movieId.isEmpty, !hostUserId.isEmpty {
-            var created = WatchRoom(id: id, movieId: movieId, hostUserId: hostUserId)
-            if userId != hostUserId, !created.memberIds.contains(userId) {
-                created.memberIds.append(userId)
-                created.joinOrder.append(userId)
-            }
-            rooms[id] = created
-            room = created
-        } else {
-            lock.unlock()
-            throw AppError.roomNotFound
+            return (room, continuations[id]?.values.map { $0 } ?? [])
         }
-        let conts = continuations[id]?.values.map { $0 } ?? []
-        lock.unlock()
         conts.forEach { $0.yield(room) }
         return room
     }
 
     public func leaveRoom(roomId: String, userId: String) async throws -> WatchRoom? {
-        lock.lock(); defer { lock.unlock() }
-        return rooms[roomId]
+        lock.withLock { rooms[roomId] }
     }
 
     public func updateRoom(_ room: WatchRoom) async throws {
-        lock.lock()
-        rooms[room.id] = room
-        let conts = continuations[room.id]?.values.map { $0 } ?? []
-        lock.unlock()
+        let conts = lock.withLock {
+            rooms[room.id] = room
+            return continuations[room.id]?.values.map { $0 } ?? []
+        }
         conts.forEach { $0.yield(room) }
     }
 
     public func observeRoom(roomId: String) -> AsyncStream<WatchRoom> {
         AsyncStream { continuation in
             let token = UUID()
-            self.lock.lock()
-            var map = self.continuations[roomId] ?? [:]
-            map[token] = continuation
-            self.continuations[roomId] = map
-            let existing = self.rooms[roomId]
-            self.lock.unlock()
+            let existing = self.lock.withLock {
+                var map = self.continuations[roomId] ?? [:]
+                map[token] = continuation
+                self.continuations[roomId] = map
+                return self.rooms[roomId]
+            }
             if let existing {
                 continuation.yield(existing)
             }
             continuation.onTermination = { _ in
-                self.lock.lock()
-                self.continuations[roomId]?[token] = nil
-                self.lock.unlock()
+                self.lock.withLock {
+                    self.continuations[roomId]?[token] = nil
+                }
             }
         }
     }
@@ -113,17 +110,17 @@ public final class InMemoryChatGateway: ChatGateway, @unchecked Sendable {
     public func messages(roomId: String) -> AsyncStream<ChatMessage> {
         AsyncStream { continuation in
             let token = UUID()
-            self.lock.lock()
-            var map = self.continuations[roomId] ?? [:]
-            map[token] = continuation
-            self.continuations[roomId] = map
-            let existing = self.storage[roomId] ?? []
-            self.lock.unlock()
+            let existing = self.lock.withLock {
+                var map = self.continuations[roomId] ?? [:]
+                map[token] = continuation
+                self.continuations[roomId] = map
+                return self.storage[roomId] ?? []
+            }
             existing.forEach { continuation.yield($0) }
             continuation.onTermination = { _ in
-                self.lock.lock()
-                self.continuations[roomId]?[token] = nil
-                self.lock.unlock()
+                self.lock.withLock {
+                    self.continuations[roomId]?[token] = nil
+                }
             }
         }
     }
@@ -141,10 +138,10 @@ public final class InMemoryChatGateway: ChatGateway, @unchecked Sendable {
     }
 
     private func append(_ message: ChatMessage) {
-        lock.lock()
-        storage[message.roomId, default: []].append(message)
-        let conts = continuations[message.roomId]?.values.map { $0 } ?? []
-        lock.unlock()
+        let conts = lock.withLock {
+            storage[message.roomId, default: []].append(message)
+            return continuations[message.roomId]?.values.map { $0 } ?? []
+        }
         conts.forEach { $0.yield(message) }
     }
 }
@@ -156,24 +153,24 @@ public final class InMemoryPlaybackSyncGateway: PlaybackSyncGateway, @unchecked 
     public init() {}
 
     public func send(roomId: String, signal: PlaybackSyncSignal) async throws {
-        lock.lock()
-        let conts = continuations[roomId]?.values.map { $0 } ?? []
-        lock.unlock()
+        let conts = lock.withLock {
+            continuations[roomId]?.values.map { $0 } ?? []
+        }
         conts.forEach { $0.yield(signal) }
     }
 
     public func signals(roomId: String) -> AsyncStream<PlaybackSyncSignal> {
         AsyncStream { continuation in
             let token = UUID()
-            self.lock.lock()
-            var map = self.continuations[roomId] ?? [:]
-            map[token] = continuation
-            self.continuations[roomId] = map
-            self.lock.unlock()
+            self.lock.withLock {
+                var map = self.continuations[roomId] ?? [:]
+                map[token] = continuation
+                self.continuations[roomId] = map
+            }
             continuation.onTermination = { _ in
-                self.lock.lock()
-                self.continuations[roomId]?[token] = nil
-                self.lock.unlock()
+                self.lock.withLock {
+                    self.continuations[roomId]?[token] = nil
+                }
             }
         }
     }

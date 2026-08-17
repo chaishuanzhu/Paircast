@@ -3,6 +3,11 @@ import ImSDKSPM
 import Domain
 
 /// Shared Tencent Cloud IM wrapper (login, Meeting groups, text + custom signaling).
+///
+/// Thread-safety invariant: every mutable property owned by this wrapper is
+/// accessed while `lock` is held. Tencent SDK objects are only invoked through
+/// their documented thread-safe API. Remove `@unchecked Sendable` after the SDK
+/// exposes native Sendable annotations and this state can move to an actor.
 public final class TencentIMClient: NSObject, @unchecked Sendable {
     public static let shared = TencentIMClient()
 
@@ -29,34 +34,34 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
     // MARK: - Lifecycle
 
     public func ensureInitialized(sdkAppId: Int) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        let appId = Int32(sdkAppId)
-        if didInit {
-            if initializedAppId != appId {
+        try lock.withLock {
+            let appId = Int32(sdkAppId)
+            if didInit {
+                if initializedAppId != appId {
+                    throw AppError.imInitFailed
+                }
+                return
+            }
+            let config = V2TIMSDKConfig()
+            // V2TIM_LOG_INFO == 4
+            config.logLevel = V2TIMLogLevel(rawValue: 4)!
+            guard manager.initSDK(appId, config: config) else {
                 throw AppError.imInitFailed
             }
-            return
+            manager.addIMSDKListener(listener: sdkListener)
+            manager.addSimpleMsgListener(listener: msgListener)
+            didInit = true
+            initializedAppId = appId
         }
-        let config = V2TIMSDKConfig()
-        // V2TIM_LOG_INFO == 4
-        config.logLevel = V2TIMLogLevel(rawValue: 4)!
-        guard manager.initSDK(appId, config: config) else {
-            throw AppError.imInitFailed
-        }
-        manager.addIMSDKListener(listener: sdkListener)
-        manager.addSimpleMsgListener(listener: msgListener)
-        didInit = true
-        initializedAppId = appId
     }
 
     public func login(userId: String, userSig: String, sdkAppId: Int) async throws {
         try ensureInitialized(sdkAppId: sdkAppId)
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             manager.login(userID: userId, userSig: userSig) { [weak self] in
-                self?.lock.lock()
-                self?.loggedInUserId = userId
-                self?.lock.unlock()
+                self?.lock.withLock {
+                    self?.loggedInUserId = userId
+                }
                 cont.resume()
             } fail: { code, desc in
                 cont.resume(throwing: Self.mapLoginError(code: code, desc: desc))
@@ -67,9 +72,9 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
     public func logout() async throws {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             manager.logout(succ: {
-                self.lock.lock()
-                self.loggedInUserId = nil
-                self.lock.unlock()
+                self.lock.withLock {
+                    self.loggedInUserId = nil
+                }
                 cont.resume()
             }, fail: { code, desc in
                 cont.resume(throwing: Self.mapError(code: code, desc: desc))
@@ -78,9 +83,10 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
     }
 
     public var currentUserId: String? {
-        lock.lock(); defer { lock.unlock() }
-        if let loggedInUserId { return loggedInUserId }
-        return manager.getLoginUser()
+        lock.withLock {
+            if let loggedInUserId { return loggedInUserId }
+            return manager.getLoginUser()
+        }
     }
 
     // MARK: - Profile
@@ -259,9 +265,9 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
             kind: asSystem ? .system : .user
         )
         // Local echo — simple listener typically does not deliver own messages.
-        lock.lock()
-        let conts = textContinuations[roomId.lowercased()]?.values.map { $0 } ?? []
-        lock.unlock()
+        let conts = lock.withLock {
+            textContinuations[roomId.lowercased()]?.values.map { $0 } ?? []
+        }
         conts.forEach { $0.yield(message) }
         return message
     }
@@ -270,27 +276,34 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
         try await sendText(roomId: roomId, text: text, asSystem: true)
     }
 
+    /// The callback may execute on an SDK queue, so the value is synchronized.
     private final class MessageIDBox: @unchecked Sendable {
-        var id = ""
+        private let lock = NSLock()
+        private var storage = ""
+
+        var id: String {
+            get { lock.withLock { storage } }
+            set { lock.withLock { storage = newValue } }
+        }
     }
 
     public func textMessages(roomId: String) -> AsyncStream<ChatMessage> {
         let key = roomId.lowercased()
         return AsyncStream { continuation in
             let token = UUID()
-            self.lock.lock()
-            var map = self.textContinuations[key] ?? [:]
-            map[token] = continuation
-            self.textContinuations[key] = map
-            self.lock.unlock()
+            self.lock.withLock {
+                var map = self.textContinuations[key] ?? [:]
+                map[token] = continuation
+                self.textContinuations[key] = map
+            }
             continuation.onTermination = { [weak self] _ in
                 guard let self else { return }
-                self.lock.lock()
-                self.textContinuations[key]?[token] = nil
-                if self.textContinuations[key]?.isEmpty != false {
-                    self.textContinuations[key] = nil
+                self.lock.withLock {
+                    self.textContinuations[key]?[token] = nil
+                    if self.textContinuations[key]?.isEmpty != false {
+                        self.textContinuations[key] = nil
+                    }
                 }
-                self.lock.unlock()
             }
         }
     }
@@ -317,19 +330,19 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
         let key = roomId.lowercased()
         return AsyncStream { continuation in
             let token = UUID()
-            self.lock.lock()
-            var map = self.signalContinuations[key] ?? [:]
-            map[token] = continuation
-            self.signalContinuations[key] = map
-            self.lock.unlock()
+            self.lock.withLock {
+                var map = self.signalContinuations[key] ?? [:]
+                map[token] = continuation
+                self.signalContinuations[key] = map
+            }
             continuation.onTermination = { [weak self] _ in
                 guard let self else { return }
-                self.lock.lock()
-                self.signalContinuations[key]?[token] = nil
-                if self.signalContinuations[key]?.isEmpty != false {
-                    self.signalContinuations[key] = nil
+                self.lock.withLock {
+                    self.signalContinuations[key]?[token] = nil
+                    if self.signalContinuations[key]?.isEmpty != false {
+                        self.signalContinuations[key] = nil
+                    }
                 }
-                self.lock.unlock()
             }
         }
     }
@@ -337,16 +350,16 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
     // MARK: - Listener callbacks
 
     fileprivate func handleKickedOffline() {
-        lock.lock()
-        loggedInUserId = nil
-        lock.unlock()
+        lock.withLock {
+            loggedInUserId = nil
+        }
         NotificationCenter.default.post(name: .tandemIMKickedOffline, object: nil)
     }
 
     fileprivate func handleUserSigExpired() {
-        lock.lock()
-        loggedInUserId = nil
-        lock.unlock()
+        lock.withLock {
+            loggedInUserId = nil
+        }
         NotificationCenter.default.post(name: .tandemIMUserSigExpired, object: nil)
     }
 
@@ -369,9 +382,9 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
             text: body,
             kind: isSystem ? .system : .user
         )
-        lock.lock()
-        let conts = textContinuations[roomId]?.values.map { $0 } ?? []
-        lock.unlock()
+        let conts = lock.withLock {
+            textContinuations[roomId]?.values.map { $0 } ?? []
+        }
         conts.forEach { $0.yield(message) }
     }
 
@@ -388,9 +401,9 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
         if let selfId = currentUserId, signal.senderId == selfId {
             return
         }
-        lock.lock()
-        let conts = signalContinuations[roomId]?.values.map { $0 } ?? []
-        lock.unlock()
+        let conts = lock.withLock {
+            signalContinuations[roomId]?.values.map { $0 } ?? []
+        }
         conts.forEach { $0.yield(signal) }
     }
 

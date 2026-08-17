@@ -19,7 +19,11 @@ public final class LibraryViewModel: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            let harness = LibraryHarness(session: session)
+            let harness = LibraryHarness(
+                catalogGateway: session.catalogGateway,
+                metadataGateway: session.metadataGateway,
+                configGateway: session.configGateway
+            )
             let listed = try await harness.listMovies(enrichMetadata: false)
             movies = listed
             errorMessage = nil
@@ -59,38 +63,30 @@ public final class LibraryViewModel: ObservableObject {
 }
 
 private struct LibraryHarness: ListMoviesUseCase {
-    let session: AppSession
-    var catalogGateway: MovieCatalogGateway { session.catalogGateway }
-    var metadataGateway: MetadataGateway { session.metadataGateway }
-    var configGateway: ConfigGateway { session.configGateway }
+    let catalogGateway: MovieCatalogGateway
+    let metadataGateway: MetadataGateway
+    let configGateway: ConfigGateway
 
     func enrich(_ movies: [Movie]) async -> [Movie] {
         guard let config = try? await configGateway.load() else { return movies }
-        return await withTaskGroup(of: (Int, Movie).self, returning: [Movie].self) { group in
-            let concurrency = 4
-            var index = 0
-            var results = Array(repeating: Optional<Movie>.none, count: movies.count)
-
-            func enqueue() {
-                guard index < movies.count else { return }
-                let i = index
-                let movie = movies[i]
-                index += 1
-                group.addTask {
-                    let enriched = await metadataGateway.enrich(movie, config: config)
-                    return (i, enriched)
+        let gateway = metadataGateway
+        var results = Array<Movie?>(repeating: nil, count: movies.count)
+        let concurrency = 4
+        for lowerBound in stride(from: 0, to: movies.count, by: concurrency) {
+            let upperBound = min(lowerBound + concurrency, movies.count)
+            await withTaskGroup(of: (Int, Movie).self) { group in
+                for index in lowerBound..<upperBound {
+                    let movie = movies[index]
+                    group.addTask {
+                        (index, await gateway.enrich(movie, config: config))
+                    }
+                }
+                for await (index, movie) in group {
+                    results[index] = movie
                 }
             }
-
-            for _ in 0..<min(concurrency, movies.count) {
-                enqueue()
-            }
-            for await (i, movie) in group {
-                results[i] = movie
-                enqueue()
-            }
-            return results.enumerated().map { offset, value in value ?? movies[offset] }
         }
+        return results.enumerated().map { index, movie in movie ?? movies[index] }
     }
 }
 

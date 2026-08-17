@@ -86,13 +86,12 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
         let id = roomId.lowercased()
         return AsyncStream { continuation in
             let token = UUID()
-            self.lock.lock()
-            var map = self.continuations[id] ?? [:]
-            map[token] = continuation
-            self.continuations[id] = map
-            let existing = self.localCache[id]
-            let shouldStartPoll = self.pollTasks[id] == nil
-            self.lock.unlock()
+            let (existing, shouldStartPoll) = self.lock.withLock {
+                var map = self.continuations[id] ?? [:]
+                map[token] = continuation
+                self.continuations[id] = map
+                return (self.localCache[id], self.pollTasks[id] == nil)
+            }
 
             if let existing {
                 continuation.yield(existing)
@@ -103,22 +102,22 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
                     guard let self else { return }
                     await self.pollLoop(roomId: id)
                 }
-                self.lock.lock()
-                self.pollTasks[id] = task
-                self.lock.unlock()
+                self.lock.withLock {
+                    self.pollTasks[id] = task
+                }
             }
 
             continuation.onTermination = { [weak self] _ in
                 guard let self else { return }
-                self.lock.lock()
-                self.continuations[id]?[token] = nil
-                let empty = self.continuations[id]?.isEmpty != false
-                if empty {
-                    self.continuations[id] = nil
-                    self.pollTasks[id]?.cancel()
-                    self.pollTasks[id] = nil
+                self.lock.withLock {
+                    self.continuations[id]?[token] = nil
+                    let empty = self.continuations[id]?.isEmpty != false
+                    if empty {
+                        self.continuations[id] = nil
+                        self.pollTasks[id]?.cancel()
+                        self.pollTasks[id] = nil
+                    }
                 }
-                self.lock.unlock()
             }
         }
     }
@@ -135,14 +134,14 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
                 // Transient network — keep polling while observers exist.
             }
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-            lock.lock()
-            let hasObservers = !(continuations[roomId] ?? [:]).isEmpty
-            lock.unlock()
+            let hasObservers = lock.withLock {
+                !(continuations[roomId] ?? [:]).isEmpty
+            }
             if !hasObservers { break }
         }
-        lock.lock()
-        pollTasks[roomId] = nil
-        lock.unlock()
+        lock.withLock {
+            pollTasks[roomId] = nil
+        }
     }
 
     private func fetchRoom(id: String) async throws -> WatchRoom? {
@@ -252,24 +251,23 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
     }
 
     private func cachedRoom(_ id: String) -> WatchRoom? {
-        lock.lock(); defer { lock.unlock() }
-        return localCache[id]
+        lock.withLock { localCache[id] }
     }
 
     private func cacheAndBroadcast(_ room: WatchRoom) {
-        lock.lock()
-        localCache[room.id.lowercased()] = room
-        let conts = continuations[room.id.lowercased()]?.values.map { $0 } ?? []
-        lock.unlock()
+        let conts = lock.withLock {
+            localCache[room.id.lowercased()] = room
+            return continuations[room.id.lowercased()]?.values.map { $0 } ?? []
+        }
         conts.forEach { $0.yield(room) }
     }
 
     private func stopPolling(roomId: String) {
         let id = roomId.lowercased()
-        lock.lock()
-        pollTasks[id]?.cancel()
-        pollTasks[id] = nil
-        lock.unlock()
+        lock.withLock {
+            pollTasks[id]?.cancel()
+            pollTasks[id] = nil
+        }
     }
 }
 

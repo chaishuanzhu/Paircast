@@ -12,35 +12,40 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
     public init() {}
 
     public func load() async throws -> AppCloudConfig? {
-        lock.lock(); defer { lock.unlock() }
-        guard let data = try read(service: configService, account: configAccount) else {
-            return nil
+        try lock.withLock {
+            guard let data = try read(service: configService, account: configAccount) else {
+                return nil
+            }
+            return try JSONDecoder().decode(AppCloudConfigDTO.self, from: data).toDomain()
         }
-        return try JSONDecoder().decode(AppCloudConfigDTO.self, from: data).toDomain()
     }
 
     public func save(_ config: AppCloudConfig) async throws {
-        lock.lock(); defer { lock.unlock() }
-        let data = try JSONEncoder().encode(AppCloudConfigDTO(config))
-        try write(data, service: configService, account: configAccount)
+        try lock.withLock {
+            let data = try JSONEncoder().encode(AppCloudConfigDTO(config))
+            try write(data, service: configService, account: configAccount)
+        }
     }
 
     public func clearSessionUserId() async throws {
-        lock.lock(); defer { lock.unlock() }
-        try delete(service: sessionService, account: sessionAccount)
+        try lock.withLock {
+            try delete(service: sessionService, account: sessionAccount)
+        }
     }
 
     public func saveSessionUserId(_ userId: String) async throws {
-        lock.lock(); defer { lock.unlock() }
-        try write(Data(userId.utf8), service: sessionService, account: sessionAccount)
+        try lock.withLock {
+            try write(Data(userId.utf8), service: sessionService, account: sessionAccount)
+        }
     }
 
     public func loadSessionUserId() async throws -> String? {
-        lock.lock(); defer { lock.unlock() }
-        guard let data = try read(service: sessionService, account: sessionAccount) else {
-            return nil
+        try lock.withLock {
+            guard let data = try read(service: sessionService, account: sessionAccount) else {
+                return nil
+            }
+            return String(data: data, encoding: .utf8)
         }
-        return String(data: data, encoding: .utf8)
     }
 
     private func read(service: String, account: String) throws -> Data? {

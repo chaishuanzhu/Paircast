@@ -158,25 +158,32 @@ public final class WatchViewModel: ObservableObject {
         }
         memberProfileTask?.cancel()
         let snapshot = ids
-        memberProfileTask = Task {
-            let users = (try? await session.authGateway.fetchUsers(userIds: snapshot)) ?? []
+        let authGateway = session.authGateway
+        let currentUser = session.currentUser
+        memberProfileTask = Task { @concurrent in
+            let users = (try? await authGateway.fetchUsers(userIds: snapshot)) ?? []
             guard !Task.isCancelled else { return }
             var map: [String: User] = [:]
             for user in users {
                 map[user.id] = user
             }
-            if let me = session.currentUser {
+            if let me = currentUser {
                 map[me.id] = me
             }
+            let profileMap = map
             await MainActor.run {
-                self.memberProfiles = map
+                self.memberProfiles = profileMap
             }
         }
         await memberProfileTask?.value
     }
 
     private func loadMovie(id: String) async {
-        let harness = LibraryHarness(session: session)
+        let harness = LibraryHarness(
+            catalogGateway: session.catalogGateway,
+            metadataGateway: session.metadataGateway,
+            configGateway: session.configGateway
+        )
         let movies = (try? await harness.listMovies(enrichMetadata: false)) ?? []
         libraryMovies = movies
         movie = movies.first(where: { $0.id == id }) ?? Movie(
@@ -219,29 +226,34 @@ public final class WatchViewModel: ObservableObject {
         chatTask?.cancel()
         roomTask?.cancel()
 
-        signalTask = Task {
-            for await signal in session.syncGateway.signals(roomId: room.id) {
+        let roomId = room.id
+        let syncGateway = session.syncGateway
+        let chatGateway = session.chatGateway
+        let roomGateway = session.roomGateway
+        signalTask = Task { @concurrent in
+            for await signal in syncGateway.signals(roomId: roomId) {
                 await MainActor.run {
                     applyRemote(signal)
                 }
             }
         }
-        chatTask = Task {
-            for await message in session.chatGateway.messages(roomId: room.id) {
+        chatTask = Task { @concurrent in
+            for await message in chatGateway.messages(roomId: roomId) {
                 await MainActor.run {
                     messages.append(message)
                 }
             }
         }
-        roomTask = Task {
-            for await updated in session.roomGateway.observeRoom(roomId: room.id) {
-                let membersChanged = updated.memberIds != self.room?.memberIds
-                await MainActor.run {
+        roomTask = Task { @concurrent in
+            for await updated in roomGateway.observeRoom(roomId: roomId) {
+                let membersChanged = await MainActor.run {
+                    let changed = updated.memberIds != self.room?.memberIds
                     self.room = updated
                     syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
                     if updated.status == .ended {
                         errorMessage = AppError.roomEnded.userMessage
                     }
+                    return changed
                 }
                 if membersChanged {
                     await refreshMemberProfiles()
@@ -253,13 +265,15 @@ public final class WatchViewModel: ObservableObject {
     private func startHeartbeatIfNeeded() {
         heartbeatTask?.cancel()
         guard isHost else { return }
-        heartbeatTask = Task { [weak self] in
+        let heartbeat: @MainActor @Sendable () -> Void = { [weak self] in
+            self?.emitHeartbeat()
+        }
+        heartbeatTask = Task { @concurrent in
             let interval = UInt64(PlaybackSyncRules.foregroundHeartbeatSeconds * 1_000_000_000)
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: interval)
-                await MainActor.run {
-                    self?.emitHeartbeat()
-                }
+                guard !Task.isCancelled else { return }
+                await heartbeat()
             }
         }
     }
@@ -271,7 +285,7 @@ public final class WatchViewModel: ObservableObject {
         let position = player.currentPositionMs
         let currentSeq = seq
         Task {
-            let harness = SyncHarness(session: session)
+            let harness = SyncHarness(syncGateway: session.syncGateway)
             _ = try? await harness.emitHostSignal(
                 room: room,
                 hostUserId: user.id,
@@ -344,7 +358,7 @@ public final class WatchViewModel: ObservableObject {
         let position = player.currentPositionMs
         seq += 1
         Task {
-            let harness = SyncHarness(session: session)
+            let harness = SyncHarness(syncGateway: session.syncGateway)
             _ = try? await harness.emitHostSignal(
                 room: room,
                 hostUserId: user.id,
@@ -376,7 +390,7 @@ public final class WatchViewModel: ObservableObject {
         playback.positionMs = clamped
         playback.lastSeq = currentSeq
         Task {
-            let harness = SyncHarness(session: session)
+            let harness = SyncHarness(syncGateway: session.syncGateway)
             _ = try? await harness.emitHostSignal(
                 room: room,
                 hostUserId: user.id,
@@ -409,9 +423,13 @@ public final class WatchViewModel: ObservableObject {
         pendingMovie = movie
         showSwitchMovie = false
         // Dismiss sheet first so the confirm alert isn't buried under it.
-        Task { @MainActor in
+        let revealConfirmation: @MainActor @Sendable () -> Void = { [weak self] in
+            self?.showSwitchConfirm = true
+        }
+        Task { @concurrent in
             try? await Task.sleep(nanoseconds: 280_000_000)
-            showSwitchConfirm = true
+            guard !Task.isCancelled else { return }
+            await revealConfirmation()
         }
     }
 
@@ -424,39 +442,42 @@ public final class WatchViewModel: ObservableObject {
         isLoadingLibraryForSwitch = true
         defer { isLoadingLibraryForSwitch = false }
         switchQuery = ""
-        let harness = LibraryHarness(session: session)
+        let harness = LibraryHarness(
+            catalogGateway: session.catalogGateway,
+            metadataGateway: session.metadataGateway,
+            configGateway: session.configGateway
+        )
         let movies = (try? await harness.listMovies(enrichMetadata: false)) ?? []
         if !movies.isEmpty {
             libraryMovies = movies
         }
         // Enrich posters in background for the switch list thumbs.
-        Task {
-            guard let config = try? await self.session.configGateway.load() else { return }
-            let snapshot = self.libraryMovies
-            let metadataGateway = self.session.metadataGateway
+        let configGateway = session.configGateway
+        let metadataGateway = session.metadataGateway
+        let snapshot = libraryMovies
+        Task { @concurrent in
+            guard let config = try? await configGateway.load() else { return }
             var enriched = snapshot
-            await withTaskGroup(of: (Int, Movie).self) { group in
-                let concurrency = 4
-                var next = 0
-                func enqueue() {
-                    guard next < snapshot.count else { return }
-                    let i = next
-                    next += 1
-                    group.addTask {
-                        let movie = await metadataGateway.enrich(snapshot[i], config: config)
-                        return (i, movie)
+            let concurrency = 4
+            for lowerBound in stride(from: 0, to: snapshot.count, by: concurrency) {
+                let upperBound = min(lowerBound + concurrency, snapshot.count)
+                await withTaskGroup(of: (Int, Movie).self) { group in
+                    for index in lowerBound..<upperBound {
+                        let movie = snapshot[index]
+                        group.addTask {
+                            (index, await metadataGateway.enrich(movie, config: config))
+                        }
+                    }
+                    for await (index, movie) in group {
+                        enriched[index] = movie
                     }
                 }
-                for _ in 0..<min(concurrency, snapshot.count) { enqueue() }
-                for await (i, movie) in group {
-                    enriched[i] = movie
-                    enqueue()
-                }
             }
+            let result = enriched
             await MainActor.run {
                 // Keep list if user already refreshed to a different set.
                 if self.libraryMovies.map(\.id) == snapshot.map(\.id) {
-                    self.libraryMovies = enriched
+                    self.libraryMovies = result
                 }
             }
         }
@@ -473,7 +494,11 @@ public final class WatchViewModel: ObservableObject {
         defer { isSwitchingMovie = false }
         seq += 1
         do {
-            let harness = RoomHarness(session: session)
+            let harness = RoomHarness(
+                roomGateway: session.roomGateway,
+                syncGateway: session.syncGateway,
+                chatGateway: session.chatGateway
+            )
             let (updated, _) = try await harness.changeMovie(
                 room: room,
                 actorUserId: user.id,
@@ -510,7 +535,10 @@ public final class WatchViewModel: ObservableObject {
 
     public func refreshSubtitles(autoSelectChinese: Bool = false) async {
         guard let movie else { return }
-        let harness = SubtitleHarness(session: session)
+        let harness = SubtitleHarness(
+            subtitleGateway: session.subtitleGateway,
+            configGateway: session.configGateway
+        )
         let listed = (try? await harness.listSubtitleTracks(for: movie)) ?? [
             SubtitleTrack(id: "off", label: "关闭字幕", source: .off),
         ]
@@ -674,7 +702,7 @@ public final class WatchViewModel: ObservableObject {
     ) async {
         guard let room, let user = session.currentUser, isHost else { return }
         seq += 1
-        let harness = SyncHarness(session: session)
+        let harness = SyncHarness(syncGateway: session.syncGateway)
         _ = try? await harness.emitHostSignal(
             room: room,
             hostUserId: user.id,
@@ -776,7 +804,10 @@ public final class WatchViewModel: ObservableObject {
         isSearchingOnline = true
         onlineSearchError = nil
         defer { isSearchingOnline = false }
-        let harness = SubtitleHarness(session: session)
+        let harness = SubtitleHarness(
+            subtitleGateway: session.subtitleGateway,
+            configGateway: session.configGateway
+        )
         do {
             onlineResults = try await harness.searchOnlineSubtitles(query: onlineQuery, year: movie?.year)
             didSearchOnline = true
@@ -805,7 +836,11 @@ public final class WatchViewModel: ObservableObject {
             return
         }
         seq += 1
-        let harness = LeaveHarness(session: session)
+        let harness = LeaveHarness(
+            roomGateway: session.roomGateway,
+            chatGateway: session.chatGateway,
+            syncGateway: session.syncGateway
+        )
         let position = player.currentPositionMs
         _ = try? await harness.leaveRoom(
             room: room,
@@ -819,35 +854,30 @@ public final class WatchViewModel: ObservableObject {
 }
 
 private struct LibraryHarness: ListMoviesUseCase {
-    let session: AppSession
-    var catalogGateway: MovieCatalogGateway { session.catalogGateway }
-    var metadataGateway: MetadataGateway { session.metadataGateway }
-    var configGateway: ConfigGateway { session.configGateway }
+    let catalogGateway: MovieCatalogGateway
+    let metadataGateway: MetadataGateway
+    let configGateway: ConfigGateway
 }
 
 private struct SyncHarness: EmitHostPlaybackUseCase {
-    let session: AppSession
-    var syncGateway: PlaybackSyncGateway { session.syncGateway }
+    let syncGateway: PlaybackSyncGateway
 }
 
 private struct RoomHarness: ChangeMovieUseCase {
-    let session: AppSession
-    var roomGateway: RoomGateway { session.roomGateway }
-    var syncGateway: PlaybackSyncGateway { session.syncGateway }
-    var chatGateway: ChatGateway { session.chatGateway }
+    let roomGateway: RoomGateway
+    let syncGateway: PlaybackSyncGateway
+    let chatGateway: ChatGateway
 }
 
 private struct LeaveHarness: LeaveRoomUseCase {
-    let session: AppSession
-    var roomGateway: RoomGateway { session.roomGateway }
-    var chatGateway: ChatGateway { session.chatGateway }
-    var syncGateway: PlaybackSyncGateway { session.syncGateway }
+    let roomGateway: RoomGateway
+    let chatGateway: ChatGateway
+    let syncGateway: PlaybackSyncGateway
 }
 
 private struct SubtitleHarness: ListSubtitleTracksUseCase, SearchOnlineSubtitlesUseCase {
-    let session: AppSession
-    var subtitleGateway: SubtitleGateway { session.subtitleGateway }
-    var configGateway: ConfigGateway { session.configGateway }
+    let subtitleGateway: SubtitleGateway
+    let configGateway: ConfigGateway
 }
 
 private struct OffsetHarness: ApplySubtitleOffsetUseCase {}
@@ -879,22 +909,20 @@ public struct WatchView: View {
     }
 
     public var body: some View {
-        Group {
-            if isFullscreen {
-                playerStage(height: nil)
-                    .ignoresSafeArea()
-            } else {
-                GeometryReader { proxy in
-                    VStack(spacing: 0) {
-                        playerStage(height: stageHeight(in: proxy.size))
-                        membersBar
-                        chatList
-                        chatInput
-                    }
+        // 播放器必须始终处在视图树的同一位置：一旦 SwiftUI 因分支切换重建
+        // VLCPlayerView，VLC 的 drawable 会被摘出窗口，vout 销毁后不再重建（黑屏）。
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                playerStage(height: isFullscreen ? nil : stageHeight(in: proxy.size))
+                if !isFullscreen {
+                    membersBar
+                    chatList
+                    chatInput
                 }
-                .background(TandemColors.groupedBackground.ignoresSafeArea())
             }
         }
+        .background(TandemColors.groupedBackground.ignoresSafeArea())
+        .ignoresSafeArea(edges: isFullscreen ? .all : [])
         .statusBarHidden(isFullscreen)
         .onChange(of: isFullscreen) { _, fullscreen in
             applyFullscreenOrientation(fullscreen)
@@ -1025,7 +1053,9 @@ public struct WatchView: View {
 
     private func playerStage(height: CGFloat?) -> some View {
         ZStack {
-            VLCPlayerView(videoView: viewModel.player.videoView)
+            VLCPlayerView(videoView: viewModel.player.videoView) {
+                viewModel.player.refreshDrawable()
+            }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // UIViewRepresentable 会吞掉触摸，不能依赖它上面的 onTapGesture
 

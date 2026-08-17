@@ -117,7 +117,7 @@ public struct TandemAvatarView: View {
     public var avatarURL: URL? = nil
     public var localImage: UIImage? = nil
 
-    public init(
+    nonisolated public init(
         initial: String,
         size: CGFloat = 36,
         color: Color = TandemColors.systemBlue,
@@ -133,7 +133,7 @@ public struct TandemAvatarView: View {
         self.localImage = localImage
     }
 
-    public init(
+    nonisolated public init(
         userId: String,
         size: CGFloat = 36,
         color: Color? = nil,

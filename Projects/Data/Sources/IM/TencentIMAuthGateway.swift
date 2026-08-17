@@ -24,33 +24,30 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
         }
         try await client.login(userId: userId, userSig: userSig, sdkAppId: config.im.sdkAppId)
         let profile = try await resolveAvatar(try await client.fetchProfile(userId: userId))
-        lock.lock()
-        cachedUser = profile
-        lock.unlock()
+        lock.withLock {
+            cachedUser = profile
+        }
         try await configGateway.saveSessionUserId(userId)
     }
 
     public func logout() async throws {
         try? await client.logout()
-        lock.lock()
-        cachedUser = nil
-        lock.unlock()
+        lock.withLock {
+            cachedUser = nil
+        }
         try await configGateway.clearSessionUserId()
     }
 
     public func currentUserId() async -> String? {
         if let id = client.currentUserId { return id }
-        lock.lock(); defer { lock.unlock() }
-        return cachedUser?.id
+        return lock.withLock { cachedUser?.id }
     }
 
     public func updateProfile(nickname: String, avatarData: Data?) async throws -> User {
         guard let userId = await currentUserId() else {
             throw AppError.userSigExpired
         }
-        lock.lock()
-        let previousKey = cachedUser?.avatarKey
-        lock.unlock()
+        let previousKey = lock.withLock { cachedUser?.avatarKey }
 
         var uploadedKey: String?
         if let avatarData {
@@ -77,9 +74,9 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
         var merged = user
         merged.avatarKey = uploadedKey ?? previousKey
         let resolved = try await resolveAvatar(merged)
-        lock.lock()
-        cachedUser = resolved
-        lock.unlock()
+        lock.withLock {
+            cachedUser = resolved
+        }
         return resolved
     }
 
@@ -88,9 +85,9 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
             throw AppError.userSigExpired
         }
         let resolved = try await resolveAvatar(try await client.fetchProfile(userId: userId))
-        lock.lock()
-        cachedUser = resolved
-        lock.unlock()
+        lock.withLock {
+            cachedUser = resolved
+        }
         return resolved
     }
 

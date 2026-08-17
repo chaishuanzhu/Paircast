@@ -32,7 +32,11 @@ public final class LoginViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            let harness = LoginHarness(session: session)
+            let harness = LoginHarness(
+                configGateway: session.configGateway,
+                authGateway: session.authGateway,
+                userSigGateway: session.userSigGateway
+            )
             try await harness.login(userId: userId, password: password)
             session.currentUser = try await session.authGateway.fetchProfile()
             session.consumePendingInviteIfPossible()
@@ -46,10 +50,9 @@ public final class LoginViewModel: ObservableObject {
 }
 
 private struct LoginHarness: LoginUseCase {
-    let session: AppSession
-    var configGateway: ConfigGateway { session.configGateway }
-    var authGateway: AuthGateway { session.authGateway }
-    var userSigGateway: UserSigGateway { session.userSigGateway }
+    let configGateway: ConfigGateway
+    let authGateway: AuthGateway
+    let userSigGateway: UserSigGateway
 }
 
 public struct LoginView: View {

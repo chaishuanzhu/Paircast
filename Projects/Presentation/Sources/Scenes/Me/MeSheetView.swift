@@ -56,7 +56,10 @@ public final class MeViewModel: ObservableObject {
         isSaving = true
         defer { isSaving = false }
         do {
-            let harness = MeHarness(session: session)
+            let harness = MeHarness(
+                authGateway: session.authGateway,
+                configGateway: session.configGateway
+            )
             let user = try await harness.updateProfile(
                 nickname: nickname,
                 avatarData: pendingAvatarData
@@ -77,7 +80,10 @@ public final class MeViewModel: ObservableObject {
 
     public func logout() async {
         do {
-            let harness = MeHarness(session: session)
+            let harness = MeHarness(
+                authGateway: session.authGateway,
+                configGateway: session.configGateway
+            )
             try await harness.logout()
             session.currentUser = nil
             session.resetToLogin()
@@ -88,11 +94,11 @@ public final class MeViewModel: ObservableObject {
 }
 
 private struct MeHarness: UpdateProfileUseCase, LogoutUseCase {
-    let session: AppSession
-    var authGateway: AuthGateway { session.authGateway }
-    var configGateway: ConfigGateway { session.configGateway }
+    let authGateway: AuthGateway
+    let configGateway: ConfigGateway
 }
 
+@MainActor
 public struct MeSheetView: View {
     @ObservedObject var session: AppSession
     @ObservedObject var theme: ThemeStore
@@ -106,16 +112,20 @@ public struct MeSheetView: View {
     }
 
     public var body: some View {
+        let avatarUserId = viewModel.nickname.isEmpty ? viewModel.userId : viewModel.nickname
+        let avatarURL = viewModel.displayedAvatarURL
+        let avatarImage = viewModel.pendingAvatarPreview
+
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
                     PhotosPicker(selection: $viewModel.pickerItem, matching: .images, photoLibrary: .shared()) {
                         VStack(spacing: 10) {
                             TandemAvatarView(
-                                userId: viewModel.nickname.isEmpty ? viewModel.userId : viewModel.nickname,
+                                userId: avatarUserId,
                                 size: 80,
-                                avatarURL: viewModel.displayedAvatarURL,
-                                localImage: viewModel.pendingAvatarPreview
+                                avatarURL: avatarURL,
+                                localImage: avatarImage
                             )
                             Text("轻点更换头像")
                                 .font(.system(size: 13))
@@ -146,7 +156,8 @@ public struct MeSheetView: View {
                         Divider().padding(.leading, 16)
                         Button {
                             dismiss()
-                            DispatchQueue.main.async {
+                            Task { @MainActor in
+                                await Task.yield()
                                 session.openLibraryConfig()
                             }
                         } label: {

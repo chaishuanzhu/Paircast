@@ -51,7 +51,7 @@ public final class ServiceConfigViewModel: ObservableObject {
     public func save() async -> Bool {
         do {
             let config = try buildConfig()
-            let harness = ConfigHarness(session: session)
+            let harness = ConfigHarness(configGateway: session.configGateway)
             try await harness.saveCloudConfig(config)
             session.config = config
             statusMessage = "已保存"
@@ -73,7 +73,7 @@ public final class ServiceConfigViewModel: ObservableObject {
         do {
             // Persist current form first so export matches what the user sees.
             let config = try buildConfig()
-            let harness = ConfigHarness(session: session)
+            let harness = ConfigHarness(configGateway: session.configGateway)
             try await harness.saveCloudConfig(config)
             session.config = config
             exportShareURL = try await harness.exportConfigQR()
@@ -104,7 +104,7 @@ public final class ServiceConfigViewModel: ObservableObject {
         guard let pendingImportConfig else { return }
         do {
             let raw = try ConfigShareLink.shareURL(for: pendingImportConfig).absoluteString
-            let harness = ConfigHarness(session: session)
+            let harness = ConfigHarness(configGateway: session.configGateway)
             let saved = try await harness.importConfigQR(raw)
             session.config = saved
             apply(saved)
@@ -146,8 +146,7 @@ public final class ServiceConfigViewModel: ObservableObject {
 }
 
 private struct ConfigHarness: SaveCloudConfigUseCase, ImportConfigQRUseCase, ExportConfigQRUseCase {
-    let session: AppSession
-    var configGateway: ConfigGateway { session.configGateway }
+    let configGateway: ConfigGateway
 }
 
 public struct ServiceConfigView: View {

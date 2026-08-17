@@ -16,11 +16,6 @@ public final class AVPlayerGateway: NSObject, PlayerGateway {
     public func prepare(url: URL) async throws {
         let item = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: item)
-        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                cont.resume()
-            }
-        }
     }
 
     public func play() async {

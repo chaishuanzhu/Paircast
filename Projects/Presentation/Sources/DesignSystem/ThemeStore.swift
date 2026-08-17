@@ -43,7 +43,8 @@ public enum ThemeWindowApplier {
     public static func apply(_ appearance: AppAppearance) {
         applyNow(appearance)
         // Sheet windows can appear a runloop later than the preference change.
-        DispatchQueue.main.async {
+        Task { @MainActor in
+            await Task.yield()
             applyNow(appearance)
         }
     }

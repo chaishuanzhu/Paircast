@@ -111,6 +111,17 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         TandemLog.playback.info("play rate=\(self.mediaPlayer.rate, privacy: .public)")
     }
 
+    /// Rebind the render surface after the drawable moved in the view hierarchy.
+    /// VLC tears down its vout when the drawable leaves the window and won't rebuild it
+    /// on a plain `drawable` assignment — the symptom is video audio with a black frame.
+    public func refreshDrawable() {
+        mediaPlayer.drawable = videoView
+        guard mediaPlayer.media != nil, mediaPlayer.isPlaying else { return }
+        mediaPlayer.pause()
+        mediaPlayer.play()
+        TandemLog.playback.info("drawable reattached positionMs=\(self.currentPositionMs, privacy: .public)")
+    }
+
     public func pause() {
         mediaPlayer.pause()
         isPaused = true
@@ -144,8 +155,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
 
     /// Embedded subtitle tracks discovered after media is parsed.
     public func embeddedSubtitleTracks() -> [SubtitleTrack] {
-        let names = (mediaPlayer.videoSubTitlesNames as? [Any]) ?? []
-        let indexes = (mediaPlayer.videoSubTitlesIndexes as? [Any]) ?? []
+        let names = mediaPlayer.videoSubTitlesNames
+        let indexes = mediaPlayer.videoSubTitlesIndexes
         var tracks: [SubtitleTrack] = []
         let count = min(names.count, indexes.count)
         for i in 0..<count {

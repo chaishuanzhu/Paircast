@@ -3,6 +3,7 @@ import Domain
 
 // MARK: - Subtitle panel (design 08)
 
+@MainActor
 struct SubtitlePanelView: View {
     @ObservedObject var viewModel: WatchViewModel
     @Environment(\.dismiss) private var dismiss
@@ -77,8 +78,12 @@ struct SubtitlePanelView: View {
 
                         Button {
                             dismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                viewModel.showSubtitleSync = true
+                            Task { @concurrent in
+                                try? await Task.sleep(for: .milliseconds(250))
+                                guard !Task.isCancelled else { return }
+                                await MainActor.run {
+                                    viewModel.showSubtitleSync = true
+                                }
                             }
                         } label: {
                             rowContent(
