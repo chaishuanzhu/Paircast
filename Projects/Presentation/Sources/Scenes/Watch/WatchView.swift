@@ -801,7 +801,7 @@ public final class WatchViewModel: ObservableObject {
 
     public func leave() async {
         guard let room, let user = session.currentUser else {
-            session.route = .library
+            session.popLibraryToRoot()
             return
         }
         seq += 1
@@ -814,7 +814,7 @@ public final class WatchViewModel: ObservableObject {
             nextTransferSeq: seq
         )
         stop()
-        session.route = .library
+        session.popLibraryToRoot()
     }
 }
 
@@ -862,8 +862,10 @@ public struct WatchView: View {
     @State private var isFullscreen = false
     @State private var scrubProgress: CGFloat?
     @State private var chromeHideTask: Task<Void, Never>?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private static let chromeAutoHideSeconds: UInt64 = 5_000_000_000
+    private static let compactStageHeight: CGFloat = 248
 
     public init(session: AppSession, theme: ThemeStore, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
@@ -879,14 +881,16 @@ public struct WatchView: View {
     public var body: some View {
         Group {
             if isFullscreen {
-                playerStage
+                playerStage(height: nil)
                     .ignoresSafeArea()
             } else {
-                VStack(spacing: 0) {
-                    playerStage
-                    membersBar
-                    chatList
-                    chatInput
+                GeometryReader { proxy in
+                    VStack(spacing: 0) {
+                        playerStage(height: stageHeight(in: proxy.size))
+                        membersBar
+                        chatList
+                        chatInput
+                    }
                 }
                 .background(TandemColors.groupedBackground.ignoresSafeArea())
             }
@@ -1011,7 +1015,15 @@ public struct WatchView: View {
         }
     }
 
-    private var playerStage: some View {
+    /// iPad portrait gives the stage a full-width 16:9 box; compact widths keep the fixed bar.
+    private func stageHeight(in container: CGSize) -> CGFloat {
+        let isRegularPortrait = horizontalSizeClass == .regular && container.height >= container.width
+        guard isRegularPortrait, container.width > 0 else { return Self.compactStageHeight }
+        let sixteenByNine = container.width * 9 / 16
+        return min(sixteenByNine, container.height * 0.5).rounded()
+    }
+
+    private func playerStage(height: CGFloat?) -> some View {
         ZStack {
             VLCPlayerView(videoView: viewModel.player.videoView)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1061,8 +1073,8 @@ public struct WatchView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: isFullscreen ? nil : 248)
-        .frame(maxHeight: isFullscreen ? .infinity : nil)
+        .frame(height: height)
+        .frame(maxHeight: height == nil ? .infinity : nil)
         .background(Color.black)
         .overlay(alignment: .top) {
             if let error = viewModel.errorMessage {

@@ -51,7 +51,7 @@ public final class LibraryViewModel: ObservableObject {
         guard let user = session.currentUser else { return }
         do {
             let room = try await session.roomGateway.createRoom(movieId: movie.id, hostUserId: user.id)
-            session.route = .watch(roomId: room.id, movieId: movie.id, hostUserId: user.id)
+            session.openWatch(roomId: room.id, movieId: movie.id, hostUserId: user.id)
         } catch {
             session.showToast(AppError.unknown("建房失败").userMessage)
         }
@@ -110,8 +110,13 @@ public struct LibraryView: View {
         horizontalSizeClass == .regular ? 24 : 16
     }
 
+    /// iPad presents the sheet as a centered form; a medium detent leaves it half empty.
+    private var meSheetDetents: Set<PresentationDetent> {
+        horizontalSizeClass == .regular ? [.large] : [.medium, .large]
+    }
+
     public var body: some View {
-        NavigationStack {
+        NavigationStack(path: $session.libraryPath) {
             Group {
                 if viewModel.isLoading && viewModel.movies.isEmpty {
                     ProgressView("加载片库…")
@@ -122,7 +127,7 @@ public struct LibraryView: View {
                         Text(error)
                     } actions: {
                         Button("重试") { Task { await viewModel.load() } }
-                        Button("去配置") { session.route = .config(fromLogin: false) }
+                        Button("去配置") { session.openLibraryConfig() }
                     }
                 } else if viewModel.movies.isEmpty {
                     ContentUnavailableView(
@@ -171,8 +176,24 @@ public struct LibraryView: View {
             .sheet(isPresented: $viewModel.showMe) {
                 MeSheetView(session: session, theme: theme)
                     .preferredColorScheme(theme.appearance.preferredColorScheme)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents(meSheetDetents)
                     .presentationDragIndicator(.visible)
+            }
+            .navigationDestination(for: LibraryRoute.self) { destination in
+                switch destination {
+                case .config:
+                    ServiceConfigView(session: session, fromLogin: false)
+                case .watch(let roomId, let movieId, let hostUserId):
+                    WatchView(
+                        session: session,
+                        theme: theme,
+                        roomId: roomId,
+                        movieId: movieId,
+                        hostUserId: hostUserId
+                    )
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationBarBackButtonHidden(true)
+                }
             }
             .task { await viewModel.load() }
         }

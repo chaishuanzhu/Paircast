@@ -63,6 +63,21 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
     }
 
     public func updateRoom(_ room: WatchRoom) async throws {
+        if room.status == .ended {
+            // Notify local observers first, then remove the Qiniu object so dissolved
+            // rooms do not leave orphan `_tandem/rooms/{id}.json` files.
+            cacheAndBroadcast(room)
+            do {
+                try await deleteRoomObject(id: room.id)
+            } catch {
+                TandemLog.catalog.error(
+                    "room DELETE failed id=\(room.id, privacy: .public); writing ended tombstone"
+                )
+                try await putRoom(room)
+            }
+            stopPolling(roomId: room.id)
+            return
+        }
         try await putRoom(room)
         cacheAndBroadcast(room)
     }
@@ -186,9 +201,39 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
         }
     }
 
+    private func deleteRoomObject(id: String) async throws {
+        let config = try await requireConfig()
+        let url = try objectURL(roomId: id, config: config)
+        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let signed = try AWSV4Signer.signHeader(
+            method: "DELETE",
+            url: url,
+            region: region,
+            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey)
+        )
+        var request = URLRequest(url: signed.url)
+        request.httpMethod = signed.method
+        request.timeoutInterval = 20
+        for (key, value) in signed.headers where key.lowercased() != "host" {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw AppError.network }
+        // 404: already gone — treat as success for dissolve cleanup.
+        guard http.statusCode == 404 || (200..<300).contains(http.statusCode) else {
+            TandemLog.catalog.error("room DELETE HTTP \(http.statusCode, privacy: .public)")
+            throw AppError.network
+        }
+        TandemLog.catalog.info("room DELETE ok id=\(id, privacy: .public)")
+    }
+
+    public static func objectKey(roomId: String) -> String {
+        objectKeyPrefix + roomId.lowercased() + ".json"
+    }
+
     private func objectURL(roomId: String, config: AppCloudConfig) throws -> URL {
         let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let key = Self.objectKeyPrefix + roomId.lowercased() + ".json"
+        let key = Self.objectKey(roomId: roomId)
         var components = URLComponents()
         components.scheme = "https"
         components.host = host
@@ -217,6 +262,14 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
         let conts = continuations[room.id.lowercased()]?.values.map { $0 } ?? []
         lock.unlock()
         conts.forEach { $0.yield(room) }
+    }
+
+    private func stopPolling(roomId: String) {
+        let id = roomId.lowercased()
+        lock.lock()
+        pollTasks[id]?.cancel()
+        pollTasks[id] = nil
+        lock.unlock()
     }
 }
 

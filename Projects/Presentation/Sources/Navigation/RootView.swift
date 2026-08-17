@@ -24,9 +24,6 @@ public struct RootView: View {
             case .library:
                 LibraryView(session: session, theme: theme)
                     .transition(.opacity)
-            case .watch(let roomId, let movieId, let hostUserId):
-                WatchView(session: session, theme: theme, roomId: roomId, movieId: movieId, hostUserId: hostUserId)
-                    .transition(.opacity)
             }
         }
         .preferredColorScheme(theme.appearance.preferredColorScheme)

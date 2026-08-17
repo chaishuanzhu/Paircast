@@ -4,6 +4,8 @@ import Domain
 @MainActor
 public final class AppSession: ObservableObject {
     @Published public var route: AppRoute
+    /// In-library NavigationStack path (Watch / Config). Replaced, not stacked, for deep links.
+    @Published public var libraryPath: [LibraryRoute] = []
     @Published public var config: AppCloudConfig?
     @Published public var currentUser: User?
     @Published public var toast: String?
@@ -55,6 +57,7 @@ public final class AppSession: ObservableObject {
         config = try? await configGateway.load()
 
         var next: AppRoute = .login
+        var nextLibraryPath: [LibraryRoute] = []
         if let userId = try? await configGateway.loadSessionUserId(),
            let config,
            config.isComplete {
@@ -70,14 +73,18 @@ public final class AppSession: ObservableObject {
 
         // Deep links received during splash win over the default destination.
         if pendingConfigImportRaw != nil {
-            next = .config(fromLogin: currentUser == nil)
+            if currentUser == nil {
+                next = .config(fromLogin: true)
+            } else {
+                next = .library
+                nextLibraryPath = [.config]
+            }
         } else if currentUser != nil, let invite = pendingInvite {
             pendingInvite = nil
-            next = .watch(
-                roomId: invite.roomId,
-                movieId: invite.movieId,
-                hostUserId: invite.hostUserId
-            )
+            next = .library
+            nextLibraryPath = [
+                .watch(roomId: invite.roomId, movieId: invite.movieId, hostUserId: invite.hostUserId)
+            ]
         }
 
         await Self.waitMinimumSplash(since: started)
@@ -85,10 +92,11 @@ public final class AppSession: ObservableObject {
         // A logged-in watch deep link may already have left splash.
         guard route == .splash else { return }
         route = next
+        libraryPath = nextLibraryPath
         if case .login = next, pendingInvite != nil {
             showToast("请先登录再加入房间")
         }
-        if case .config = next {
+        if pendingConfigImportRaw != nil {
             showToast("检测到配置链接，请确认后导入")
         }
     }
@@ -112,7 +120,7 @@ public final class AppSession: ObservableObject {
         if ConfigShareLink.isConfigShareURL(url) {
             pendingConfigImportRaw = url.absoluteString
             if route != .splash {
-                route = .config(fromLogin: currentUser == nil)
+                openConfig(fromLogin: currentUser == nil)
                 showToast("检测到配置链接，请确认后导入")
             }
             return
@@ -121,16 +129,12 @@ public final class AppSession: ObservableObject {
         if currentUser == nil {
             pendingInvite = invite
             if route != .splash {
-                route = .login
+                resetToLogin()
                 showToast("请先登录再加入房间")
             }
         } else {
             pendingInvite = nil
-            route = .watch(
-                roomId: invite.roomId,
-                movieId: invite.movieId,
-                hostUserId: invite.hostUserId
-            )
+            openWatch(roomId: invite.roomId, movieId: invite.movieId, hostUserId: invite.hostUserId)
         }
     }
 
@@ -144,11 +148,36 @@ public final class AppSession: ObservableObject {
     public func consumePendingInviteIfPossible() {
         guard currentUser != nil, let invite = pendingInvite else { return }
         pendingInvite = nil
-        route = .watch(
-            roomId: invite.roomId,
-            movieId: invite.movieId,
-            hostUserId: invite.hostUserId
-        )
+        openWatch(roomId: invite.roomId, movieId: invite.movieId, hostUserId: invite.hostUserId)
+    }
+
+    public func openWatch(roomId: String?, movieId: String?, hostUserId: String?) {
+        route = .library
+        libraryPath = [.watch(roomId: roomId, movieId: movieId, hostUserId: hostUserId)]
+    }
+
+    public func openLibraryConfig() {
+        route = .library
+        libraryPath = [.config]
+    }
+
+    public func popLibraryToRoot() {
+        libraryPath = []
+    }
+
+    /// Config from login stays a root scene; logged-in config is a library push.
+    public func openConfig(fromLogin: Bool) {
+        if fromLogin {
+            libraryPath = []
+            route = .config(fromLogin: true)
+        } else {
+            openLibraryConfig()
+        }
+    }
+
+    public func resetToLogin() {
+        libraryPath = []
+        route = .login
     }
 
     public func installIMSessionObservers() {
@@ -175,7 +204,7 @@ public final class AppSession: ObservableObject {
     private func handleForcedLogout(message: String) {
         currentUser = nil
         pendingInvite = nil
-        route = .login
+        resetToLogin()
         showToast(message)
     }
 }
@@ -207,5 +236,9 @@ public enum AppRoute: Equatable, Hashable {
     case login
     case config(fromLogin: Bool)
     case library
-    case watch(roomId: String?, movieId: String?, hostUserId: String? = nil)
+}
+
+public enum LibraryRoute: Hashable {
+    case config
+    case watch(roomId: String?, movieId: String?, hostUserId: String?)
 }

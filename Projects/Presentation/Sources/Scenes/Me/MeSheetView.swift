@@ -80,7 +80,7 @@ public final class MeViewModel: ObservableObject {
             let harness = MeHarness(session: session)
             try await harness.logout()
             session.currentUser = nil
-            session.route = .login
+            session.resetToLogin()
         } catch {
             statusMessage = AppError.network.userMessage
         }
@@ -146,7 +146,9 @@ public struct MeSheetView: View {
                         Divider().padding(.leading, 16)
                         Button {
                             dismiss()
-                            session.route = .config(fromLogin: false)
+                            DispatchQueue.main.async {
+                                session.openLibraryConfig()
+                            }
                         } label: {
                             meRow(title: "服务配置") {
                                 HStack(spacing: 4) {

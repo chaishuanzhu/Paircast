@@ -36,11 +36,7 @@ public final class LoginViewModel: ObservableObject {
             try await harness.login(userId: userId, password: password)
             session.currentUser = try await session.authGateway.fetchProfile()
             session.consumePendingInviteIfPossible()
-            if case .watch = session.route {
-                // Pending invite consumed — stay on watch.
-            } else {
-                session.route = .library
-            }
+            session.route = .library
         } catch let error as AppError {
             errorMessage = error.userMessage
         } catch {

@@ -293,6 +293,7 @@ final class WatchRoomDTOTests: XCTestCase {
         let decoded = try JSONDecoder().decode(WatchRoomDTO.self, from: data).toDomain()
         XCTAssertEqual(decoded, room)
         XCTAssertEqual(QiniuRoomGateway.objectKeyPrefix, "_tandem/rooms/")
+        XCTAssertEqual(QiniuRoomGateway.objectKey(roomId: "AbC-123"), "_tandem/rooms/abc-123.json")
     }
 }
 

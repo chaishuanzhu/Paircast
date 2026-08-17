@@ -153,6 +153,7 @@ private struct ConfigHarness: SaveCloudConfigUseCase, ImportConfigQRUseCase, Exp
 public struct ServiceConfigView: View {
     @ObservedObject var session: AppSession
     let fromLogin: Bool
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: ServiceConfigViewModel
 
     public init(session: AppSession, fromLogin: Bool) {
@@ -162,7 +163,16 @@ public struct ServiceConfigView: View {
     }
 
     public var body: some View {
-        NavigationStack {
+        if fromLogin {
+            NavigationStack {
+                formContent
+            }
+        } else {
+            formContent
+        }
+    }
+
+    private var formContent: some View {
             Form {
                 Section {
                     ConfigTransferRow(
@@ -223,10 +233,13 @@ public struct ServiceConfigView: View {
                 }
             }
             .navigationTitle("服务配置")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    ToolbarBackButton {
-                        session.route = fromLogin ? .login : .library
+                if fromLogin {
+                    ToolbarItem(placement: .cancellationAction) {
+                        ToolbarBackButton {
+                            session.resetToLogin()
+                        }
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -234,7 +247,11 @@ public struct ServiceConfigView: View {
                         Task {
                             if await viewModel.save() {
                                 session.showToast("已保存")
-                                session.route = fromLogin ? .login : .library
+                                if fromLogin {
+                                    session.resetToLogin()
+                                } else {
+                                    dismiss()
+                                }
                             }
                         }
                     }
@@ -276,7 +293,6 @@ public struct ServiceConfigView: View {
                     )
                 }
             }
-        }
     }
 }
 
