@@ -1,10 +1,10 @@
 import ProjectDescription
 
 public extension Project {
-    static let tandemOrganizationName = "Tandem"
-    static let tandemBundlePrefix = "com.chaisz"
-    static let tandemDeploymentTargets: DeploymentTargets = .iOS("26.0")
-    static let tandemDestinations: Destinations = .iOS
+    static let paircastOrganizationName = "Paircast"
+    static let paircastBundlePrefix = "com.chaisz"
+    static let paircastDeploymentTargets: DeploymentTargets = .iOS("26.0")
+    static let paircastDestinations: Destinations = .iOS
 
     static func framework(
         name: String,
@@ -13,24 +13,24 @@ public extension Project {
     ) -> Project {
         Project(
             name: name,
-            organizationName: tandemOrganizationName,
+            organizationName: paircastOrganizationName,
             targets: [
                 .target(
                     name: name,
-                    destinations: tandemDestinations,
+                    destinations: paircastDestinations,
                     product: .staticFramework,
-                    bundleId: "\(tandemBundlePrefix).\(name.lowercased())",
-                    deploymentTargets: tandemDeploymentTargets,
+                    bundleId: "\(paircastBundlePrefix).\(name.lowercased())",
+                    deploymentTargets: paircastDeploymentTargets,
                     infoPlist: .default,
                     sources: ["Sources/**"],
                     dependencies: dependencies
                 ),
                 .target(
                     name: "\(name)Tests",
-                    destinations: tandemDestinations,
+                    destinations: paircastDestinations,
                     product: .unitTests,
-                    bundleId: "\(tandemBundlePrefix).\(name.lowercased()).tests",
-                    deploymentTargets: tandemDeploymentTargets,
+                    bundleId: "\(paircastBundlePrefix).\(name.lowercased()).tests",
+                    deploymentTargets: paircastDeploymentTargets,
                     infoPlist: .default,
                     sources: ["Tests/**"],
                     dependencies: [.target(name: name)] + testDependencies

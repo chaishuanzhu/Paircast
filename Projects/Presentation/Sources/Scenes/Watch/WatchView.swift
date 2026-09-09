@@ -197,7 +197,7 @@ public final class WatchViewModel: ObservableObject {
 
     private func preparePlayer() async {
         guard let movie else { return }
-        TandemLog.playback.info(
+        PaircastLog.playback.info(
             "preparePlayer movie=\(movie.objectKey, privacy: .public) format=\(movie.format.rawValue, privacy: .public)"
         )
         player.stop()
@@ -209,14 +209,14 @@ public final class WatchViewModel: ObservableObject {
             let url = try await session.catalogGateway.playURL(for: movie, config: config)
             try await player.prepare(url: url)
             if let playerError = player.lastError {
-                TandemLog.playback.error("preparePlayer playerError=\(playerError, privacy: .public)")
+                PaircastLog.playback.error("preparePlayer playerError=\(playerError, privacy: .public)")
                 errorMessage = playerError
             }
         } catch let error as AppError {
-            TandemLog.playback.error("preparePlayer AppError=\(error.userMessage, privacy: .public)")
+            PaircastLog.playback.error("preparePlayer AppError=\(error.userMessage, privacy: .public)")
             errorMessage = TandemL10n.format(error)
         } catch {
-            TandemLog.playback.error("preparePlayer error=\(String(describing: error), privacy: .public)")
+            PaircastLog.playback.error("preparePlayer error=\(String(describing: error), privacy: .public)")
             errorMessage = TandemL10n.format(AppError.playbackFailed)
         }
     }

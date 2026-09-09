@@ -1,12 +1,12 @@
 # Design Tokens
 
-Tandem iOS — designtoken.md format ([spec](https://designtoken.md/spec)).
+Paircast iOS — designtoken.md format ([spec](https://designtoken.md/spec)).
 Brand: co-watching cinema · primary = system blue · surfaces follow iOS grouped hierarchy.
 Theme modes: `system` | `light` | `dark` (user preference; `system` defers to OS).
 
 ## Color Palette
 
-### Primary (Tandem Blue)
+### Primary (Paircast Blue)
 - **50:** #E8F2FF
 - **100:** #D1E6FF
 - **200:** #A3CDFF

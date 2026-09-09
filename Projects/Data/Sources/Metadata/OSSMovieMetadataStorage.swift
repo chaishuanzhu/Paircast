@@ -37,7 +37,7 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
             result.backdropURL = try? signedGETURL(objectKey: fanartKey, config: config)
         }
 
-        TandemLog.catalog.info(
+        PaircastLog.catalog.info(
             "metadata oss hit movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public) poster=\(result.posterURL != nil, privacy: .public) fanart=\(result.backdropURL != nil, privacy: .public)"
         )
         return result
@@ -71,7 +71,7 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
                     )
                     result.posterURL = try signedGETURL(objectKey: posterKey, config: config)
                 } catch {
-                    TandemLog.catalog.error(
+                    PaircastLog.catalog.error(
                         "metadata poster upload failed key=\(posterKey, privacy: .public)"
                     )
                 }
@@ -94,7 +94,7 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
                 )
                 result.backdropURL = try signedGETURL(objectKey: fanartKey, config: config)
             } catch {
-                TandemLog.catalog.error(
+                PaircastLog.catalog.error(
                     "metadata fanart upload failed key=\(fanartKey, privacy: .public)"
                 )
             }
@@ -122,11 +122,11 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
             if hasLocalFanart {
                 result.backdropURL = try? signedGETURL(objectKey: fanartKey, config: config)
             }
-            TandemLog.catalog.info(
+            PaircastLog.catalog.info(
                 "metadata oss saved movie=\(movie.objectKey, privacy: .public) nfo=\(nfoKey, privacy: .public)"
             )
         } catch {
-            TandemLog.catalog.error(
+            PaircastLog.catalog.error(
                 "metadata oss save failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
             )
         }
@@ -146,7 +146,7 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
             )
             return try signedGETURL(objectKey: objectKey, config: config)
         } catch {
-            TandemLog.catalog.error(
+            PaircastLog.catalog.error(
                 "metadata art upload failed key=\(objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
             )
             return nil
@@ -174,7 +174,7 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
             let contentType = rawType.contains("image") ? rawType : "image/jpeg"
             return (data, contentType)
         } catch {
-            TandemLog.catalog.error(
+            PaircastLog.catalog.error(
                 "metadata art download failed error=\(String(describing: error), privacy: .public)"
             )
             return nil
@@ -243,7 +243,7 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? -1
             let snippet = String(data: responseBody.prefix(200), encoding: .utf8) ?? ""
-            TandemLog.catalog.error("metadata PUT HTTP \(code, privacy: .public) \(snippet, privacy: .public)")
+            PaircastLog.catalog.error("metadata PUT HTTP \(code, privacy: .public) \(snippet, privacy: .public)")
             throw AppError.network
         }
     }

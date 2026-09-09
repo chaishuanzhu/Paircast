@@ -4,7 +4,7 @@ import Domain
 /// Persists watch rooms as JSON objects in the configured object-storage bucket so friends on
 /// other devices can join via invite (in-memory rooms cannot cross processes/devices).
 public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
-    public static let objectKeyPrefix = "_tandem/rooms/"
+    public static let objectKeyPrefix = "_paircast/rooms/"
 
     private let configGateway: ConfigGateway
     private let session: URLSession
@@ -65,12 +65,12 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
     public func updateRoom(_ room: WatchRoom) async throws {
         if room.status == .ended {
             // Notify local observers first, then remove the storage object so dissolved
-            // rooms do not leave orphan `_tandem/rooms/{id}.json` files.
+            // rooms do not leave orphan `_paircast/rooms/{id}.json` files.
             cacheAndBroadcast(room)
             do {
                 try await deleteRoomObject(id: room.id)
             } catch {
-                TandemLog.catalog.error(
+                PaircastLog.catalog.error(
                     "room DELETE failed id=\(room.id, privacy: .public); writing ended tombstone"
                 )
                 try await putRoom(room)
@@ -164,7 +164,7 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
         guard let http = response as? HTTPURLResponse else { throw AppError.network }
         if http.statusCode == 404 { return nil }
         guard (200..<300).contains(http.statusCode) else {
-            TandemLog.catalog.error("room GET HTTP \(http.statusCode, privacy: .public)")
+            PaircastLog.catalog.error("room GET HTTP \(http.statusCode, privacy: .public)")
             throw AppError.network
         }
         return try JSONDecoder().decode(WatchRoomDTO.self, from: data).toDomain()
@@ -195,7 +195,7 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
         let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? -1
-            TandemLog.catalog.error("room PUT HTTP \(code, privacy: .public)")
+            PaircastLog.catalog.error("room PUT HTTP \(code, privacy: .public)")
             throw AppError.network
         }
     }
@@ -220,10 +220,10 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
         guard let http = response as? HTTPURLResponse else { throw AppError.network }
         // 404: already gone — treat as success for dissolve cleanup.
         guard http.statusCode == 404 || (200..<300).contains(http.statusCode) else {
-            TandemLog.catalog.error("room DELETE HTTP \(http.statusCode, privacy: .public)")
+            PaircastLog.catalog.error("room DELETE HTTP \(http.statusCode, privacy: .public)")
             throw AppError.network
         }
-        TandemLog.catalog.info("room DELETE ok id=\(id, privacy: .public)")
+        PaircastLog.catalog.info("room DELETE ok id=\(id, privacy: .public)")
     }
 
     public static func objectKey(roomId: String) -> String {

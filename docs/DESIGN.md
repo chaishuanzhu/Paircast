@@ -1,14 +1,14 @@
-# Tandem iOS 设计说明（Apple HIG）
+# Paircast iOS 设计说明（Apple HIG）
 
 > 对应 PRD v1.4  
-> Figma：[Tandem iOS Design](https://www.figma.com/design/5wmtldOSN7EznnnpjIRDnD)  
+> Figma：[Paircast iOS Design](https://www.figma.com/design/5wmtldOSN7EznnnpjIRDnD)  
 > 画板基准：**iPhone 16 / 393×852**，圆角设备框仅用于展示
 
 ---
 
 ## 1. 设计原则（对齐 Human Interface Guidelines）
 
-| 原则 | 在 Tandem 中的体现 |
+| 原则 | 在 Paircast 中的体现 |
 |------|-------------------|
 | **清晰 Clarity** | 片库双列海报为主视觉；播放页播控与聊天分区明确；文案短句 |
 | **遵从 Deference** | 内容优先：海报与影片画面占主导；系统控件克制，少用装饰 |
@@ -109,7 +109,7 @@
 
 ### 片库 SPA
 
-- 无 Tab；**大标题**「Tandem」（滚动收起）；右上角 36pt 圆形头像  
+- 无 Tab；**大标题**「Paircast」（滚动收起）；右上角 36pt 圆形头像  
 - 下拉刷新（标准 `UIRefreshControl`）  
 - 点海报 → 全屏 Push/Cover 进 Watch  
 
@@ -180,7 +180,7 @@
 
 | 问题 | 修正 |
 |------|------|
-| 登录页「Tandem / 一起看电影」未水平居中 | Body / Brand 设置 `counterAxisAlignItems: CENTER`，标题 `textAlignHorizontal: CENTER` 且横向 FILL |
+| 登录页「Paircast / 一起看电影」未水平居中 | Body / Brand 设置 `counterAxisAlignItems: CENTER`，标题 `textAlignHorizontal: CENTER` 且横向 FILL |
 | Library 卡片列宽不齐、文案撑破 | 双列 `FILL` 等分；海报 `aspect 2:3`；标题单行省略；简介两行截断 |
 
 本地预览（推荐，含全部页面修正）：[`design-preview/index.html`](./design-preview/index.html)  

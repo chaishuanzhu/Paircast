@@ -5,7 +5,7 @@ import Foundation
 public enum MovieMetadataObjectKey {
     public static func movieBase(from movieObjectKey: String) -> String? {
         let key = movieObjectKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty, !key.hasPrefix("_tandem/") else { return nil }
+        guard !key.isEmpty, !key.hasPrefix("_paircast/") else { return nil }
         let base = (key as NSString).deletingPathExtension
         return base.isEmpty ? nil : base
     }

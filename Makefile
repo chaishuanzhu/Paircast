@@ -12,13 +12,13 @@ generate:
 	tuist generate --no-open
 
 test:
-	xcodebuild test -workspace Tandem.xcworkspace -scheme Domain -destination '$(DESTINATION)' -quiet
-	xcodebuild test -workspace Tandem.xcworkspace -scheme Data -destination '$(DESTINATION)' -quiet
-	xcodebuild test -workspace Tandem.xcworkspace -scheme Presentation -destination '$(DESTINATION)' -quiet
+	xcodebuild test -workspace Paircast.xcworkspace -scheme Domain -destination '$(DESTINATION)' -quiet
+	xcodebuild test -workspace Paircast.xcworkspace -scheme Data -destination '$(DESTINATION)' -quiet
+	xcodebuild test -workspace Paircast.xcworkspace -scheme Presentation -destination '$(DESTINATION)' -quiet
 
 open:
 	tuist generate
-	open Tandem.xcworkspace
+	open Paircast.xcworkspace
 
 graph:
 	tuist graph

@@ -203,7 +203,7 @@ public struct ServiceConfigView: View {
                 Section {
                     ConfigTransferRow(
                         title: "Paste to Import",
-                        subtitle: "Paste a tandem://config?args=… link",
+                        subtitle: "Paste a paircast://config?args=… link",
                         systemImage: "arrow.down.doc.fill",
                         tint: Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255)
                     ) {
@@ -270,7 +270,7 @@ public struct ServiceConfigView: View {
                 } header: {
                     Text("Extensions")
                 } footer: {
-                    Text("Tandem only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews.")
+                    Text("Paircast only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews.")
                 }
                 if let status = viewModel.statusMessage {
                     Section {
@@ -570,7 +570,7 @@ private struct ConfigPasteImportView: View {
                             .font(.system(size: 20, weight: .bold))
                             .tracking(-0.3)
 
-                        Text("Supports a full deep link, or a tandem://config?args=… link found in a chat message")
+                        Text("Supports a full deep link, or a paircast://config?args=… link found in a chat message")
                             .font(.system(size: 14))
                             .foregroundStyle(TandemColors.secondaryLabel)
                             .multilineTextAlignment(.center)
@@ -578,7 +578,7 @@ private struct ConfigPasteImportView: View {
                     }
                     .padding(.top, 8)
 
-                    TextField("tandem://config?args=…", text: $text, axis: .vertical)
+                    TextField("paircast://config?args=…", text: $text, axis: .vertical)
                         .font(.system(size: 15))
                         .lineLimit(5...10)
                         .textInputAutocapitalization(.never)

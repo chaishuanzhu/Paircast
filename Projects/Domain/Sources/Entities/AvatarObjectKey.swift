@@ -3,10 +3,10 @@ import Foundation
 /// Object key stored in Tencent IM `faceURL` (not a downloadable HTTPS URL).
 /// Display URLs are resolved at login / profile fetch via S3 SigV4.
 public enum AvatarObjectKey {
-    public static let prefix = "_tandem/avatars/"
+    public static let prefix = "_paircast/avatars/"
 
     /// Parses IM `faceURL` into a storage object key.
-    /// Supports raw keys, `tandem://avatar/…`, and legacy HTTPS signed URLs.
+    /// Supports raw keys, `paircast://avatar/…`, and HTTPS signed URLs.
     public static func parse(fromFaceURL raw: String?) -> String? {
         guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
             return nil
@@ -14,7 +14,9 @@ public enum AvatarObjectKey {
         if raw.hasPrefix(prefix) {
             return raw
         }
-        if let url = URL(string: raw), url.scheme?.lowercased() == "tandem", url.host?.lowercased() == "avatar" {
+        if let url = URL(string: raw),
+           url.scheme?.lowercased() == "paircast",
+           url.host?.lowercased() == "avatar" {
             let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             if path.hasPrefix(prefix) { return path }
         }
@@ -31,7 +33,7 @@ public enum AvatarObjectKey {
 
     private static func extractFromHTTPSPath(_ path: String) -> String? {
         let parts = path.split(separator: "/").map(String.init)
-        guard let idx = parts.firstIndex(of: "_tandem"),
+        guard let idx = parts.firstIndex(of: "_paircast"),
               idx + 1 < parts.count,
               parts[idx + 1] == "avatars" else {
             return nil

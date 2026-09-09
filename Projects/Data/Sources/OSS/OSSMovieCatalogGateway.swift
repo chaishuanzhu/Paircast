@@ -26,7 +26,7 @@ public struct OSSMovieCatalogGateway: MovieCatalogGateway {
     public func listMovies(config: AppCloudConfig) async throws -> [Movie] {
         let host = AWSV4Signer.normalizedHost(config.storage.endpoint)
         let region = config.storage.signingRegion
-        TandemLog.catalog.info(
+        PaircastLog.catalog.info(
             "listMovies begin bucket=\(config.storage.bucket, privacy: .public) host=\(host, privacy: .public) region=\(region, privacy: .public) prefix=\(config.storage.prefix ?? "", privacy: .public) provider=\(config.storage.provider.rawValue, privacy: .public)"
         )
         do {
@@ -42,32 +42,32 @@ public struct OSSMovieCatalogGateway: MovieCatalogGateway {
                     format: format
                 )
             }
-            TandemLog.catalog.info(
+            PaircastLog.catalog.info(
                 "listMovies done objects=\(keys.count, privacy: .public) videos=\(movies.count, privacy: .public)"
             )
             return movies
         } catch {
-            TandemLog.catalog.error("listMovies failed error=\(String(describing: error), privacy: .public)")
+            PaircastLog.catalog.error("listMovies failed error=\(String(describing: error), privacy: .public)")
             throw error
         }
     }
 
     public func playURL(for movie: Movie, config: AppCloudConfig) async throws -> URL {
         if let playURL = movie.playURL {
-            TandemLog.catalog.info(
-                "playURL using embedded url movie=\(movie.objectKey, privacy: .public) \(TandemLog.redactedURL(playURL), privacy: .public)"
+            PaircastLog.catalog.info(
+                "playURL using embedded url movie=\(movie.objectKey, privacy: .public) \(PaircastLog.redactedURL(playURL), privacy: .public)"
             )
             return playURL
         }
         // Always AWS SigV4 query-presign against the S3 endpoint (private bucket).
         do {
             let url = try makePresignedGetURL(objectKey: movie.objectKey, config: config)
-            TandemLog.catalog.info(
-                "playURL presigned expires=\(self.presignExpires, privacy: .public)s movie=\(movie.objectKey, privacy: .public) \(TandemLog.redactedURL(url), privacy: .public)"
+            PaircastLog.catalog.info(
+                "playURL presigned expires=\(self.presignExpires, privacy: .public)s movie=\(movie.objectKey, privacy: .public) \(PaircastLog.redactedURL(url), privacy: .public)"
             )
             return url
         } catch {
-            TandemLog.catalog.error(
+            PaircastLog.catalog.error(
                 "playURL presign failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
             )
             throw error
@@ -89,7 +89,7 @@ public struct OSSMovieCatalogGateway: MovieCatalogGateway {
             }
             let page = try await listObjectKeysPage(config: config, continuationToken: continuationToken)
             allKeys.append(contentsOf: page.keys)
-            TandemLog.catalog.debug(
+            PaircastLog.catalog.debug(
                 "listObjects page=\(pageCount, privacy: .public) keys=\(page.keys.count, privacy: .public) truncated=\(page.isTruncated, privacy: .public)"
             )
             if page.isTruncated, let next = page.nextContinuationToken, !next.isEmpty {
@@ -157,8 +157,8 @@ public struct OSSMovieCatalogGateway: MovieCatalogGateway {
         }
 
         if !(200..<300).contains(http.statusCode) {
-            TandemLog.catalog.error(
-                "listObjects HTTP \(http.statusCode, privacy: .public) \(TandemLog.redactedURL(signed.url), privacy: .public)"
+            PaircastLog.catalog.error(
+                "listObjects HTTP \(http.statusCode, privacy: .public) \(PaircastLog.redactedURL(signed.url), privacy: .public)"
             )
             throw mapListFailure(data: data, statusCode: http.statusCode)
         }

@@ -76,7 +76,7 @@ public struct LoginView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .shadow(color: TandemColors.systemBlue.opacity(0.28), radius: 12, y: 6)
                         .accessibilityHidden(true)
-                    Text("Tandem")
+                    Text("Paircast")
                         .font(.system(size: 34, weight: .bold))
                         .tracking(-0.4)
                     Text("Watch together")

@@ -1,7 +1,7 @@
 import Foundation
 import Domain
 
-/// Uploads avatars to `_tandem/avatars/{userId}/{uuid}.jpg` via S3-compatible Endpoint.
+/// Uploads avatars to `_paircast/avatars/{userId}/{uuid}.jpg` via S3-compatible Endpoint.
 /// IM stores only the object key; signed GET URLs are minted on login / profile fetch.
 public final class OSSAvatarStorage: AvatarStorageGateway, @unchecked Sendable {
     public static let objectKeyPrefix = AvatarObjectKey.prefix
@@ -61,7 +61,7 @@ public final class OSSAvatarStorage: AvatarStorageGateway, @unchecked Sendable {
         let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw AppError.network }
         guard http.statusCode == 404 || (200..<300).contains(http.statusCode) else {
-            TandemLog.catalog.error("avatar DELETE HTTP \(http.statusCode, privacy: .public)")
+            PaircastLog.catalog.error("avatar DELETE HTTP \(http.statusCode, privacy: .public)")
             throw AppError.network
         }
     }
@@ -91,7 +91,7 @@ public final class OSSAvatarStorage: AvatarStorageGateway, @unchecked Sendable {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? -1
             let snippet = String(data: responseBody.prefix(400), encoding: .utf8) ?? ""
-            TandemLog.catalog.error("avatar PUT HTTP \(code, privacy: .public) \(snippet, privacy: .public)")
+            PaircastLog.catalog.error("avatar PUT HTTP \(code, privacy: .public) \(snippet, privacy: .public)")
             throw AppError.avatarUploadFailed
         }
     }

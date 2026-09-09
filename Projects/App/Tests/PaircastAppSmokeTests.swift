@@ -1,7 +1,7 @@
 import XCTest
-@testable import Tandem
+@testable import Paircast
 
-final class TandemAppSmokeTests: XCTestCase {
+final class PaircastAppSmokeTests: XCTestCase {
     func test_bundleIdentifierUsesComChaiszPrefix() {
         let bundleId = Bundle.main.bundleIdentifier ?? ""
         XCTAssertTrue(

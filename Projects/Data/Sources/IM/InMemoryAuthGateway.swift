@@ -41,7 +41,7 @@ public final class InMemoryAuthGateway: AuthGateway, @unchecked Sendable {
             if avatarData != nil {
                 let key = "\(AvatarObjectKey.prefix)\(user.id)/local.jpg"
                 user.avatarKey = key
-                user.avatarURL = URL(string: "tandem://avatar/\(key)")
+                user.avatarURL = URL(string: "paircast://avatar/\(key)")
             }
             currentUser = user
             return user

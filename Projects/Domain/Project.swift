@@ -4,7 +4,7 @@ let deploymentTargets: DeploymentTargets = .iOS("26.0")
 
 let project = Project(
     name: "Domain",
-    organizationName: "Tandem",
+    organizationName: "Paircast",
     targets: [
         .target(
             name: "Domain",

@@ -38,13 +38,13 @@ public struct CascadingMetadataGateway: MetadataGateway {
         if result.posterURL == nil || (result.overview ?? "").isEmpty {
             if let omdb = await fetchOMDb(title: result.title, year: result.year, apiKey: config.omdbApiKey) {
                 result = merge(result, with: omdb)
-                TandemLog.catalog.info(
+                PaircastLog.catalog.info(
                     "metadata omdb hit movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public) poster=\(result.posterURL != nil, privacy: .public)"
                 )
             }
         }
         if result.posterURL == nil && (result.overview ?? "").isEmpty {
-            TandemLog.catalog.info(
+            PaircastLog.catalog.info(
                 "metadata filename-only movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public)"
             )
         }
@@ -101,14 +101,14 @@ public struct CascadingMetadataGateway: MetadataGateway {
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                TandemLog.catalog.error(
+                PaircastLog.catalog.error(
                     "douban suggest HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1, privacy: .public)"
                 )
                 return nil
             }
             return try JSONDecoder().decode([DoubanSuggestDTO].self, from: data)
         } catch {
-            TandemLog.catalog.error("douban suggest error=\(String(describing: error), privacy: .public)")
+            PaircastLog.catalog.error("douban suggest error=\(String(describing: error), privacy: .public)")
             return nil
         }
     }
@@ -140,7 +140,7 @@ public struct CascadingMetadataGateway: MetadataGateway {
                   let html = String(data: data, encoding: .utf8) else { return nil }
             return Self.parseDoubanIntro(from: html)
         } catch {
-            TandemLog.catalog.error("douban overview error=\(String(describing: error), privacy: .public)")
+            PaircastLog.catalog.error("douban overview error=\(String(describing: error), privacy: .public)")
             return nil
         }
     }
@@ -182,7 +182,7 @@ public struct CascadingMetadataGateway: MetadataGateway {
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                TandemLog.catalog.error(
+                PaircastLog.catalog.error(
                     "imdb suggest HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1, privacy: .public)"
                 )
                 return nil
@@ -198,7 +198,7 @@ public struct CascadingMetadataGateway: MetadataGateway {
                 posterURL: poster
             )
         } catch {
-            TandemLog.catalog.error("imdb suggest error=\(String(describing: error), privacy: .public)")
+            PaircastLog.catalog.error("imdb suggest error=\(String(describing: error), privacy: .public)")
             return nil
         }
     }
@@ -263,7 +263,7 @@ public struct CascadingMetadataGateway: MetadataGateway {
                 posterURL: poster
             )
         } catch {
-            TandemLog.catalog.error("omdb error=\(String(describing: error), privacy: .public)")
+            PaircastLog.catalog.error("omdb error=\(String(describing: error), privacy: .public)")
             return nil
         }
     }

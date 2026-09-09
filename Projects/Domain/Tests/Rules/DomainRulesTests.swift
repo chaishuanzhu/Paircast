@@ -89,7 +89,7 @@ final class ConfigShareLinkTests: XCTestCase {
     func test_shareURLRoundTrip() throws {
         let config = AppCloudConfig.fixture()
         let url = try ConfigShareLink.shareURL(for: config)
-        XCTAssertEqual(url.scheme, "tandem")
+        XCTAssertEqual(url.scheme, "paircast")
         XCTAssertEqual(url.host, "config")
         XCTAssertNotNil(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "args" })?.value)
         let decoded = try ConfigShareLink.decode(url.absoluteString)
@@ -127,6 +127,13 @@ final class ConfigShareLinkTests: XCTestCase {
         components.queryItems = [URLQueryItem(name: "args", value: "AAAA")]
         url = components.url!
         XCTAssertThrowsError(try ConfigShareLink.decode(url.absoluteString)) { error in
+            XCTAssertEqual(error as? AppError, .invalidConfigQR)
+        }
+    }
+
+    func test_rejectsTandemScheme() {
+        XCTAssertFalse(ConfigShareLink.isConfigShareURL(URL(string: "tandem://config?args=x")!))
+        XCTAssertThrowsError(try ConfigShareLink.decode("tandem://config?args=AAAA")) { error in
             XCTAssertEqual(error as? AppError, .invalidConfigQR)
         }
     }
@@ -254,18 +261,25 @@ final class ConfigValidationTests: XCTestCase {
 }
 
 final class AvatarObjectKeyTests: XCTestCase {
-    func test_parseRawAndLegacyHTTPS() {
-        let key = "_tandem/avatars/alice/uuid.jpg"
+    func test_parseRawAndHTTPS() {
+        let key = "_paircast/avatars/alice/uuid.jpg"
         XCTAssertEqual(AvatarObjectKey.parse(fromFaceURL: key), key)
         XCTAssertEqual(
             AvatarObjectKey.parse(
-                fromFaceURL: "https://s3.cn-south-1.qiniucs.com/b/_tandem/avatars/alice/uuid.jpg?e=1"
+                fromFaceURL: "https://s3.cn-south-1.qiniucs.com/b/_paircast/avatars/alice/uuid.jpg?e=1"
             ),
             key
         )
         XCTAssertEqual(
-            AvatarObjectKey.parse(fromFaceURL: "tandem://avatar/_tandem/avatars/alice/uuid.jpg"),
+            AvatarObjectKey.parse(fromFaceURL: "paircast://avatar/_paircast/avatars/alice/uuid.jpg"),
             key
+        )
+        XCTAssertNil(AvatarObjectKey.parse(fromFaceURL: "tandem://avatar/_paircast/avatars/alice/uuid.jpg"))
+        XCTAssertNil(AvatarObjectKey.parse(fromFaceURL: "_tandem/avatars/alice/uuid.jpg"))
+        XCTAssertNil(
+            AvatarObjectKey.parse(
+                fromFaceURL: "https://s3.cn-south-1.qiniucs.com/b/_tandem/avatars/alice/uuid.jpg?e=1"
+            )
         )
     }
 }
@@ -397,7 +411,7 @@ final class PlaybackSyncRulesTests: XCTestCase {
             movieId: "m1",
             senderId: room.hostUserId,
             seq: 4,
-            subtitleObjectKey: "_tandem/subtitles/r1/abc.srt",
+            subtitleObjectKey: "films/Inception.2010.srt",
             subtitleLabel: "简体中文"
         )
         let result = PlaybackSyncRules.shouldAccept(signal: signal, room: room, current: current)

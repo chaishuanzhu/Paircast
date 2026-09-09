@@ -1,6 +1,6 @@
 import Foundation
 
 public extension Notification.Name {
-    static let tandemIMKickedOffline = Notification.Name("tandem.im.kickedOffline")
-    static let tandemIMUserSigExpired = Notification.Name("tandem.im.userSigExpired")
+    static let paircastIMKickedOffline = Notification.Name("paircast.im.kickedOffline")
+    static let paircastIMUserSigExpired = Notification.Name("paircast.im.userSigExpired")
 }

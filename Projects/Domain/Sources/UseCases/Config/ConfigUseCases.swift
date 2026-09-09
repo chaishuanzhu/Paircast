@@ -44,7 +44,7 @@ public protocol ExportConfigQRUseCase {
 }
 
 public extension ExportConfigQRUseCase {
-    /// Returns an encrypted share deep link: `tandem://config?args=…`
+    /// Returns an encrypted share deep link: `paircast://config?args=…`
     func exportConfigQR() async throws -> String {
         guard let config = try await configGateway.load() else {
             throw AppError.notConfigured

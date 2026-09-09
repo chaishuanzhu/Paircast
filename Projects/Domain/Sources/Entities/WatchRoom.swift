@@ -30,7 +30,7 @@ public struct WatchRoom: Equatable, Sendable, Identifiable {
         self.hostTransferSeq = hostTransferSeq
     }
 
-    public var imGroupId: String { "tandem_\(id)" }
+    public var imGroupId: String { "paircast_\(id)" }
 }
 
 public enum RoomStatus: String, Equatable, Sendable {

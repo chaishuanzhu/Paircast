@@ -50,9 +50,9 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         // FreeType needs an explicit CJK-capable font on iOS 18+ (otherwise □□□).
         if let path = font.path {
             options.append("--freetype-font=\(path)")
-            TandemLog.playback.info("subtitle freetype-font=\(path, privacy: .public)")
+            PaircastLog.playback.info("subtitle freetype-font=\(path, privacy: .public)")
         } else {
-            TandemLog.playback.warning(
+            PaircastLog.playback.warning(
                 "subtitle font path unresolved name=\(font.name, privacy: .public); relying on setTextRendererFont"
             )
         }
@@ -72,7 +72,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.stop()
         mediaPlayer.rate = 1.0
 
-        TandemLog.playback.info("prepare stream \(TandemLog.redactedURL(url), privacy: .public)")
+        PaircastLog.playback.info("prepare stream \(PaircastLog.redactedURL(url), privacy: .public)")
 
         // Rebuild from absoluteString so Foundation keeps the exact SigV4 query encoding.
         let streamURL = URL(string: url.absoluteString) ?? url
@@ -94,12 +94,12 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         positionMs = 0
         durationMs = Int64(media.length.intValue)
         applySubtitleTextRendererFont()
-        TandemLog.playback.info("prepare ready MobileVLCKit stream media set")
+        PaircastLog.playback.info("prepare ready MobileVLCKit stream media set")
     }
 
     public func play() {
         guard isReady, mediaPlayer.media != nil else {
-            TandemLog.playback.warning("play ignored isReady=\(self.isReady, privacy: .public) hasMedia=\(self.mediaPlayer.media != nil, privacy: .public)")
+            PaircastLog.playback.warning("play ignored isReady=\(self.isReady, privacy: .public) hasMedia=\(self.mediaPlayer.media != nil, privacy: .public)")
             return
         }
         Self.configureAudioSession()
@@ -108,7 +108,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         applySubtitleTextRendererFont()
         mediaPlayer.play()
         isPaused = false
-        TandemLog.playback.info("play rate=\(self.mediaPlayer.rate, privacy: .public)")
+        PaircastLog.playback.info("play rate=\(self.mediaPlayer.rate, privacy: .public)")
     }
 
     /// Rebind the render surface after the drawable moved in the view hierarchy.
@@ -119,17 +119,17 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         guard mediaPlayer.media != nil, mediaPlayer.isPlaying else { return }
         mediaPlayer.pause()
         mediaPlayer.play()
-        TandemLog.playback.info("drawable reattached positionMs=\(self.currentPositionMs, privacy: .public)")
+        PaircastLog.playback.info("drawable reattached positionMs=\(self.currentPositionMs, privacy: .public)")
     }
 
     public func pause() {
         mediaPlayer.pause()
         isPaused = true
-        TandemLog.playback.info("pause positionMs=\(self.currentPositionMs, privacy: .public)")
+        PaircastLog.playback.info("pause positionMs=\(self.currentPositionMs, privacy: .public)")
     }
 
     public func stop() {
-        TandemLog.playback.info("stop")
+        PaircastLog.playback.info("stop")
         mediaPlayer.pause()
         mediaPlayer.stop()
         mediaPlayer.rate = 1.0
@@ -309,7 +309,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
             try session.setCategory(.playback, mode: .moviePlayback, options: [])
             try session.setActive(true)
         } catch {
-            TandemLog.playback.error(
+            PaircastLog.playback.error(
                 "audio session failed error=\(String(describing: error), privacy: .public)"
             )
         }
@@ -326,18 +326,18 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
             refreshTiming()
             switch mediaPlayer.state {
             case .error:
-                TandemLog.playback.error("vlc state=error")
+                PaircastLog.playback.error("vlc state=error")
                 lastError = AppError.playbackFailed.userMessage
                 isPaused = true
             case .ended, .stopped:
-                TandemLog.playback.info("vlc state=\(String(describing: self.mediaPlayer.state), privacy: .public)")
+                PaircastLog.playback.info("vlc state=\(String(describing: self.mediaPlayer.state), privacy: .public)")
                 isPaused = true
             case .paused:
                 isPaused = true
             case .playing, .buffering:
                 // VLC resets text renderer when opening media — re-apply CJK font.
                 applySubtitleTextRendererFont()
-                TandemLog.playback.debug(
+                PaircastLog.playback.debug(
                     "vlc state=\(String(describing: self.mediaPlayer.state), privacy: .public) rate=\(self.mediaPlayer.rate, privacy: .public)"
                 )
                 isPaused = !mediaPlayer.isPlaying

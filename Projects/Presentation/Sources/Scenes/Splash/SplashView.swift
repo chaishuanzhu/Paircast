@@ -49,7 +49,7 @@ public struct SplashView: View {
                     .scaleEffect(markVisible ? 1 : 0.82)
 
                     VStack(spacing: 8) {
-                        Text("Tandem")
+                        Text("Paircast")
                             .font(.system(size: 42, weight: .bold, design: .rounded))
                             .tracking(-0.8)
                             .foregroundStyle(.white)
@@ -73,7 +73,7 @@ public struct SplashView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Tandem, Watch together")
+        .accessibilityLabel("Paircast, Watch together")
         .onAppear { runEntrance() }
     }
 

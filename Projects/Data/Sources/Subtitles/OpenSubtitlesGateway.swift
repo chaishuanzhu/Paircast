@@ -5,7 +5,7 @@ import Domain
 public struct OpenSubtitlesGateway: SubtitleGateway {
     private let session: URLSession
     private let presignExpires: Int
-    private let userAgent = "Tandem iOS v1.0"
+    private let userAgent = "Paircast iOS v1.0"
 
     public init(
         session: URLSession = .shared,
@@ -31,7 +31,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         do {
             keys = try await listAllObjectKeys(config: config, prefix: base)
         } catch {
-            TandemLog.catalog.error(
+            PaircastLog.catalog.error(
                 "listOSSSidecars list failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
             )
             keys = []
@@ -67,7 +67,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
                 )
             )
         }
-        TandemLog.catalog.info(
+        PaircastLog.catalog.info(
             "listOSSSidecars movie=\(movie.objectKey, privacy: .public) tracks=\(tracks.count, privacy: .public)"
         )
         return tracks

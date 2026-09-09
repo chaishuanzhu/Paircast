@@ -154,7 +154,7 @@ public struct LibraryView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("Tandem")
+            .navigationTitle("Paircast")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

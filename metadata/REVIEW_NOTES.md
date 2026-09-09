@@ -1,11 +1,11 @@
 # App Review notes (paste into App Store Connect)
 
-Tandem is a private, invite-only player. It does **not** host or stream a public catalog. Videos come from the tester’s own S3-compatible bucket (Qiniu). The app does not scrape Douban or IMDb.
+Paircast is a private, invite-only player. It does **not** host or stream a public catalog. Videos come from the tester’s own S3-compatible bucket. The app does not scrape Douban or IMDb.
 
 ## Demo setup
 
-1. On the login screen open **服务配置**.
-2. Paste the demo cloud config (or import `tandem://config?args=…` provided separately).
+1. On the login screen open **Service Configuration**.
+2. Paste the demo cloud config (or import `paircast://config?args=…` provided separately).
 3. Log in with the IM user ids below (no password; IM login uses UserSig).
 4. Open the library. Sample files in the bucket are public-domain / Creative Commons shorts only (e.g. Big Buck Bunny). Do not expect commercial films.
 
@@ -16,7 +16,7 @@ Demo IM accounts (provisioned in the Tencent IM console):
 
 ## Account deletion
 
-Me → 删除账号。This clears the on-device Keychain config, session user id, IM nickname/avatar, and the uploaded avatar object.
+Me → Delete Account. This clears the on-device Keychain config, session user id, IM nickname/avatar, and the uploaded avatar object.
 
 ## Chat safety
 

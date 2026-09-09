@@ -10,7 +10,7 @@ let packageSettings = PackageSettings(
 #endif
 
 let package = Package(
-    name: "Tandem",
+    name: "Paircast",
     dependencies: [
         // Local wrapper around pre-downloaded VLCKit binary (see Scripts/download-vlckit.sh).
         .package(path: "../Vendor/VLCKitSPM"),

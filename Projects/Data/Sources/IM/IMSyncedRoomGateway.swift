@@ -13,7 +13,7 @@ public final class IMSyncedRoomGateway: RoomGateway, @unchecked Sendable {
 
     public func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom {
         let room = try await storage.createRoom(movieId: movieId, hostUserId: hostUserId)
-        try await client.ensureMeetingGroup(roomId: room.id, groupName: "Tandem \(room.id.prefix(8))")
+        try await client.ensureMeetingGroup(roomId: room.id, groupName: "Paircast \(room.id.prefix(8))")
         return room
     }
 
@@ -29,7 +29,7 @@ public final class IMSyncedRoomGateway: RoomGateway, @unchecked Sendable {
             movieId: movieId,
             hostUserId: hostUserId
         )
-        try await client.ensureMeetingGroup(roomId: room.id, groupName: "Tandem \(room.id.prefix(8))")
+        try await client.ensureMeetingGroup(roomId: room.id, groupName: "Paircast \(room.id.prefix(8))")
         return room
     }
 

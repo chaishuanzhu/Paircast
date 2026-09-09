@@ -35,7 +35,7 @@ public final class OSSSharedSubtitleStorage: SharedSubtitleStorageGateway, @unch
             config: config,
             contentType: contentType(for: ext)
         )
-        TandemLog.catalog.info(
+        PaircastLog.catalog.info(
             "sidecar subtitle uploaded room=\(roomId, privacy: .public) movie=\(movieId, privacy: .public) key=\(key, privacy: .public)"
         )
         return key
@@ -98,7 +98,7 @@ public final class OSSSharedSubtitleStorage: SharedSubtitleStorageGateway, @unch
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? -1
             let snippet = String(data: responseBody.prefix(400), encoding: .utf8) ?? ""
-            TandemLog.catalog.error("sidecar subtitle PUT HTTP \(code, privacy: .public) \(snippet, privacy: .public)")
+            PaircastLog.catalog.error("sidecar subtitle PUT HTTP \(code, privacy: .public) \(snippet, privacy: .public)")
             throw AppError.subtitleShareFailed
         }
     }

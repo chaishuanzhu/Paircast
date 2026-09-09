@@ -69,7 +69,7 @@ final class ImportConfigQRUseCaseTests: XCTestCase {
         let sut = ConfigUseCaseHarness()
         sut.fakeConfig.config = .fixture()
         let exported = try await sut.exportConfigQR()
-        XCTAssertTrue(exported.hasPrefix("tandem://config?args="))
+        XCTAssertTrue(exported.hasPrefix("paircast://config?args="))
         let decoded = try ConfigShareLink.decode(exported)
         XCTAssertEqual(decoded.storage.bucket, AppCloudConfig.fixture().storage.bucket)
     }

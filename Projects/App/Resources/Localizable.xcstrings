@@ -1,3440 +1,3457 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "{{count}} watching" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{{count}} watching"
+  "sourceLanguage": "en",
+  "strings": {
+    "{{count}} watching": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{count}} watching"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "{{count}} 人在看"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{count}} 人在看"
           }
         }
       }
     },
-    "Account not found or not provisioned. Contact an admin" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account not found or not provisioned. Contact an admin"
+    "Account not found or not provisioned. Contact an admin": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account not found or not provisioned. Contact an admin"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "账号不存在或未开通，请联系管理员"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号不存在或未开通，请联系管理员"
           }
         }
       }
     },
-    "Accounts are assigned by an admin · No sign-up" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accounts are assigned by an admin · No sign-up"
+    "Accounts are assigned by an admin · No sign-up": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accounts are assigned by an admin · No sign-up"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "账号由管理员分配 · 不提供注册"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号由管理员分配 · 不提供注册"
           }
         }
       }
     },
-    "Acknowledgements" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acknowledgements"
+    "Acknowledgements": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acknowledgements"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开源许可"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开源许可"
           }
         }
       }
     },
-    "Add an OpenSubtitles API Key in Service Configuration first" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add an OpenSubtitles API Key in Service Configuration first"
+    "Add an OpenSubtitles API Key in Service Configuration first": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an OpenSubtitles API Key in Service Configuration first"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请先在服务配置中填写 OpenSubtitles API Key"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先在服务配置中填写 OpenSubtitles API Key"
           }
         }
       }
     },
-    "AES-GCM encrypted" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AES-GCM encrypted"
+    "AES-GCM encrypted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AES-GCM encrypted"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "AES-GCM 加密"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AES-GCM 加密"
           }
         }
       }
     },
-    "After friends open the link and sign in, they join this watch room and sync playback." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After friends open the link and sign in, they join this watch room and sync playback."
+    "After friends open the link and sign in, they join this watch room and sync playback.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After friends open the link and sign in, they join this watch room and sync playback."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "好友打开链接并登录后，将加入当前观影房间并对齐进度。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好友打开链接并登录后，将加入当前观影房间并对齐进度。"
           }
         }
       }
     },
-    "After parsing, a masked preview is shown. Local configuration is overwritten only after you confirm." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After parsing, a masked preview is shown. Local configuration is overwritten only after you confirm."
+    "After parsing, a masked preview is shown. Local configuration is overwritten only after you confirm.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After parsing, a masked preview is shown. Local configuration is overwritten only after you confirm."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "解析成功后会展示脱敏预览，确认才会覆盖本机配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解析成功后会展示脱敏预览，确认才会覆盖本机配置"
           }
         }
       }
     },
-    "Alibaba Cloud OSS" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alibaba Cloud OSS"
+    "Alibaba Cloud OSS": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alibaba Cloud OSS"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "阿里云 OSS"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阿里云 OSS"
           }
         }
       }
     },
-    "Already playing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Already playing"
+    "Already playing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already playing"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已在播放"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在播放"
           }
         }
       }
     },
-    "Appearance" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appearance"
+    "Appearance": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "外观"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外观"
           }
         }
       }
     },
-    "Avatar must be under 1 MB after compression" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avatar must be under 1 MB after compression"
+    "Avatar must be under 1 MB after compression": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avatar must be under 1 MB after compression"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "头像需压缩到 1MB 以内"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "头像需压缩到 1MB 以内"
           }
         }
       }
     },
-    "Avatar upload failed. Please try again" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avatar upload failed. Please try again"
+    "Avatar upload failed. Please try again": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avatar upload failed. Please try again"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "头像上传失败，请重试"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "头像上传失败，请重试"
           }
         }
       }
     },
-    "Back" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back"
+    "Back": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
           }
         }
       }
     },
-    "Block User" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Block User"
+    "Block User": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Block User"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "屏蔽用户"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "屏蔽用户"
           }
         }
       }
     },
-    "Blocked {{name}}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blocked {{name}}"
+    "Blocked {{name}}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocked {{name}}"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已屏蔽 {{name}}"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已屏蔽 {{name}}"
           }
         }
       }
     },
-    "Buffering…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buffering…"
+    "Buffering…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buffering…"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "缓冲中…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缓冲中…"
           }
         }
       }
     },
-    "Cancel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
+    "Cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
           }
         }
       }
     },
-    "Change avatar" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Change avatar"
+    "Change avatar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change avatar"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更换头像"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更换头像"
           }
         }
       }
     },
-    "Choose a profile photo and save configuration QR codes" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose a profile photo and save configuration QR codes"
+    "Choose a profile photo and save configuration QR codes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a profile photo and save configuration QR codes"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择头像与保存配置二维码"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择头像与保存配置二维码"
           }
         }
       }
     },
-    "Choose Match System to follow iOS language settings. English and 简体中文 override the system." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose Match System to follow iOS language settings. English and 简体中文 override the system."
+    "Choose Match System to follow iOS language settings. English and 简体中文 override the system.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Match System to follow iOS language settings. English and 简体中文 override the system."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择「跟随系统」时与 iOS 语言设置一致。English 与简体中文会覆盖系统语言。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择「跟随系统」时与 iOS 语言设置一致。English 与简体中文会覆盖系统语言。"
           }
         }
       }
     },
-    "Close" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close"
+    "Close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关闭"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
           }
         }
       }
     },
-    "Configuration imported" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configuration imported"
+    "Configuration imported": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration imported"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置成功"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置成功"
           }
         }
       }
     },
-    "Configuration is too large to share or import" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configuration is too large to share or import"
+    "Configuration is too large to share or import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration is too large to share or import"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置过大，无法分享或导入"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置过大，无法分享或导入"
           }
         }
       }
     },
-    "Configuration link" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configuration link"
+    "Configuration link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration link"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置链接"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置链接"
           }
         }
       }
     },
-    "Configuration link detected. Confirm to import" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configuration link detected. Confirm to import"
+    "Configuration link detected. Confirm to import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration link detected. Confirm to import"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "检测到配置链接，请确认后导入"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检测到配置链接，请确认后导入"
           }
         }
       }
     },
-    "Configuration link generated (contains secrets — do not share publicly)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configuration link generated (contains secrets — do not share publicly)"
+    "Configuration link generated (contains secrets — do not share publicly)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration link generated (contains secrets — do not share publicly)"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已生成配置链接（含密钥，请勿公开分享）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已生成配置链接（含密钥，请勿公开分享）"
           }
         }
       }
     },
-    "Configuration QR code" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configuration QR code"
+    "Configuration QR code": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration QR code"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置二维码"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置二维码"
           }
         }
       }
     },
-    "Configure" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configure"
+    "Configure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "去配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "去配置"
           }
         }
       }
     },
-    "Configured" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Configured"
+    "Configured": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configured"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已配置"
           }
         }
       }
     },
-    "Confirm Import" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirm Import"
+    "Confirm Import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm Import"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确认导入"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认导入"
           }
         }
       }
     },
-    "Confirm Import & Overwrite" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirm Import & Overwrite"
+    "Confirm Import & Overwrite": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm Import & Overwrite"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确认导入并覆盖"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认导入并覆盖"
           }
         }
       }
     },
-    "Continue" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue"
+    "Continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "继续"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续"
           }
         }
       }
     },
-    "Continue Sharing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue Sharing"
+    "Continue Sharing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue Sharing"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "继续分享"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续分享"
           }
         }
       }
     },
-    "Copied" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copied"
+    "Copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已复制"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已复制"
           }
         }
       }
     },
-    "Copy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy"
+    "Copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制"
           }
         }
       }
     },
-    "Copy Invite Link" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy Invite Link"
+    "Copy Invite Link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Invite Link"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制邀请链接"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制邀请链接"
           }
         }
       }
     },
-    "Copy Link" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copy Link"
+    "Copy Link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Link"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制链接"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制链接"
           }
         }
       }
     },
-    "Current" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current"
+    "Current": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前"
           }
         }
       }
     },
-    "Custom domain (optional)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom domain (optional)"
+    "Custom domain (optional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom domain (optional)"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自定义域名（可选）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义域名（可选）"
           }
         }
       }
     },
-    "Custom domain cannot be an API endpoint. Use a CDN or public domain" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custom domain cannot be an API endpoint. Use a CDN or public domain"
+    "Custom domain cannot be an API endpoint. Use a CDN or public domain": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom domain cannot be an API endpoint. Use a CDN or public domain"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自定义域名不能填写 API Endpoint，请填写 CDN / 公网域名"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义域名不能填写 API Endpoint，请填写 CDN / 公网域名"
           }
         }
       }
     },
-    "Dark" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dark"
+    "Dark": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "深色"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深色"
           }
         }
       }
     },
-    "Delete Account" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete Account"
+    "Delete Account": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Account"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "删除账号"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除账号"
           }
         }
       }
     },
-    "Delete account?" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete account?"
+    "Delete account?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete account?"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确定删除账号？"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确定删除账号？"
           }
         }
       }
     },
-    "Done" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
+    "Done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完成"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
           }
         }
       }
     },
-    "Earlier · Later" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Earlier · Later"
+    "Earlier · Later": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earlier · Later"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提前 · 延后"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提前 · 延后"
           }
         }
       }
     },
-    "Embedded" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Embedded"
+    "Embedded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Embedded"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "内嵌"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内嵌"
           }
         }
       }
     },
-    "Encrypted link parsed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Encrypted link parsed"
+    "Encrypted link parsed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encrypted link parsed"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加密链接已解析"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加密链接已解析"
           }
         }
       }
     },
-    "Endpoint must be a MinIO host (e.g. {{example}})" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint must be a MinIO host (e.g. {{example}})"
+    "Endpoint must be a MinIO host (e.g. {{example}})": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint must be a MinIO host (e.g. {{example}})"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 需为 MinIO 主机（如 {{example}}）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 需为 MinIO 主机（如 {{example}}）"
           }
         }
       }
     },
-    "Endpoint must be a Qiniu S3 host (e.g. {{example}})" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint must be a Qiniu S3 host (e.g. {{example}})"
+    "Endpoint must be a Qiniu S3 host (e.g. {{example}})": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint must be a Qiniu S3 host (e.g. {{example}})"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 需为七牛 S3 地址（如 {{example}}）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 需为七牛 S3 地址（如 {{example}}）"
           }
         }
       }
     },
-    "Endpoint must be a Tencent Cloud COS host (e.g. {{example}})" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint must be a Tencent Cloud COS host (e.g. {{example}})"
+    "Endpoint must be a Tencent Cloud COS host (e.g. {{example}})": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint must be a Tencent Cloud COS host (e.g. {{example}})"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 需为腾讯云 COS 地址（如 {{example}}）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 需为腾讯云 COS 地址（如 {{example}}）"
           }
         }
       }
     },
-    "Endpoint must be an Alibaba Cloud OSS host (e.g. {{example}})" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint must be an Alibaba Cloud OSS host (e.g. {{example}})"
+    "Endpoint must be an Alibaba Cloud OSS host (e.g. {{example}})": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint must be an Alibaba Cloud OSS host (e.g. {{example}})"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 需为阿里云 OSS 地址（如 {{example}}）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 需为阿里云 OSS 地址（如 {{example}}）"
           }
         }
       }
     },
-    "English" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "English"
+    "English": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "English"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
           }
         }
       }
     },
-    "Exit fullscreen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exit fullscreen"
+    "Exit fullscreen": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exit fullscreen"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "退出全屏"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出全屏"
           }
         }
       }
     },
-    "Extensions" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Extensions"
+    "Extensions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extensions"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "扩展"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扩展"
           }
         }
       }
     },
-    "Failed to create room" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed to create room"
+    "Failed to create room": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to create room"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建房失败"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建房失败"
           }
         }
       }
     },
-    "Failed to parse listing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed to parse listing"
+    "Failed to parse listing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to parse listing"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "列表解析失败"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列表解析失败"
           }
         }
       }
     },
-    "Failed to switch movie" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed to switch movie"
+    "Failed to switch movie": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to switch movie"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "换片失败"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "换片失败"
           }
         }
       }
     },
-    "Failed to sync subtitles to members" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed to sync subtitles to members"
+    "Failed to sync subtitles to members": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to sync subtitles to members"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "字幕同步给成员失败"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕同步给成员失败"
           }
         }
       }
     },
-    "Finish service configuration first" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finish service configuration first"
+    "Finish service configuration first": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish service configuration first"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请先完成服务配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先完成服务配置"
           }
         }
       }
     },
-    "Following the host" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Following the host"
+    "Following the host": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Following the host"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跟随房主"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟随房主"
           }
         }
       }
     },
-    "Fullscreen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fullscreen"
+    "Fullscreen": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fullscreen"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "全屏"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全屏"
           }
         }
       }
     },
-    "Generate an encrypted link to copy or share with friends" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Generate an encrypted link to copy or share with friends"
+    "Generate an encrypted link to copy or share with friends": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generate an encrypted link to copy or share with friends"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "生成加密链接，复制或分享给好友"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成加密链接，复制或分享给好友"
           }
         }
       }
     },
-    "Hide" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hide"
+    "Hide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "隐藏"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏"
           }
         }
       }
     },
-    "Host is now {{name}}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Host is now {{name}}"
+    "Host is now {{name}}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host is now {{name}}"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "房主已变为 {{name}}"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房主已变为 {{name}}"
           }
         }
       }
     },
-    "Host shared" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Host shared"
+    "Host shared": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host shared"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "房主共享"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房主共享"
           }
         }
       }
     },
-    "Host switched the movie…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Host switched the movie…"
+    "Host switched the movie…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host switched the movie…"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "房主切换了影片…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房主切换了影片…"
           }
         }
       }
     },
-    "HTTPS" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "HTTPS"
+    "HTTPS": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "HTTPS"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS"
           }
         }
       }
     },
-    "Import" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import"
+    "Import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入"
           }
         }
       }
     },
-    "Import Configuration" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import Configuration"
+    "Import Configuration": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Configuration"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入配置"
           }
         }
       }
     },
-    "Includes IM / object storage secrets" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Includes IM / object storage secrets"
+    "Includes IM / object storage secrets": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includes IM / object storage secrets"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "含 IM / 对象存储密钥"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "含 IM / 对象存储密钥"
           }
         }
       }
     },
-    "Incomplete configuration: {{fields}}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Incomplete configuration: {{fields}}"
+    "Incomplete configuration: {{fields}}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incomplete configuration: {{fields}}"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置不完整：{{fields}}"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置不完整：{{fields}}"
           }
         }
       }
     },
-    "Invalid avatar key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid avatar key"
+    "Invalid avatar key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid avatar key"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无效的头像 key"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无效的头像 key"
           }
         }
       }
     },
-    "Invalid configuration link. Existing settings were not changed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid configuration link. Existing settings were not changed"
+    "Invalid configuration link. Existing settings were not changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid configuration link. Existing settings were not changed"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配置链接无效，未修改现有配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置链接无效，未修改现有配置"
           }
         }
       }
     },
-    "Invalid IM configuration. Check SDKAppID and related settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid IM configuration. Check SDKAppID and related settings"
+    "Invalid IM configuration. Check SDKAppID and related settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid IM configuration. Check SDKAppID and related settings"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "IM 配置无效，请检查 SDKAppID 等"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM 配置无效，请检查 SDKAppID 等"
           }
         }
       }
     },
-    "Invalid OpenSubtitles API Key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid OpenSubtitles API Key"
+    "Invalid OpenSubtitles API Key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid OpenSubtitles API Key"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OpenSubtitles API Key 无效"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenSubtitles API Key 无效"
           }
         }
       }
     },
-    "Invalid shared subtitle key" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid shared subtitle key"
+    "Invalid shared subtitle key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid shared subtitle key"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无效的共享字幕 key"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无效的共享字幕 key"
           }
         }
       }
     },
-    "Invalid user ID or login failed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invalid user ID or login failed"
+    "Invalid user ID or login failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid user ID or login failed"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用户 ID 无效或登录失败"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户 ID 无效或登录失败"
           }
         }
       }
     },
-    "Invite" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invite"
+    "Invite": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "邀请"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请"
           }
         }
       }
     },
-    "Invite Friends" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invite Friends"
+    "Invite Friends": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite Friends"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "邀请好友"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请好友"
           }
         }
       }
     },
-    "Invite-only room · Long-press a message to block or report" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Invite-only room · Long-press a message to block or report"
+    "Invite-only room · Long-press a message to block or report": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite-only room · Long-press a message to block or report"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仅邀请可进房 · 长按消息可屏蔽或举报"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅邀请可进房 · 长按消息可屏蔽或举报"
           }
         }
       }
     },
-    "Language" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Language"
+    "Language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "语言"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
           }
         }
       }
     },
-    "Library configuration is invalid" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Library configuration is invalid"
+    "Library configuration is invalid": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Library configuration is invalid"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "片库配置无效"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片库配置无效"
           }
         }
       }
     },
-    "Library sidecars" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Library sidecars"
+    "Library sidecars": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Library sidecars"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "片库外挂"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片库外挂"
           }
         }
       }
     },
-    "Library unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Library unavailable"
+    "Library unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Library unavailable"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "片库不可用"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片库不可用"
           }
         }
       }
     },
-    "Light" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Light"
+    "Light": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "浅色"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浅色"
           }
         }
       }
     },
-    "Link contains secrets — do not post to public groups or social media" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Link contains secrets — do not post to public groups or social media"
+    "Link contains secrets — do not post to public groups or social media": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link contains secrets — do not post to public groups or social media"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "链接含密钥，请勿发到公开群或社交平台"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接含密钥，请勿发到公开群或社交平台"
           }
         }
       }
     },
-    "Link copied" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Link copied"
+    "Link copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link copied"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已复制链接"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已复制链接"
           }
         }
       }
     },
-    "Link preview" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Link preview"
+    "Link preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link preview"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "链接预览"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接预览"
           }
         }
       }
     },
-    "Links contain secrets — share only with trusted friends" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Links contain secrets — share only with trusted friends"
+    "Links contain secrets — share only with trusted friends": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links contain secrets — share only with trusted friends"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "链接含密钥，仅发给可信好友"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接含密钥，仅发给可信好友"
           }
         }
       }
     },
-    "Loaded host-shared subtitles" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loaded host-shared subtitles"
+    "Loaded host-shared subtitles": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loaded host-shared subtitles"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已加载房主共享的字幕"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加载房主共享的字幕"
           }
         }
       }
     },
-    "Loading library…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading library…"
+    "Loading library…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading library…"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加载片库…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加载片库…"
           }
         }
       }
     },
-    "Loading subtitles…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading subtitles…"
+    "Loading subtitles…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading subtitles…"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加载字幕…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加载字幕…"
           }
         }
       }
     },
-    "Local cloud service configuration will be kept" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Local cloud service configuration will be kept"
+    "Local cloud service configuration will be kept": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local cloud service configuration will be kept"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将保留本地云服务配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将保留本地云服务配置"
           }
         }
       }
     },
-    "Make sure your object storage bucket contains mp4/m4v/mkv files" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Make sure your object storage bucket contains mp4/m4v/mkv files"
+    "Make sure your object storage bucket contains mp4/m4v/mkv files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make sure your object storage bucket contains mp4/m4v/mkv files"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确认对象存储 Bucket 中有 mp4/m4v/mkv"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认对象存储 Bucket 中有 mp4/m4v/mkv"
           }
         }
       }
     },
-    "Match System" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Match System"
+    "Match System": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Match System"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跟随系统"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟随系统"
           }
         }
       }
     },
-    "Me" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Me"
+    "Me": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Me"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "我的"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的"
           }
         }
       }
     },
-    "Messaging" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Messaging"
+    "Messaging": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messaging"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "即时通讯"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即时通讯"
           }
         }
       }
     },
-    "More" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "More"
+    "More": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更多"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多"
           }
         }
       }
     },
-    "Network error. Please try again" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Network error. Please try again"
+    "Network error. Please try again": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network error. Please try again"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "网络异常，请重试"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "网络异常，请重试"
           }
         }
       }
     },
-    "Nickname" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nickname"
+    "Nickname": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nickname"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "昵称"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "昵称"
           }
         }
       }
     },
-    "Nickname can be at most {{count}} characters" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nickname can be at most {{count}} characters"
+    "Nickname can be at most {{count}} characters": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nickname can be at most {{count}} characters"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "昵称最多 {{count}} 字"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "昵称最多 {{count}} 字"
           }
         }
       }
     },
-    "Nickname cannot be empty" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nickname cannot be empty"
+    "Nickname cannot be empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nickname cannot be empty"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "昵称不能为空"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "昵称不能为空"
           }
         }
       }
     },
-    "No matching movies" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No matching movies"
+    "No matching movies": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching movies"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有匹配的影片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有匹配的影片"
           }
         }
       }
     },
-    "No movies" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No movies"
+    "No movies": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No movies"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无影片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无影片"
           }
         }
       }
     },
-    "No subtitles available" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No subtitles available"
+    "No subtitles available": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No subtitles available"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无可用字幕"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无可用字幕"
           }
         }
       }
     },
-    "No subtitles found" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No subtitles found"
+    "No subtitles found": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No subtitles found"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未找到字幕"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到字幕"
           }
         }
       }
     },
-    "Not configured" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not configured"
+    "Not configured": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not configured"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未配置"
           }
         }
       }
     },
-    "Object Storage" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Object Storage"
+    "Object Storage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Object Storage"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "对象存储"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对象存储"
           }
         }
       }
     },
-    "Off" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Off"
+    "Off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关闭"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
           }
         }
       }
     },
-    "Online Search" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Online Search"
+    "Online Search": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online Search"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在线搜索"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在线搜索"
           }
         }
       }
     },
-    "Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb."
+    "Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在线字幕检索使用 OpenSubtitles API（需你自己的 Key）。可选的封面补全使用 OMDb（需你自己的 Key）。本应用不抓取豆瓣或 IMDb。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在线字幕检索使用 OpenSubtitles API（需你自己的 Key）。可选的封面补全使用 OMDb（需你自己的 Key）。本应用不抓取豆瓣或 IMDb。"
           }
         }
       }
     },
-    "Only the host can switch movies" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Only the host can switch movies"
+    "Only the host can switch movies": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the host can switch movies"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仅房主可切换影片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅房主可切换影片"
           }
         }
       }
     },
-    "Open the library to switch the current movie" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open the library to switch the current movie"
+    "Open the library to switch the current movie": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the library to switch the current movie"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开片库以切换当前影片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开片库以切换当前影片"
           }
         }
       }
     },
-    "Paste a tandem://config?args=… link" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste a tandem://config?args=… link"
+    "Paste configuration link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste configuration link"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "粘贴 tandem://config?args=… 链接"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴配置链接"
           }
         }
       }
     },
-    "Paste configuration link" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste configuration link"
+    "Paste from Clipboard": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste from Clipboard"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "粘贴配置链接"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从剪贴板粘贴"
           }
         }
       }
     },
-    "Paste from Clipboard" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste from Clipboard"
+    "Paste to Import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste to Import"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从剪贴板粘贴"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴导入"
           }
         }
       }
     },
-    "Paste to Import" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste to Import"
+    "Path-Style URL": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Path-Style URL"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "粘贴导入"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Path-Style URL"
           }
         }
       }
     },
-    "Path-Style URL" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Path-Style URL"
+    "Playback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Path-Style URL"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放"
           }
         }
       }
     },
-    "Playback" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Playback"
+    "Playback progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback progress"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "播放"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放进度"
           }
         }
       }
     },
-    "Playback progress" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Playback progress"
+    "Playback will restart from the beginning. Everyone syncs to the new movie.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback will restart from the beginning. Everyone syncs to the new movie."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "播放进度"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将从开头重新播放，所有人同步到新影片。"
           }
         }
       }
     },
-    "Playback will restart from the beginning. Everyone syncs to the new movie." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Playback will restart from the beginning. Everyone syncs to the new movie."
+    "Playing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将从开头重新播放，所有人同步到新影片。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放中"
           }
         }
       }
     },
-    "Playing" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Playing"
+    "Please choose a profile photo": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please choose a profile photo"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "播放中"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请选择头像图片"
           }
         }
       }
     },
-    "Please choose a profile photo" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please choose a profile photo"
+    "Please enter a user ID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please enter a user ID"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请选择头像图片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入用户 ID"
           }
         }
       }
     },
-    "Please enter a user ID" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please enter a user ID"
+    "Please finish service configuration first": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please finish service configuration first"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请输入用户 ID"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先完成服务配置"
           }
         }
       }
     },
-    "Please finish service configuration first" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please finish service configuration first"
+    "Prefix (optional)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prefix (optional)"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请先完成服务配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prefix（可选）"
           }
         }
       }
     },
-    "Prefix (optional)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prefix (optional)"
+    "Privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prefix（可选）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私"
           }
         }
       }
     },
-    "Privacy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privacy"
+    "Privacy Policy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "隐私"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私政策"
           }
         }
       }
     },
-    "Privacy Policy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privacy Policy"
+    "Provider": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provider"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "隐私政策"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提供商"
           }
         }
       }
     },
-    "Provider" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Provider"
+    "Qiniu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qiniu"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提供商"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "七牛云"
           }
         }
       }
     },
-    "Qiniu" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Qiniu"
+    "Report": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "七牛云"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "举报"
           }
         }
       }
     },
-    "Report" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Report"
+    "Report recorded — opening feedback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report recorded — opening feedback"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "举报"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已记录举报，将打开反馈页"
           }
         }
       }
     },
-    "Report recorded — opening feedback" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Report recorded — opening feedback"
+    "Reset": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已记录举报，将打开反馈页"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重置"
           }
         }
       }
     },
-    "Reset" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset"
+    "Results": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Results"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结果"
           }
         }
       }
     },
-    "Results" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Results"
+    "Retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "结果"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试"
           }
         }
       }
     },
-    "Retry" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retry"
+    "Room not found or invite expired": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Room not found or invite expired"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重试"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房间不存在或邀请已失效"
           }
         }
       }
     },
-    "Room not found or invite expired" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Room not found or invite expired"
+    "Save": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "房间不存在或邀请已失效"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
           }
         }
       }
     },
-    "Save" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save"
+    "Save configuration QR codes to Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save configuration QR codes to Photos"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存配置分享二维码到相册"
           }
         }
       }
     },
-    "Save configuration QR codes to Photos" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save configuration QR codes to Photos"
+    "Save QR Code": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save QR Code"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存配置分享二维码到相册"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存二维码"
           }
         }
       }
     },
-    "Save QR Code" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save QR Code"
+    "Saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存二维码"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存"
           }
         }
       }
     },
-    "Saved" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saved"
+    "Saving…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving…"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已保存"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存中…"
           }
         }
       }
     },
-    "Saving…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saving…"
+    "Search": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存中…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索"
           }
         }
       }
     },
-    "Search" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search"
+    "Search Again": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search Again"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新搜索"
           }
         }
       }
     },
-    "Search Again" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search Again"
+    "Search failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search failed"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新搜索"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索失败"
           }
         }
       }
     },
-    "Search failed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search failed"
+    "Searching…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searching…"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索失败"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索中…"
           }
         }
       }
     },
-    "Searching…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Searching…"
+    "Send": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索中…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送"
           }
         }
       }
     },
-    "Send" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Send"
+    "Send to a friend to import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send to a friend to import"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "发送"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发给好友即可导入"
           }
         }
       }
     },
-    "Send to a friend to import" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Send to a friend to import"
+    "Service Configuration": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Service Configuration"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "发给好友即可导入"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务配置"
           }
         }
       }
     },
-    "Service Configuration" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Service Configuration"
+    "Session expired. Please sign in again": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session expired. Please sign in again"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "服务配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录已过期，请重新登录"
           }
         }
       }
     },
-    "Session expired. Please sign in again" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Session expired. Please sign in again"
+    "Share": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "登录已过期，请重新登录"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享"
           }
         }
       }
     },
-    "Share" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share"
+    "Share & Import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share & Import"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分享"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享与导入"
           }
         }
       }
     },
-    "Share & Import" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share & Import"
+    "Share Configuration": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share Configuration"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分享与导入"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享配置"
           }
         }
       }
     },
-    "Share Configuration" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Share Configuration"
+    "Sharing includes secrets — do not post publicly": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sharing includes secrets — do not post publicly"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分享配置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享含密钥，勿发到公开场合"
           }
         }
       }
     },
-    "Sharing includes secrets — do not post publicly" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sharing includes secrets — do not post publicly"
+    "Show": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分享含密钥，勿发到公开场合"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示"
           }
         }
       }
     },
-    "Show" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show"
+    "Sign In": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign In"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录"
           }
         }
       }
     },
-    "Sign In" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign In"
+    "Sign in to join the room": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to join the room"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "登录"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先登录再加入房间"
           }
         }
       }
     },
-    "Sign in to join the room" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign in to join the room"
+    "Sign Out": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign Out"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请先登录再加入房间"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出登录"
           }
         }
       }
     },
-    "Sign Out" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign Out"
+    "Sign out?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out?"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "退出登录"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确定退出登录？"
           }
         }
       }
     },
-    "Sign out?" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out?"
+    "Signed in on another device": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signed in on another device"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "确定退出登录？"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号在其他设备登录"
           }
         }
       }
     },
-    "Signed in on another device" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Signed in on another device"
+    "Subtitle Sync": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitle Sync"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "账号在其他设备登录"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕同步"
           }
         }
       }
     },
-    "Subtitle Sync" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subtitle Sync"
+    "Subtitles": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitles"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "字幕同步"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕"
           }
         }
       }
     },
-    "Subtitles" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subtitles"
+    "Subtitles {{offset}}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitles {{offset}}"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "字幕"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕 {{offset}}"
           }
         }
       }
     },
-    "Subtitles {{offset}}" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subtitles {{offset}}"
+    "Subtitles & Metadata": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitles & Metadata"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "字幕 {{offset}}"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕与元数据"
           }
         }
       }
     },
-    "Subtitles & Metadata" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subtitles & Metadata"
+    "Subtitles loaded (library not configured — cannot sync to members)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtitles loaded (library not configured — cannot sync to members)"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "字幕与元数据"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕已加载（片库未配置，无法同步给成员）"
           }
         }
       }
     },
-    "Subtitles loaded (library not configured — cannot sync to members)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Subtitles loaded (library not configured — cannot sync to members)"
+    "Support & Reports": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support & Reports"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "字幕已加载（片库未配置，无法同步给成员）"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持与举报"
           }
         }
       }
     },
-    "Support & Reports" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support & Reports"
+    "Switch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "支持与举报"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "换片"
           }
         }
       }
     },
-    "Supports a full deep link, or a tandem://config?args=… link found in a chat message" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Supports a full deep link, or a tandem://config?args=… link found in a chat message"
+    "Switch movie": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch movie"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "支持完整深链，或聊天消息中带有的 tandem://config?args=…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换影片"
           }
         }
       }
     },
-    "Switch" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Switch"
+    "Switch Movie": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch Movie"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "换片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换影片"
           }
         }
       }
     },
-    "Switch movie" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Switch movie"
+    "Switch to “{{title}}” and play from the start. Everyone syncs to the new movie.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch to “{{title}}” and play from the start. Everyone syncs to the new movie."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换影片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将切换到「{{title}}」并从开头播放，所有人同步到新影片。"
           }
         }
       }
     },
-    "Switch Movie" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Switch Movie"
+    "Switching movie…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switching movie…"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换影片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在换片…"
           }
         }
       }
     },
-    "Switch to “{{title}}” and play from the start. Everyone syncs to the new movie." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Switch to “{{title}}” and play from the start. Everyone syncs to the new movie."
+    "System": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将切换到「{{title}}」并从开头播放，所有人同步到新影片。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统"
           }
         }
       }
     },
-    "Switching movie…" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Switching movie…"
+    "System Share": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Share"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在换片…"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统分享"
           }
         }
       }
     },
-    "System" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "System"
+    "Tap to change avatar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to change avatar"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "系统"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点更换头像"
           }
         }
       }
     },
-    "System Share" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "System Share"
+    "Tencent Cloud COS": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tencent Cloud COS"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "系统分享"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "腾讯云 COS"
           }
         }
       }
     },
-    "Tandem only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tandem only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews."
+    "Tencent Cloud IM": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tencent Cloud IM"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tandem 只播放你自己网盘里的文件，不会从公网抓取影视海报。填写 OMDb Key 后，才用文件名向 OMDb 补全封面与简介。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "腾讯云 IM"
           }
         }
       }
     },
-    "Tandem, Watch together" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tandem, Watch together"
+    "Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tandem，一起看电影"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "腾讯云 IM SDK。使用受腾讯云服务协议约束。"
           }
         }
       }
     },
-    "Tap to change avatar" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tap to change avatar"
+    "The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "轻点更换头像"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接内含腾讯云 IM 与对象存储凭证，仅发给可信好友。"
           }
         }
       }
     },
-    "Tencent Cloud COS" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tencent Cloud COS"
+    "Theme": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theme"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "腾讯云 COS"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主题"
           }
         }
       }
     },
-    "Tencent Cloud IM" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tencent Cloud IM"
+    "They can open the link or paste it into Service Configuration to apply the same environment": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They can open the link or paste it into Service Configuration to apply the same environment"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "腾讯云 IM"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对方打开链接或粘贴到「服务配置」即可写入同一套环境"
           }
         }
       }
     },
-    "Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements."
+    "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "腾讯云 IM SDK。使用受腾讯云服务协议约束。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将清除本机云配置、登录会话、头像与昵称，并退出登录。IM 控制台中的预置账号需管理员另行停用。"
           }
         }
       }
     },
-    "The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends."
+    "This container or codec is not supported on this device": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This container or codec is not supported on this device"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "链接内含腾讯云 IM 与对象存储凭证，仅发给可信好友。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前设备暂不支持该封装/编码"
           }
         }
       }
     },
-    "Theme" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Theme"
+    "This room has ended": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This room has ended"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "主题"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房间已结束"
           }
         }
       }
     },
-    "They can open the link or paste it into Service Configuration to apply the same environment" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "They can open the link or paste it into Service Configuration to apply the same environment"
+    "Try different keywords, or try again later": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try different keywords, or try again later"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "对方打开链接或粘贴到「服务配置」即可写入同一套环境"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试试其他关键词，或稍后再试"
           }
         }
       }
     },
-    "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin."
+    "Unable to generate QR code": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to generate QR code"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将清除本机云配置、登录会话、头像与昵称，并退出登录。IM 控制台中的预置账号需管理员另行停用。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法生成二维码"
           }
         }
       }
     },
-    "This container or codec is not supported on this device" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This container or codec is not supported on this device"
+    "Unable to play. Please try again later": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to play. Please try again later"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前设备暂不支持该封装/编码"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法播放，请稍后重试"
           }
         }
       }
     },
-    "This room has ended" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This room has ended"
+    "Unable to process this image, or it still exceeds 1MB after compression": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to process this image, or it still exceeds 1MB after compression"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "房间已结束"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法处理该图片，或压缩后仍超过 1MB"
           }
         }
       }
     },
-    "Try different keywords, or try again later" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Try different keywords, or try again later"
+    "Unable to read image": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to read image"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "试试其他关键词，或稍后再试"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取图片"
           }
         }
       }
     },
-    "Unable to generate QR code" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to generate QR code"
+    "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法生成二维码"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 填 COS 地域域名（如 cos.ap-guangzhou.myqcloud.com），Region 可留空由 Endpoint 推断。"
           }
         }
       }
     },
-    "Unable to play. Please try again later" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to play. Please try again later"
+    "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法播放，请稍后重试"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 填七牛 S3 地址（如 s3.cn-south-1.qiniucs.com）。自定义域名只用于头像下载，不要填进 Endpoint。"
           }
         }
       }
     },
-    "Unable to process this image, or it still exceeds 1MB after compression" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to process this image, or it still exceeds 1MB after compression"
+    "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法处理该图片，或压缩后仍超过 1MB"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 填 OSS 地域域名（如 oss-cn-hangzhou.aliyuncs.com），Region 可留空由 Endpoint 推断。"
           }
         }
       }
     },
-    "Unable to read image" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unable to read image"
+    "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法读取图片"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint 填主机:端口（如 192.168.1.10:9000）。自建 MinIO 通常关 HTTPS、开 Path-Style；Region 默认 us-east-1。"
           }
         }
       }
     },
-    "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint."
+    "User ID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User ID"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 填 COS 地域域名（如 cos.ap-guangzhou.myqcloud.com），Region 可留空由 Endpoint 推断。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户 ID"
           }
         }
       }
     },
-    "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint."
+    "Username": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Username"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 填七牛 S3 地址（如 s3.cn-south-1.qiniucs.com）。自定义域名只用于头像下载，不要填进 Endpoint。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户名"
           }
         }
       }
     },
-    "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
+    "VLCKit / MobileVLCKit (VideoLAN, LGPLv2.1+) is linked as a dynamic framework. Full license text is available on the VideoLAN website.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VLCKit / MobileVLCKit (VideoLAN, LGPLv2.1+) is linked as a dynamic framework. Full license text is available on the VideoLAN website."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 填 OSS 地域域名（如 oss-cn-hangzhou.aliyuncs.com），Region 可留空由 Endpoint 推断。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VLCKit / MobileVLCKit（VideoLAN，LGPLv2.1+）以动态框架链接。完整许可见 VideoLAN 网站。"
           }
         }
       }
     },
-    "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1."
+    "Watch together": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch together"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endpoint 填主机:端口（如 192.168.1.10:9000）。自建 MinIO 通常关 HTTPS、开 Path-Style；Region 默认 us-east-1。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一起看电影"
           }
         }
       }
     },
-    "User ID" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "User ID"
+    "You are the host — you control playback": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are the host — you control playback"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用户 ID"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你是房主 — 由你控制播放"
           }
         }
       }
     },
-    "Username" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Username"
+    "简体中文": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简体中文"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用户名"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简体中文"
           }
         }
       }
     },
-    "VLCKit / MobileVLCKit (VideoLAN, LGPLv2.1+) is linked as a dynamic framework. Full license text is available on the VideoLAN website." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VLCKit / MobileVLCKit (VideoLAN, LGPLv2.1+) is linked as a dynamic framework. Full license text is available on the VideoLAN website."
+    "Paircast only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paircast only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VLCKit / MobileVLCKit（VideoLAN，LGPLv2.1+）以动态框架链接。完整许可见 VideoLAN 网站。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paircast 只播放你自己网盘里的文件，不会从公网抓取影视海报。填写 OMDb Key 后，才用文件名向 OMDb 补全封面与简介。"
           }
         }
       }
     },
-    "Watch together" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Watch together"
+    "Paircast, Watch together": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paircast, Watch together"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一起看电影"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paircast，一起看"
           }
         }
       }
     },
-    "When System is selected, Tandem follows your iOS appearance settings." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When System is selected, Tandem follows your iOS appearance settings."
+    "When System is selected, Paircast follows your iOS appearance settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When System is selected, Paircast follows your iOS appearance settings."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择「跟随系统」时，Tandem 会与 iOS 外观设置保持一致。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择「跟随系统」时，Paircast 会与 iOS 外观设置保持一致。"
           }
         }
       }
     },
-    "You are the host — you control playback" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You are the host — you control playback"
+    "Paircast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paircast"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你是房主 — 由你控制播放"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paircast"
           }
         }
       }
     },
-    "简体中文" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "简体中文"
+    "Paste a paircast://config?args=… link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a paircast://config?args=… link"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "简体中文"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴 paircast://config?args=… 链接"
+          }
+        }
+      }
+    },
+    "Supports a full deep link, or a paircast://config?args=… link found in a chat message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supports a full deep link, or a paircast://config?args=… link found in a chat message"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持完整深链，或聊天消息中带有的 paircast://config?args=…"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

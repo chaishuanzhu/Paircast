@@ -343,16 +343,16 @@ final class WatchRoomDTOTests: XCTestCase {
         let data = try JSONEncoder().encode(WatchRoomDTO(room))
         let decoded = try JSONDecoder().decode(WatchRoomDTO.self, from: data).toDomain()
         XCTAssertEqual(decoded, room)
-        XCTAssertEqual(OSSRoomGateway.objectKeyPrefix, "_tandem/rooms/")
-        XCTAssertEqual(OSSRoomGateway.objectKey(roomId: "AbC-123"), "_tandem/rooms/abc-123.json")
+        XCTAssertEqual(OSSRoomGateway.objectKeyPrefix, "_paircast/rooms/")
+        XCTAssertEqual(OSSRoomGateway.objectKey(roomId: "AbC-123"), "_paircast/rooms/abc-123.json")
     }
 }
 
 final class TencentIMGroupIDTests: XCTestCase {
-    func test_groupIDUsesTandemPrefix() {
-        XCTAssertEqual(TencentIMClient.groupID(forRoomId: "AbC"), "tandem_abc")
-        XCTAssertEqual(TencentIMClient.groupID(forRoomId: "tandem_xyz"), "tandem_xyz")
-        XCTAssertEqual(TencentIMClient.roomId(fromGroupID: "tandem_abc"), "abc")
+    func test_groupIDUsesPaircastPrefix() {
+        XCTAssertEqual(TencentIMClient.groupID(forRoomId: "AbC"), "paircast_abc")
+        XCTAssertEqual(TencentIMClient.groupID(forRoomId: "paircast_xyz"), "paircast_xyz")
+        XCTAssertEqual(TencentIMClient.roomId(fromGroupID: "paircast_abc"), "abc")
     }
 
     func test_playbackSignalJSONRoundTrip() throws {
@@ -363,7 +363,7 @@ final class TencentIMGroupIDTests: XCTestCase {
             hostUserId: "alice",
             senderId: "alice",
             seq: 9,
-            subtitleObjectKey: "_tandem/subtitles/r1/abc.srt",
+            subtitleObjectKey: "films/Inception.2010.srt",
             subtitleLabel: "简体"
         )
         let data = try JSONEncoder().encode(signal)
@@ -382,10 +382,9 @@ final class TencentIMGroupIDTests: XCTestCase {
             SharedSubtitleObjectKey.sidecarKey(movieObjectKey: "films/Inception.2010.mkv", fileExtension: "ASS"),
             "films/Inception.2010.ass"
         )
-        XCTAssertNil(SharedSubtitleObjectKey.sidecarKey(movieObjectKey: "_tandem/rooms/x.json", fileExtension: "srt"))
+        XCTAssertNil(SharedSubtitleObjectKey.sidecarKey(movieObjectKey: "_paircast/rooms/x.json", fileExtension: "srt"))
         XCTAssertTrue(SharedSubtitleObjectKey.isValid("films/Inception.2010.srt"))
-        XCTAssertTrue(SharedSubtitleObjectKey.isValid("_tandem/subtitles/r1/a.srt")) // legacy keys still downloadable
-        XCTAssertFalse(SharedSubtitleObjectKey.isValid("_tandem/avatars/u/a.jpg"))
+        XCTAssertFalse(SharedSubtitleObjectKey.isValid("_paircast/avatars/u/a.jpg"))
         XCTAssertFalse(SharedSubtitleObjectKey.isValid("films/Inception.2010.mkv"))
     }
 }
@@ -457,7 +456,7 @@ final class OSSAvatarStorageTests: XCTestCase {
         )
         XCTAssertThrowsError(try storage.signedURL(objectKey: "films/a.jpg", config: config))
         let url = try? storage.signedURL(
-            objectKey: "_tandem/avatars/alice/x.jpg",
+            objectKey: "_paircast/avatars/alice/x.jpg",
             config: config
         )
         XCTAssertNotNil(url)
@@ -524,7 +523,7 @@ final class MovieNFOCodecTests: XCTestCase {
         XCTAssertEqual(MovieMetadataObjectKey.nfoKey(for: movie), "films/Inception.2010.nfo")
         XCTAssertEqual(MovieMetadataObjectKey.posterKey(for: movie), "films/Inception.2010-poster.jpg")
         XCTAssertEqual(MovieMetadataObjectKey.fanartKey(for: movie), "films/Inception.2010-fanart.jpg")
-        XCTAssertNil(MovieMetadataObjectKey.nfoKey(for: "_tandem/rooms/x.json"))
+        XCTAssertNil(MovieMetadataObjectKey.nfoKey(for: "_paircast/rooms/x.json"))
     }
 }
 

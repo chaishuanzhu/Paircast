@@ -3,15 +3,15 @@ import ProjectDescription
 let deploymentTargets: DeploymentTargets = .iOS("26.0")
 
 let project = Project(
-    name: "Tandem",
-    organizationName: "Tandem",
+    name: "Paircast",
+    organizationName: "Paircast",
     options: .options(
         defaultKnownRegions: ["en", "zh-Hans"],
         developmentRegion: "en"
     ),
     targets: [
         .target(
-            name: "Tandem",
+            name: "Paircast",
             destinations: .iOS,
             product: .app,
             bundleId: "com.chaisz.tandem",
@@ -20,11 +20,11 @@ let project = Project(
                 "CFBundleShortVersionString": "$(MARKETING_VERSION)",
                 "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
                 "UILaunchScreen": [:],
-                "CFBundleDisplayName": "Tandem",
+                "CFBundleDisplayName": "Paircast",
                 "CFBundleURLTypes": [
                     [
                         "CFBundleURLName": "com.chaisz.tandem",
-                        "CFBundleURLSchemes": ["tandem"],
+                        "CFBundleURLSchemes": ["paircast"],
                     ],
                 ],
                 "UISupportedInterfaceOrientations": [
@@ -62,14 +62,14 @@ let project = Project(
             ])
         ),
         .target(
-            name: "TandemTests",
+            name: "PaircastTests",
             destinations: .iOS,
             product: .unitTests,
             bundleId: "com.chaisz.tandem.tests",
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/**"],
-            dependencies: [.target(name: "Tandem")]
+            dependencies: [.target(name: "Paircast")]
         ),
     ]
 )

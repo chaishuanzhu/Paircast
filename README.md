@@ -1,6 +1,6 @@
-# Tandem
+# Paircast
 
-异地好友同步观影 + 实时聊天的 iOS App（SwiftUI · Clean Architecture · Tuist）。
+异地好友同步观影 + 实时聊天的 iOS App（SwiftUI · Clean Architecture · Tuist）。Bundle ID 仍为 `com.chaisz.tandem`。
 
 ## 要求
 
@@ -31,7 +31,7 @@ tuist generate
 | Domain | Entities / UseCases / Gateway 协议 / 纯规则 |
 | Data | Keychain、UserSig、七牛、元数据、**腾讯云 IM**（登录/群聊/播控信令）、字幕、播放器适配 |
 | Presentation | SwiftUI Scenes + ViewModels（对照 `docs/design-preview`） |
-| App | 组装与 Deep Link `tandem://` |
+| App | 组装与 Deep Link `paircast://` |
 
 依赖方向：`App → Presentation/Data → Domain`。
 
@@ -46,7 +46,7 @@ tuist generate
 
 ## 安全说明（MVP）
 
-持有配置中的 IM `SecretKey` 即可为任意 `userID` 签发 UserSig；登录密码仅为非空弱校验，真实成败以 IM login 为准。配置请存 Keychain；分享链接 `tandem://config?args=…` 含加密后的密钥，勿公开传播。
+持有配置中的 IM `SecretKey` 即可为任意 `userID` 签发 UserSig；登录密码仅为非空弱校验，真实成败以 IM login 为准。配置请存 Keychain；分享链接 `paircast://config?args=…` 含加密后的密钥，勿公开传播。
 
 ## 文档
 

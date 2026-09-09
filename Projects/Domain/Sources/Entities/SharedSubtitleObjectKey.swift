@@ -9,8 +9,8 @@ public enum SharedSubtitleObjectKey {
     public static func sidecarKey(movieObjectKey: String, fileExtension: String) -> String? {
         let movieKey = movieObjectKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !movieKey.isEmpty else { return nil }
-        // Refuse writing into internal tandem prefixes.
-        if movieKey.hasPrefix("_tandem/") { return nil }
+        // Refuse writing into reserved Paircast prefixes.
+        if movieKey.hasPrefix("_paircast/") { return nil }
 
         let base = (movieKey as NSString).deletingPathExtension
         guard !base.isEmpty else { return nil }
@@ -20,7 +20,7 @@ public enum SharedSubtitleObjectKey {
 
     public static func isValid(_ objectKey: String) -> Bool {
         let key = objectKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty, !key.hasPrefix("_tandem/avatars/") else { return false }
+        guard !key.isEmpty, !key.hasPrefix("_paircast/avatars/") else { return false }
         let ext = (key as NSString).pathExtension.lowercased()
         return subtitleExtensions.contains(ext)
     }

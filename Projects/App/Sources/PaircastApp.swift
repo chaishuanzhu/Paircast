@@ -4,7 +4,7 @@ import Data
 import Domain
 
 @main
-struct TandemApp: App {
+struct PaircastApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var session = AppSession(
         configGateway: DataAssembly.makeConfigGateway(),

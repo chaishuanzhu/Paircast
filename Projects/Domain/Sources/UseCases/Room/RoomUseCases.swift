@@ -118,13 +118,13 @@ public protocol InviteToRoomUseCase {}
 public extension InviteToRoomUseCase {
     func inviteURL(roomId: String, movieId: String, hostUserId: String) -> URL {
         var components = URLComponents()
-        components.scheme = "tandem"
+        components.scheme = "paircast"
         components.host = "watch"
         components.queryItems = [
             URLQueryItem(name: "roomId", value: roomId),
             URLQueryItem(name: "movieId", value: movieId),
             URLQueryItem(name: "hostUserId", value: hostUserId),
         ]
-        return components.url ?? URL(string: "tandem://watch?roomId=\(roomId)")!
+        return components.url ?? URL(string: "paircast://watch?roomId=\(roomId)")!
     }
 }

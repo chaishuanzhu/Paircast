@@ -1,4 +1,4 @@
-# Tandem 技术说明（MVP）
+# Paircast 技术说明（MVP）
 
 对应 PRD v1.4 与本地设计预览 `docs/design-preview/index.html`。
 
@@ -22,7 +22,7 @@ Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App�
 分享格式：
 
 ```
-tandem://config?args=<base64url(AES-GCM(JSON))>
+paircast://config?args=<base64url(AES-GCM(JSON))>
 ```
 
 - 明文 JSON 与原先配置码一致（`type=tandem-config`，UTF-8 ≤ 2KB）
@@ -78,8 +78,8 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 
 ## 头像
 
-- 上传：七牛 S3 `PUT`（**Endpoint**）→ `_tandem/avatars/{userId}/{uuid}.jpg`
-- 腾讯云 IM：`faceURL` **只存 object key**（如 `_tandem/avatars/alice/….jpg`），不存签名 URL
+- 上传：七牛 S3 `PUT`（**Endpoint**）→ `_paircast/avatars/{userId}/{uuid}.jpg`
+- 腾讯云 IM：`faceURL` **只存 object key**（如 `_paircast/avatars/alice/….jpg`），不存签名 URL
 - 登录 / 拉资料：用 key + Endpoint 生成 AWS SigV4 预签名 GET（最长 **7 天**）写入本地 `User.avatarURL` 供 UI 显示
 - 兼容：若 IM 里仍是旧的 HTTPS 签名链接，会尝试从 path 解析出 key 再重新签名
 - 观影页成员条：批量 `getUsersInfo` → 解析头像；头像外圈环形进度条反映播放进度
@@ -90,18 +90,18 @@ tandem://config?args=<base64url(AES-GCM(JSON))>
 
 | URL | 行为 |
 |-----|------|
-| `tandem://watch?roomId={id}&movieId={id}&hostUserId={id}` | 加入观影房（未登录则暂存邀请） |
-| `tandem://config?args={encrypted}` | 打开服务配置并弹出脱敏确认导入 |
+| `paircast://watch?roomId={id}&movieId={id}&hostUserId={id}` | 加入观影房（未登录则暂存邀请） |
+| `paircast://config?args={encrypted}` | 打开服务配置并弹出脱敏确认导入 |
 
-房间状态写入七牛 `_tandem/rooms/{roomId}.json`（跨设备可加入）。
+房间状态写入七牛 `_paircast/rooms/{roomId}.json`（跨设备可加入）。
 
 **腾讯云 IM（播控 + 聊天）：**
 
 - 登录：`TencentIMAuthGateway` + 本地 UserSig → `V2TIMManager.login`
-- 观影群：Meeting 群，`groupID = tandem_{roomId}`（`WatchRoom.imGroupId`）；`IMSyncedRoomGateway` 在 create/join 时 `ensureMeetingGroup`
+- 观影群：Meeting 群，`groupID = paircast_{roomId}`（`WatchRoom.imGroupId`）；`IMSyncedRoomGateway` 在 create/join 时 `ensureMeetingGroup`
 - 聊天：群文本；系统消息前缀 `[sys]`
 - 播控：群自定义消息（`sendGroupCustomMessage`），payload 为上方信令 JSON；房主约每 5s 发 heartbeat（播放中）
-- 踢下线 / UserSig 过期：`Notification.Name.tandemIMKickedOffline` / `.tandemIMUserSigExpired` → 回登录页
+- 踢下线 / UserSig 过期：`Notification.Name.paircastIMKickedOffline` / `.paircastIMUserSigExpired` → 回登录页
 ## 元数据
 
 1. **七牛 sidecar 优先**：同目录 `{base}.nfo` + `{base}-poster.jpg` + `{base}-fanart.jpg` 存在则直接读取，**不再刮削**

@@ -83,7 +83,7 @@ final class InviteUseCasePresentationTests: XCTestCase {
     func test_inviteURLFormat() {
         let url = InviteHarness().inviteURL(roomId: "abc", movieId: "film.mkv", hostUserId: "alice")
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        XCTAssertEqual(url.scheme, "tandem")
+        XCTAssertEqual(url.scheme, "paircast")
         XCTAssertEqual(url.host, "watch")
         XCTAssertEqual(items.first(where: { $0.name == "roomId" })?.value, "abc")
         XCTAssertEqual(items.first(where: { $0.name == "movieId" })?.value, "film.mkv")
@@ -105,7 +105,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
 
     func test_watchDeepLinkRequiresLoginAndKeepsPendingInvite() async {
         let session = makeSession()
-        session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
+        session.handleDeepLink(URL(string: "paircast://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         XCTAssertEqual(session.route, .splash)
         XCTAssertEqual(session.pendingInvite?.roomId, "r1")
         XCTAssertEqual(session.pendingInvite?.movieId, "m1")
@@ -120,7 +120,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
     func test_watchDeepLinkOpensWatchWhenLoggedIn() async {
         let session = makeSession()
         session.currentUser = User(id: "bob", nickname: "bob")
-        session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
+        session.handleDeepLink(URL(string: "paircast://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         XCTAssertEqual(session.route, .library)
         XCTAssertEqual(
             session.libraryPath,
@@ -129,9 +129,18 @@ final class AppRouteDeepLinkTests: XCTestCase {
         XCTAssertNil(session.pendingInvite)
     }
 
-    func test_consumePendingInvitePushesLibraryWatch() {
+    func test_tandemWatchDeepLinkIsIgnored() {
+        XCTAssertNil(RoomInvite(url: URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!))
         let session = makeSession()
         session.handleDeepLink(URL(string: "tandem://watch?roomId=r1&movieId=m1&hostUserId=host")!)
+        XCTAssertNil(session.pendingInvite)
+        XCTAssertEqual(session.route, .splash)
+        XCTAssertTrue(session.libraryPath.isEmpty)
+    }
+
+    func test_consumePendingInvitePushesLibraryWatch() {
+        let session = makeSession()
+        session.handleDeepLink(URL(string: "paircast://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         session.currentUser = User(id: "bob", nickname: "bob")
         session.consumePendingInviteIfPossible()
         XCTAssertEqual(session.route, .library)

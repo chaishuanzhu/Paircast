@@ -125,7 +125,7 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
         do {
             copy.avatarURL = try avatarStorage.signedURL(objectKey: key, config: config)
         } catch {
-            TandemLog.catalog.error("avatar resolve failed key=\(key, privacy: .public) error=\(String(describing: error), privacy: .public)")
+            PaircastLog.catalog.error("avatar resolve failed key=\(key, privacy: .public) error=\(String(describing: error), privacy: .public)")
             copy.avatarURL = nil
         }
         return copy

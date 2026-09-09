@@ -1,7 +1,9 @@
 import Foundation
 
 public enum ConfigQRCodec {
-    public static let payloadType = "tandem-config"
+    public static let payloadType = "paircast-config"
+    /// Older share payloads used `tandem-config`.
+    public static let acceptedPayloadTypes: Set<String> = ["paircast-config", "tandem-config"]
     public static let maxEncodedUTF8Bytes = 2_048
 
     public struct Payload: Codable, Equatable, Sendable {
@@ -117,7 +119,7 @@ public enum ConfigQRCodec {
         } catch {
             throw AppError.invalidConfigQR
         }
-        guard payload.type == payloadType, payload.v >= 2 else {
+        guard Self.acceptedPayloadTypes.contains(payload.type), payload.v >= 2 else {
             throw AppError.invalidConfigQR
         }
         let config = AppCloudConfig(

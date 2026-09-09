@@ -1,7 +1,7 @@
 import ProjectDescription
 
 let workspace = Workspace(
-    name: "Tandem",
+    name: "Paircast",
     projects: [
         "Projects/App",
         "Projects/Domain",

@@ -44,7 +44,7 @@ public struct ThemeSettingsView: View {
             } header: {
                 Text("Appearance")
             } footer: {
-                Text("When System is selected, Tandem follows your iOS appearance settings.")
+                Text("When System is selected, Paircast follows your iOS appearance settings.")
             }
         }
         .id("\(theme.appearance.rawValue)-\(locale.identifier)")

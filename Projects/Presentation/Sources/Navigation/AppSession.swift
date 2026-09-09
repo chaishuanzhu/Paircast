@@ -23,7 +23,7 @@ public final class AppSession: ObservableObject {
 
     /// Deep-link invite kept until the user finishes login.
     private(set) var pendingInvite: RoomInvite?
-    /// Config share link (`tandem://config?args=…`) awaiting confirm-import on the config screen.
+    /// Config share link (`paircast://config?args=…`) awaiting confirm-import on the config screen.
     private(set) var pendingConfigImportRaw: String?
 
     public init(
@@ -182,7 +182,7 @@ public final class AppSession: ObservableObject {
 
     public func installIMSessionObservers() {
         NotificationCenter.default.addObserver(
-            forName: .tandemIMKickedOffline,
+            forName: .paircastIMKickedOffline,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -191,7 +191,7 @@ public final class AppSession: ObservableObject {
             }
         }
         NotificationCenter.default.addObserver(
-            forName: .tandemIMUserSigExpired,
+            forName: .paircastIMUserSigExpired,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -221,7 +221,8 @@ public struct RoomInvite: Equatable, Sendable {
     }
 
     public init?(url: URL) {
-        guard url.scheme == "tandem", url.host == "watch" else { return nil }
+        let scheme = url.scheme?.lowercased()
+        guard scheme == "paircast", url.host == "watch" else { return nil }
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         guard let roomId = items.first(where: { $0.name == "roomId" })?.value,
               !roomId.isEmpty else { return nil }

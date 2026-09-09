@@ -2,17 +2,17 @@ import Foundation
 import CryptoKit
 
 /// Encrypts cloud config into a shareable deep link:
-/// `tandem://config?args=<base64url(AES-GCM sealed box)>`
+/// `paircast://config?args=<base64url(AES-GCM sealed box)>`
 ///
 /// The symmetric key is app-embedded (transport obfuscation / casual snooping),
 /// not a substitute for trusting the recipient — the payload still contains secrets.
 public enum ConfigShareLink {
-    public static let urlScheme = "tandem"
+    public static let urlScheme = "paircast"
     public static let urlHost = "config"
     public static let argsQueryName = "args"
     public static let maxArgsUTF8Bytes = 3_500
 
-    /// Builds `tandem://config?args=…` from the current config.
+    /// Builds `paircast://config?args=…` from the current config.
     public static func shareURL(for config: AppCloudConfig) throws -> URL {
         let args = try encodeArgs(for: config)
         var components = URLComponents()
@@ -38,7 +38,7 @@ public enum ConfigShareLink {
         return args
     }
 
-    /// Accepts a full `tandem://config?args=…` URL, raw `args` token, or legacy plaintext JSON.
+    /// Accepts a full `paircast://config?args=…` URL, raw `args`, or plaintext JSON.
     public static func decode(_ input: String) throws -> AppCloudConfig {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw AppError.invalidConfigQR }
@@ -97,6 +97,7 @@ public enum ConfigShareLink {
     // MARK: - Crypto
 
     private static var symmetricKey: SymmetricKey {
+        // Historical key material — must stay stable so existing encrypted `args` still decrypt.
         let material = Data("Tandem.iOS.ConfigShare.v1".utf8)
         return SymmetricKey(data: SHA256.hash(data: material))
     }
@@ -119,11 +120,10 @@ public enum ConfigShareLink {
         return Data(base64Encoded: base64)
     }
 
-    /// Pulls the first `tandem://config?…` substring from pasted chat text.
+    /// Pulls the first `paircast://config?…` substring from pasted chat text.
     private static func extractShareURL(from text: String) -> URL? {
-        guard let range = text.range(of: "\(urlScheme)://\(urlHost)", options: .caseInsensitive) else {
-            return nil
-        }
+        let needle = "\(urlScheme)://\(urlHost)"
+        guard let range = text.range(of: needle, options: .caseInsensitive) else { return nil }
         let fromScheme = text[range.lowerBound...]
         let end = fromScheme.firstIndex(where: { $0.isWhitespace || $0 == "\n" || $0 == "\"" }) ?? fromScheme.endIndex
         return URL(string: String(fromScheme[..<end]))

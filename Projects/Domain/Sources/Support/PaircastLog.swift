@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// Shared app loggers. Prefer these over `print` so Console.app can filter by category.
-public enum TandemLog {
+public enum PaircastLog {
     public static let catalog = Logger(subsystem: "com.chaisz.tandem", category: "catalog")
     public static let playback = Logger(subsystem: "com.chaisz.tandem", category: "playback")
 

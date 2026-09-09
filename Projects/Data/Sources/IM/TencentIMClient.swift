@@ -13,7 +13,7 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
 
     public static let systemPrefix = "[sys]"
     public static let groupTypeMeeting = "Meeting"
-    public static let groupIDPrefix = "tandem_"
+    public static let groupIDPrefix = "paircast_"
 
     private let manager = V2TIMManager.sharedInstance()!
     private let lock = NSLock()
@@ -156,7 +156,7 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
     /// Ensure a Meeting group exists and the current user is a member.
     public func ensureMeetingGroup(roomId: String, groupName: String? = nil) async throws {
         let gid = Self.groupID(forRoomId: roomId)
-        let name = groupName ?? "Tandem \(roomId.prefix(8))"
+        let name = groupName ?? "Paircast \(roomId.prefix(8))"
         try await createGroup(groupID: gid, groupName: name)
         try await joinGroup(groupID: gid)
     }
@@ -353,14 +353,14 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
         lock.withLock {
             loggedInUserId = nil
         }
-        NotificationCenter.default.post(name: .tandemIMKickedOffline, object: nil)
+        NotificationCenter.default.post(name: .paircastIMKickedOffline, object: nil)
     }
 
     fileprivate func handleUserSigExpired() {
         lock.withLock {
             loggedInUserId = nil
         }
-        NotificationCenter.default.post(name: .tandemIMUserSigExpired, object: nil)
+        NotificationCenter.default.post(name: .paircastIMUserSigExpired, object: nil)
     }
 
     fileprivate func handleGroupText(
