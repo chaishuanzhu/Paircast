@@ -39,17 +39,17 @@ public final class MeViewModel: ObservableObject {
         do {
             let picked = try await item.loadTransferable(type: PickedImageData.self)
             guard let raw = picked?.data else {
-                statusMessage = "无法读取图片"
+                statusMessage = TandemL10n.string("Unable to read image")
                 return
             }
             guard let jpeg = AvatarImageCompressor.jpegData(from: raw) else {
-                statusMessage = "无法处理该图片，或压缩后仍超过 1MB"
+                statusMessage = TandemL10n.string("Unable to process this image, or it still exceeds 1MB after compression")
                 return
             }
             pendingAvatarData = jpeg
             pendingAvatarPreview = UIImage(data: jpeg)
         } catch {
-            statusMessage = "无法读取图片"
+            statusMessage = TandemL10n.string("Unable to read image")
         }
     }
 
@@ -68,13 +68,13 @@ public final class MeViewModel: ObservableObject {
             session.currentUser = user
             pendingAvatarData = nil
             pendingAvatarPreview = nil
-            statusMessage = "已保存"
+            statusMessage = TandemL10n.string("Saved")
             return true
         } catch let error as AppError {
-            statusMessage = error.userMessage
+            statusMessage = TandemL10n.format(error)
             return false
         } catch {
-            statusMessage = AppError.network.userMessage
+            statusMessage = TandemL10n.format(AppError.network)
             return false
         }
     }
@@ -89,7 +89,7 @@ public final class MeViewModel: ObservableObject {
             session.currentUser = nil
             session.resetToLogin()
         } catch {
-            statusMessage = AppError.network.userMessage
+            statusMessage = TandemL10n.format(AppError.network)
         }
     }
 
@@ -109,7 +109,7 @@ public final class MeViewModel: ObservableObject {
             session.currentUser = nil
             session.resetToLogin()
         } catch {
-            statusMessage = AppError.network.userMessage
+            statusMessage = TandemL10n.format(AppError.network)
         }
     }
 }
@@ -123,12 +123,14 @@ private struct MeHarness: UpdateProfileUseCase, LogoutUseCase, DeleteAccountUseC
 public struct MeSheetView: View {
     @ObservedObject var session: AppSession
     @ObservedObject var theme: ThemeStore
+    @ObservedObject var language: LanguageStore
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: MeViewModel
 
-    public init(session: AppSession, theme: ThemeStore) {
+    public init(session: AppSession, theme: ThemeStore, language: LanguageStore) {
         self.session = session
         self.theme = theme
+        self.language = language
         _viewModel = StateObject(wrappedValue: MeViewModel(session: session))
     }
 
@@ -148,7 +150,7 @@ public struct MeSheetView: View {
                                 avatarURL: avatarURL,
                                 localImage: avatarImage
                             )
-                            Text("轻点更换头像")
+                            Text("Tap to change avatar")
                                 .font(.system(size: 13))
                                 .foregroundStyle(TandemColors.secondaryLabel)
                         }
@@ -157,19 +159,19 @@ public struct MeSheetView: View {
                         .padding(.bottom, 4)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("更换头像")
+                    .accessibilityLabel("Change avatar")
                     .onChange(of: viewModel.pickerItem) { _, item in
                         Task { await viewModel.applyPickedItem(item) }
                     }
 
                     VStack(spacing: 0) {
-                        meRow(title: "昵称") {
-                            TextField("昵称", text: $viewModel.nickname)
+                        meRow(title: "Nickname") {
+                            TextField("Nickname", text: $viewModel.nickname)
                                 .multilineTextAlignment(.trailing)
                                 .font(.system(size: 17))
                         }
                         Divider().padding(.leading, 16)
-                        meRow(title: "用户名") {
+                        meRow(title: "Username") {
                             Text(viewModel.userId)
                                 .font(.system(size: 17))
                                 .foregroundStyle(TandemColors.secondaryLabel)
@@ -182,9 +184,9 @@ public struct MeSheetView: View {
                                 session.openLibraryConfig()
                             }
                         } label: {
-                            meRow(title: "服务配置") {
+                            meRow(title: "Service Configuration") {
                                 HStack(spacing: 4) {
-                                    Text(viewModel.isConfigured ? "已配置" : "未配置")
+                                    Text(viewModel.isConfigured ? LocalizedStringKey("Configured") : LocalizedStringKey("Not configured"))
                                         .foregroundStyle(TandemColors.secondaryLabel)
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))
@@ -197,9 +199,24 @@ public struct MeSheetView: View {
                         NavigationLink {
                             ThemeSettingsView(theme: theme)
                         } label: {
-                            meRow(title: "主题") {
+                            meRow(title: "Theme") {
                                 HStack(spacing: 4) {
-                                    Text(theme.appearance.title)
+                                    Text(appearanceTitle(theme.appearance))
+                                        .foregroundStyle(TandemColors.secondaryLabel)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(TandemColors.tertiaryLabel)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        Divider().padding(.leading, 16)
+                        NavigationLink {
+                            LanguageSettingsView(language: language)
+                        } label: {
+                            meRow(title: "Language") {
+                                HStack(spacing: 4) {
+                                    Text(language.language.title)
                                         .foregroundStyle(TandemColors.secondaryLabel)
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))
@@ -212,7 +229,7 @@ public struct MeSheetView: View {
                         NavigationLink {
                             AcknowledgementsView()
                         } label: {
-                            meRow(title: "开源许可") {
+                            meRow(title: "Acknowledgements") {
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(TandemColors.tertiaryLabel)
@@ -226,7 +243,7 @@ public struct MeSheetView: View {
                     Button {
                         viewModel.showLogoutConfirm = true
                     } label: {
-                        Text("退出登录")
+                        Text("Sign Out")
                             .font(.system(size: 17))
                             .foregroundStyle(TandemColors.danger)
                             .frame(maxWidth: .infinity)
@@ -239,7 +256,7 @@ public struct MeSheetView: View {
                     Button {
                         viewModel.showDeleteConfirm = true
                     } label: {
-                        Text("删除账号")
+                        Text("Delete Account")
                             .font(.system(size: 17))
                             .foregroundStyle(TandemColors.danger)
                             .frame(maxWidth: .infinity)
@@ -259,7 +276,7 @@ public struct MeSheetView: View {
                 .padding(.bottom, 24)
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("我的")
+            .navigationTitle("Me")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -272,31 +289,33 @@ public struct MeSheetView: View {
                     }
                 }
             }
-            .confirmationDialog("确定退出登录？", isPresented: $viewModel.showLogoutConfirm, titleVisibility: .visible) {
-                Button("退出登录", role: .destructive) {
+            .confirmationDialog("Sign out?", isPresented: $viewModel.showLogoutConfirm, titleVisibility: .visible) {
+                Button("Sign Out", role: .destructive) {
                     Task { await viewModel.logout() }
                 }
-                Button("取消", role: .cancel) {}
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("将保留本地云服务配置")
+                Text("Local cloud service configuration will be kept")
             }
-            .confirmationDialog("确定删除账号？", isPresented: $viewModel.showDeleteConfirm, titleVisibility: .visible) {
-                Button("删除账号", role: .destructive) {
+            .confirmationDialog("Delete account?", isPresented: $viewModel.showDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete Account", role: .destructive) {
                     Task { await viewModel.deleteAccount() }
                 }
-                Button("取消", role: .cancel) {}
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("将清除本机云配置、登录会话、头像与昵称，并退出登录。IM 控制台中的预置账号需管理员另行停用。")
+                Text("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin.")
             }
             .overlay {
                 if viewModel.isSaving {
-                    ProgressView("保存中…")
+                    ProgressView("Saving…")
                         .padding(20)
                         .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
         }
+        .environment(\.locale, language.effectiveLocale)
+        .id(language.effectiveLocale.identifier)
         .preferredColorScheme(theme.appearance.preferredColorScheme)
         .onAppear { ThemeWindowApplier.apply(theme.appearance) }
         .onChange(of: theme.appearance) { _, appearance in
@@ -304,7 +323,7 @@ public struct MeSheetView: View {
         }
     }
 
-    private func meRow<Content: View>(title: String, @ViewBuilder trailing: () -> Content) -> some View {
+    private func meRow<Content: View>(title: LocalizedStringKey, @ViewBuilder trailing: () -> Content) -> some View {
         HStack {
             Text(title)
                 .font(.system(size: 17))
@@ -314,5 +333,13 @@ public struct MeSheetView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+    }
+
+    private func appearanceTitle(_ option: AppAppearance) -> LocalizedStringKey {
+        switch option {
+        case .system: "Match System"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
     }
 }

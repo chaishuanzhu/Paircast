@@ -67,7 +67,7 @@ public extension LeaveRoomUseCase {
             try await syncGateway.send(roomId: updated.id, signal: signal)
             _ = try await chatGateway.postSystemMessage(
                 roomId: updated.id,
-                text: "房主已转让给 \(newHost)"
+                text: "Host transferred to \(newHost)"
             )
             return outcome
         }
@@ -91,7 +91,7 @@ public extension ChangeMovieUseCase {
             throw AppError.onlyHostCanSwitchMovie
         }
         guard newMovie.id != room.movieId else {
-            throw AppError.validation("已在播放")
+            throw AppError.validation("Already playing")
         }
         var updated = room
         updated.movieId = newMovie.id
@@ -107,7 +107,7 @@ public extension ChangeMovieUseCase {
         try await syncGateway.send(roomId: room.id, signal: signal)
         _ = try await chatGateway.postSystemMessage(
             roomId: room.id,
-            text: "房主将影片切换为《\(newMovie.title)》"
+            text: "Host switched the movie to “\(newMovie.title)”"
         )
         return (updated, signal)
     }

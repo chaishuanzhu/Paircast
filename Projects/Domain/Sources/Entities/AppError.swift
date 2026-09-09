@@ -21,55 +21,73 @@ public enum AppError: Error, Equatable, Sendable {
     case subtitleUnavailable
     case subtitleShareFailed
     case avatarUploadFailed
-    case validation(String)
-    case unknown(String)
+    /// Localization template key (may contain `{{name}}`) plus replacement values.
+    case validation(String, args: [String: String] = [:])
+    case unknown(String, args: [String: String] = [:])
 
-    public var userMessage: String {
+    /// Catalog key / English template (placeholders not yet replaced).
+    public var localizationKey: String {
         switch self {
         case .notConfigured:
-            return "请先完成服务配置"
-        case .incompleteConfig(let missing):
-            return "配置不完整：\(missing.joined(separator: "、"))"
+            return "Please finish service configuration first"
+        case .incompleteConfig:
+            return "Incomplete configuration: {{fields}}"
         case .invalidCredentials:
-            return "用户 ID 无效或登录失败"
+            return "Invalid user ID or login failed"
         case .accountUnavailable:
-            return "账号不存在或未开通，请联系管理员"
+            return "Account not found or not provisioned. Contact an admin"
         case .imInitFailed:
-            return "IM 配置无效，请检查 SDKAppID 等"
+            return "Invalid IM configuration. Check SDKAppID and related settings"
         case .network:
-            return "网络异常，请重试"
+            return "Network error. Please try again"
         case .userSigExpired:
-            return "登录已过期，请重新登录"
+            return "Session expired. Please sign in again"
         case .kickedOffline:
-            return "账号在其他设备登录"
+            return "Signed in on another device"
         case .invalidConfigQR:
-            return "配置链接无效，未修改现有配置"
+            return "Invalid configuration link. Existing settings were not changed"
         case .configQRTooLarge:
-            return "配置过大，无法分享或导入"
+            return "Configuration is too large to share or import"
         case .catalogUnauthorized:
-            return "片库配置无效"
+            return "Library configuration is invalid"
         case .playbackFailed:
-            return "无法播放，请稍后重试"
+            return "Unable to play. Please try again later"
         case .unsupportedContainer:
-            return "当前设备暂不支持该封装/编码"
+            return "This container or codec is not supported on this device"
         case .movieChangeFailed:
-            return "换片失败"
+            return "Failed to switch movie"
         case .onlyHostCanSwitchMovie:
-            return "仅房主可切换影片"
+            return "Only the host can switch movies"
         case .roomEnded:
-            return "房间已结束"
+            return "This room has ended"
         case .roomNotFound:
-            return "房间不存在或邀请已失效"
+            return "Room not found or invite expired"
         case .subtitleUnavailable:
-            return "暂无可用字幕"
+            return "No subtitles available"
         case .subtitleShareFailed:
-            return "字幕同步给成员失败"
+            return "Failed to sync subtitles to members"
         case .avatarUploadFailed:
-            return "头像上传失败，请重试"
-        case .validation(let message):
-            return message
-        case .unknown(let message):
-            return message
+            return "Avatar upload failed. Please try again"
+        case .validation(let key, _):
+            return key
+        case .unknown(let key, _):
+            return key
         }
+    }
+
+    public var localizationArguments: [String: String] {
+        switch self {
+        case .incompleteConfig(let missing):
+            return ["fields": missing.joined(separator: ", ")]
+        case .validation(_, let args), .unknown(_, let args):
+            return args
+        default:
+            return [:]
+        }
+    }
+
+    /// English message with placeholders already replaced (logs / tests / fallback).
+    public var userMessage: String {
+        StringTemplate.apply(localizationKey, localizationArguments)
     }
 }

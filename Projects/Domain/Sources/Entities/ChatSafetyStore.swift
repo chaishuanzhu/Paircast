@@ -52,10 +52,10 @@ public struct ChatSafetyStore: @unchecked Sendable {
     public static var reportURL: URL {
         var components = URLComponents(string: "https://github.com/chai-sz/Tandem/issues/new")!
         components.queryItems = [
-            URLQueryItem(name: "title", value: "聊天内容举报"),
+            URLQueryItem(name: "title", value: "Chat content report"),
             URLQueryItem(
                 name: "body",
-                value: "请描述违规内容（房间为邀请制，仅处理你参与过的房间）。"
+                value: "Please describe the violation (rooms are invite-only; we only handle rooms you joined)."
             ),
         ]
         return components.url ?? URL(string: "https://github.com/chai-sz/Tandem/issues")!

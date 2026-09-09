@@ -45,7 +45,36 @@ final class ThemeStoreTests: XCTestCase {
 
         let reloaded = ThemeStore(defaults: defaults)
         XCTAssertEqual(reloaded.appearance, .dark)
-        XCTAssertEqual(reloaded.appearance.title, "深色")
+        XCTAssertEqual(reloaded.appearance.title, "Dark")
+    }
+}
+
+@MainActor
+final class LanguageStoreTests: XCTestCase {
+    func test_defaultsToSystem() {
+        let suite = "tandem.language.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = LanguageStore(defaults: defaults)
+        XCTAssertEqual(store.language, .system)
+    }
+
+    func test_persistsLanguageAndUpdatesSharedLocale() {
+        let suite = "tandem.language.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let store = LanguageStore(defaults: defaults)
+        store.language = .chinese
+        XCTAssertEqual(store.effectiveLocale.identifier, "zh-Hans")
+        XCTAssertEqual(TandemL10n.locale.identifier, "zh-Hans")
+
+        let reloaded = LanguageStore(defaults: defaults)
+        XCTAssertEqual(reloaded.language, .chinese)
+
+        store.language = .english
+        XCTAssertEqual(store.effectiveLocale.identifier, "en")
+        XCTAssertEqual(TandemL10n.locale.identifier, "en")
     }
 }
 
@@ -84,7 +113,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
 
         await session.bootstrap()
         XCTAssertEqual(session.route, .login)
-        XCTAssertEqual(session.toast, "请先登录再加入房间")
+        XCTAssertEqual(session.toast, "Sign in to join the room")
         XCTAssertEqual(session.pendingInvite?.roomId, "r1")
     }
 
@@ -121,7 +150,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
 
         await session.bootstrap()
         XCTAssertEqual(session.route, .config(fromLogin: true))
-        XCTAssertEqual(session.toast, "检测到配置链接，请确认后导入")
+        XCTAssertEqual(session.toast, "Configuration link detected. Confirm to import")
         XCTAssertEqual(session.consumePendingConfigImport(), share.absoluteString)
         XCTAssertNil(session.consumePendingConfigImport())
     }
@@ -204,7 +233,7 @@ private final class FakeChat: ChatGateway, @unchecked Sendable {
     }
     func messages(roomId: String) -> AsyncStream<ChatMessage> { AsyncStream { $0.finish() } }
     func postSystemMessage(roomId: String, text: String) async throws -> ChatMessage {
-        ChatMessage(id: "1", roomId: roomId, senderNickname: "系统", text: text, kind: .system)
+        ChatMessage(id: "1", roomId: roomId, senderNickname: "System", text: text, kind: .system)
     }
 }
 private final class FakeSync: PlaybackSyncGateway, @unchecked Sendable {

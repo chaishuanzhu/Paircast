@@ -94,7 +94,7 @@ public final class WatchViewModel: ObservableObject {
                 movieId: movie.id,
                 offsetMs: SubtitleOffsetStore.load(movieId: movie.id)
             )
-            syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
+            syncLabel = isHost ? "You are the host — you control playback" : "Following the host"
             onlineQuery = [movie.title, movie.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
             await preparePlayer()
             listen()
@@ -102,9 +102,9 @@ public final class WatchViewModel: ObservableObject {
             await refreshMemberProfiles()
             await refreshSubtitles(autoSelectChinese: true)
         } catch let error as AppError {
-            errorMessage = error.userMessage
+            errorMessage = TandemL10n.format(error)
         } catch {
-            errorMessage = AppError.playbackFailed.userMessage
+            errorMessage = TandemL10n.format(AppError.playbackFailed)
         }
     }
 
@@ -214,10 +214,10 @@ public final class WatchViewModel: ObservableObject {
             }
         } catch let error as AppError {
             TandemLog.playback.error("preparePlayer AppError=\(error.userMessage, privacy: .public)")
-            errorMessage = error.userMessage
+            errorMessage = TandemL10n.format(error)
         } catch {
             TandemLog.playback.error("preparePlayer error=\(String(describing: error), privacy: .public)")
-            errorMessage = AppError.playbackFailed.userMessage
+            errorMessage = TandemL10n.format(AppError.playbackFailed)
         }
     }
 
@@ -250,9 +250,9 @@ public final class WatchViewModel: ObservableObject {
                 let membersChanged = await MainActor.run {
                     let changed = updated.memberIds != self.room?.memberIds
                     self.room = updated
-                    syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
+                    syncLabel = isHost ? "You are the host — you control playback" : "Following the host"
                     if updated.status == .ended {
-                        errorMessage = AppError.roomEnded.userMessage
+                        errorMessage = TandemL10n.format(AppError.roomEnded)
                     }
                     return changed
                 }
@@ -316,15 +316,17 @@ public final class WatchViewModel: ObservableObject {
                 room.hostUserId = newHost
                 room.hostTransferSeq = signal.seq
                 self.room = room
-                syncLabel = isHost ? "你是房主，进度由你控制" : "跟随房主中"
-                session.showToast("房主已变为 \(newHost)")
+                syncLabel = isHost
+                    ? TandemL10n.string("You are the host — you control playback")
+                    : TandemL10n.string("Following the host")
+                session.showToast(TandemL10n.format("Host is now {{name}}", ["name": newHost]))
                 startHeartbeatIfNeeded()
             }
             if signal.action == .movieChange, let movieId = signal.movieId {
                 // Host already applied locally in confirmSwitch; members follow here.
                 if movie?.id != movieId {
                     if !isHost {
-                        session.showToast("房主切换了影片…")
+                        session.showToast(TandemL10n.string("Host switched the movie…"))
                     }
                     Task {
                         await loadMovie(id: movieId)
@@ -413,12 +415,12 @@ public final class WatchViewModel: ObservableObject {
 
     public func requestSwitch(_ movie: Movie) {
         guard isHost else {
-            session.showToast(AppError.onlyHostCanSwitchMovie.userMessage)
+            session.showToast(TandemL10n.format(AppError.onlyHostCanSwitchMovie))
             return
         }
         if movie.id == self.movie?.id {
             showSwitchMovie = false
-            session.showToast("已在播放")
+            session.showToast(TandemL10n.string("Already playing"))
             return
         }
         pendingMovie = movie
@@ -518,11 +520,11 @@ public final class WatchViewModel: ObservableObject {
             showSwitchMovie = false
             await refreshSubtitles(autoSelectChinese: true)
         } catch let error as AppError {
-            errorMessage = error.userMessage
-            session.showToast(error.userMessage)
+            errorMessage = TandemL10n.format(error)
+            session.showToast(TandemL10n.format(error))
         } catch {
-            errorMessage = AppError.movieChangeFailed.userMessage
-            session.showToast(AppError.movieChangeFailed.userMessage)
+            errorMessage = TandemL10n.format(AppError.movieChangeFailed)
+            session.showToast(TandemL10n.format(AppError.movieChangeFailed))
         }
     }
 
@@ -544,13 +546,15 @@ public final class WatchViewModel: ObservableObject {
         guard let ownerId = session.currentUser?.id, let senderId = message.senderId else { return }
         chatSafety.block(senderId, ownerId: ownerId)
         messages = chatSafety.visibleMessages(messages, ownerId: ownerId)
-        session.showToast("已屏蔽 \(message.senderNickname.isEmpty ? senderId : message.senderNickname)")
+        session.showToast(TandemL10n.format("Blocked {{name}}", [
+            "name": message.senderNickname.isEmpty ? senderId : message.senderNickname
+        ]))
     }
 
     public func report(_ message: ChatMessage) {
         guard let ownerId = session.currentUser?.id, let senderId = message.senderId else { return }
         chatSafety.recordReport(targetUserId: senderId, ownerId: ownerId, snippet: message.text)
-        session.showToast("已记录举报，将打开反馈页")
+        session.showToast(TandemL10n.string("Report recorded — opening feedback"))
     }
 
     public var chatReportURL: URL { ChatSafetyStore.reportURL }
@@ -570,7 +574,7 @@ public final class WatchViewModel: ObservableObject {
             configGateway: session.configGateway
         )
         let listed = (try? await harness.listSubtitleTracks(for: movie)) ?? [
-            SubtitleTrack(id: "off", label: "关闭字幕", source: .off),
+            SubtitleTrack(id: "off", label: "Off", source: .off),
         ]
         // Give VLC a moment to parse embedded tracks after prepare.
         if player.embeddedSubtitleTracks().isEmpty {
@@ -658,7 +662,7 @@ public final class WatchViewModel: ObservableObject {
             player.applySubtitleOffsetMs(retainedOffset)
 
             if track.source == .online, !subtitleTracks.contains(where: { $0.id == track.id }) {
-                // Keep selected online track visible under「当前」.
+                // Keep selected online track visible under Current.
                 subtitleTracks.insert(track, at: min(1, subtitleTracks.count))
             }
             showSubtitlePanel = false
@@ -674,9 +678,9 @@ public final class WatchViewModel: ObservableObject {
                 )
             }
         } catch let error as AppError {
-            session.showToast(error.userMessage)
+            session.showToast(TandemL10n.format(error))
         } catch {
-            session.showToast(AppError.subtitleUnavailable.userMessage)
+            session.showToast(TandemL10n.format(AppError.subtitleUnavailable))
         }
     }
 
@@ -688,7 +692,7 @@ public final class WatchViewModel: ObservableObject {
     ) async {
         guard let room, session.currentUser != nil, isHost else { return }
         guard let config = try? await session.configGateway.load(), config.storage.isComplete else {
-            session.showToast("字幕已加载（片库未配置，无法同步给成员）")
+            session.showToast(TandemL10n.string("Subtitles loaded (library not configured — cannot sync to members)"))
             return
         }
         do {
@@ -707,9 +711,9 @@ public final class WatchViewModel: ObservableObject {
             lastHostSharedSubtitleKey = key
             _ = try? await session.chatGateway.postSystemMessage(
                 roomId: room.id,
-                text: "房主共享了字幕：\(track.label)"
+                text: "Host shared subtitles: \(track.label)"
             )
-            // Sidecar now lives beside the movie — refresh「片库外挂」and mark it current.
+            // Sidecar now lives beside the movie — refresh Library sidecars and mark it current.
             await refreshSubtitles()
             if let sidecar = subtitleTracks.first(where: { $0.id == "oss:\(key)" }) {
                 subtitleState = SubtitleState(
@@ -721,7 +725,7 @@ public final class WatchViewModel: ObservableObject {
                 )
             }
         } catch {
-            session.showToast(AppError.subtitleShareFailed.userMessage)
+            session.showToast(TandemL10n.format(AppError.subtitleShareFailed))
         }
     }
 
@@ -766,7 +770,7 @@ public final class WatchViewModel: ObservableObject {
         }
 
         guard let config = try? await session.configGateway.load(), config.storage.isComplete else {
-            session.showToast(AppError.subtitleUnavailable.userMessage)
+            session.showToast(TandemL10n.format(AppError.subtitleUnavailable))
             return
         }
 
@@ -780,13 +784,13 @@ public final class WatchViewModel: ObservableObject {
             }
             let label = (signal.subtitleLabel?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
                 $0.isEmpty ? nil : $0
-            } ?? "房主共享"
+            } ?? "Host shared"
             let track = SubtitleTrack(
                 id: "shared:\(key)",
                 label: label,
                 language: nil,
                 source: .oss,
-                detail: "房主共享",
+                detail: "Host shared",
                 languageBadge: nil,
                 format: (key as NSString).pathExtension.uppercased()
             )
@@ -800,11 +804,11 @@ public final class WatchViewModel: ObservableObject {
             if !subtitleTracks.contains(where: { $0.id == track.id }) {
                 subtitleTracks.insert(track, at: min(1, subtitleTracks.count))
             }
-            session.showToast("已加载房主共享的字幕")
+            session.showToast(TandemL10n.string("Loaded host-shared subtitles"))
         } catch let error as AppError {
-            session.showToast(error.userMessage)
+            session.showToast(TandemL10n.format(error))
         } catch {
-            session.showToast(AppError.subtitleUnavailable.userMessage)
+            session.showToast(TandemL10n.format(AppError.subtitleUnavailable))
         }
     }
 
@@ -844,11 +848,11 @@ public final class WatchViewModel: ObservableObject {
         } catch let error as AppError {
             onlineResults = []
             didSearchOnline = true
-            onlineSearchError = error.userMessage
+            onlineSearchError = TandemL10n.format(error)
         } catch {
             onlineResults = []
             didSearchOnline = true
-            onlineSearchError = AppError.subtitleUnavailable.userMessage
+            onlineSearchError = TandemL10n.format(AppError.subtitleUnavailable)
         }
     }
 
@@ -977,20 +981,23 @@ public struct WatchView: View {
                 .presentationDragIndicator(.visible)
         }
         .alert(
-            "切换影片？",
+            "Switch movie?",
             isPresented: $viewModel.showSwitchConfirm
         ) {
-            Button("取消", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 viewModel.cancelSwitchConfirm()
             }
-            Button("切换") {
+            Button("Switch") {
                 Task { await viewModel.confirmSwitch() }
             }
         } message: {
             if let title = viewModel.pendingMovie?.title {
-                Text("将切换为《\(title)》，并从开头播放，全员同步换片。")
+                Text(TandemL10n.format(
+                    "Switch to “{{title}}” and play from the start. Everyone syncs to the new movie.",
+                    ["title": title]
+                ))
             } else {
-                Text("切换后将从开头播放，全员同步换片。")
+                Text("Playback will restart from the beginning. Everyone syncs to the new movie.")
             }
         }
         .sheet(isPresented: $viewModel.showSubtitlePanel) {
@@ -1011,16 +1018,16 @@ public struct WatchView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
-        .confirmationDialog("更多", isPresented: $showMoreMenu, titleVisibility: .hidden) {
-            Button("字幕") { viewModel.showSubtitlePanel = true }
-            Button("字幕同步") { viewModel.showSubtitleSync = true }
-            Button("取消", role: .cancel) {}
+        .confirmationDialog("More", isPresented: $showMoreMenu, titleVisibility: .hidden) {
+            Button("Subtitles") { viewModel.showSubtitlePanel = true }
+            Button("Subtitle Sync") { viewModel.showSubtitleSync = true }
+            Button("Cancel", role: .cancel) {}
         }
         .overlay {
             if viewModel.isSwitchingMovie {
                 ZStack {
                     Color.black.opacity(0.35).ignoresSafeArea()
-                    ProgressView("正在换片…")
+                    ProgressView("Switching movie…")
                         .padding(20)
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
@@ -1126,7 +1133,7 @@ public struct WatchView: View {
                 VStack(spacing: 8) {
                     ProgressView()
                         .tint(.white)
-                    Text("正在缓冲…")
+                    Text("Buffering…")
                         .font(.caption)
                         .foregroundStyle(.white)
                 }
@@ -1169,9 +1176,9 @@ public struct WatchView: View {
                     .frame(width: 28, height: 28)
                     .shadow(color: .black.opacity(0.45), radius: 1, y: 1)
             }
-            .accessibilityLabel(isFullscreen ? "退出全屏" : "返回")
+            .accessibilityLabel(isFullscreen ? "Exit fullscreen" : "Back")
 
-            Text(viewModel.movie?.title ?? "影片")
+            Text(viewModel.movie?.title ?? "Movie")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -1183,10 +1190,10 @@ public struct WatchView: View {
                 if viewModel.isHost {
                     viewModel.showSwitchMovie = true
                 } else {
-                    session.showToast(AppError.onlyHostCanSwitchMovie.userMessage)
+                    session.showToast(TandemL10n.format(AppError.onlyHostCanSwitchMovie))
                 }
             } label: {
-                Text("换片")
+                Text("Switch")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.white.opacity(viewModel.isHost ? 1 : 0.55))
                     .padding(.horizontal, 12)
@@ -1197,8 +1204,8 @@ public struct WatchView: View {
                     }
                     .clipShape(Capsule())
             }
-            .accessibilityLabel("切换影片")
-            .accessibilityHint(viewModel.isHost ? "打开片库切换当前影片" : "仅房主可切换影片")
+            .accessibilityLabel("Switch movie")
+            .accessibilityHint(viewModel.isHost ? "Open the library to switch the current movie" : "Only the host can switch movies")
 
             Button {
                 notePlayerInteraction()
@@ -1209,14 +1216,17 @@ public struct WatchView: View {
                     .foregroundStyle(.white)
                     .frame(width: 28, height: 28)
             }
-            .accessibilityLabel("更多")
+            .accessibilityLabel("More")
         }
     }
 
     private var playerBottomChrome: some View {
         VStack(spacing: 8) {
             if viewModel.subtitleState.source != .off, viewModel.subtitleState.offsetMs != 0 {
-                Text("字幕 \(viewModel.subtitleState.offsetLabel)")
+                Text(TandemL10n.format(
+                    "Subtitles {{offset}}",
+                    ["offset": viewModel.subtitleState.offsetLabel]
+                ))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.85), radius: 2, y: 1)
@@ -1245,7 +1255,7 @@ public struct WatchView: View {
                         .foregroundStyle(.white)
                         .frame(width: 28, height: 28)
                 }
-                .accessibilityLabel("字幕")
+                .accessibilityLabel("Subtitles")
 
                 progressBar
                     .frame(maxWidth: .infinity)
@@ -1269,7 +1279,7 @@ public struct WatchView: View {
                         .foregroundStyle(.white.opacity(0.95))
                         .frame(width: 28, height: 28)
                 }
-                .accessibilityLabel(isFullscreen ? "退出全屏" : "全屏")
+                .accessibilityLabel(isFullscreen ? "Exit fullscreen" : "Fullscreen")
             }
             .foregroundStyle(.white)
         }
@@ -1297,7 +1307,7 @@ public struct WatchView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .gesture(progressDragGesture(width: width), including: viewModel.isHost ? .gesture : .none)
-            .accessibilityLabel("播放进度")
+            .accessibilityLabel("Playback progress")
             .accessibilityValue("\(Int((progress * 100).rounded()))%")
             .opacity(viewModel.isHost ? 1 : 0.9)
         }
@@ -1341,7 +1351,10 @@ public struct WatchView: View {
     private var membersBar: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("当前 \(viewModel.room?.memberIds.count ?? 0) 人")
+                Text(TandemL10n.format(
+                    "{{count}} watching",
+                    ["count": "\(viewModel.room?.memberIds.count ?? 0)"]
+                ))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(TandemColors.secondaryLabel)
                 Spacer()
@@ -1380,7 +1393,7 @@ public struct WatchView: View {
                         }
                         .frame(width: 48, height: 48)
                     }
-                    .accessibilityLabel("邀请")
+                    .accessibilityLabel("Invite")
                 }
                 .padding(.vertical, 2)
             }
@@ -1407,7 +1420,7 @@ public struct WatchView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                Text("邀请制房间 · 长按消息可屏蔽或举报")
+                Text("Invite-only room · Long-press a message to block or report")
                     .font(.system(size: 11))
                     .foregroundStyle(TandemColors.tertiaryLabel)
                     .frame(maxWidth: .infinity)
@@ -1468,10 +1481,10 @@ public struct WatchView: View {
             .padding(isMe ? .leading : .trailing, 40)
             .contextMenu {
                 if viewModel.canModerate(message) {
-                    Button("屏蔽此人", role: .destructive) {
+                    Button("Block User", role: .destructive) {
                         viewModel.blockSender(of: message)
                     }
-                    Button("举报") {
+                    Button("Report") {
                         viewModel.report(message)
                         openURL(viewModel.chatReportURL)
                     }
@@ -1482,7 +1495,7 @@ public struct WatchView: View {
 
     private var chatInput: some View {
         HStack(spacing: 8) {
-            TextField("发个消息聊聊呗~", text: $viewModel.draft)
+            TextField("Say something…", text: $viewModel.draft)
                 .font(.system(size: 15))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -1491,7 +1504,7 @@ public struct WatchView: View {
             Button {
                 Task { await viewModel.sendChat() }
             } label: {
-                Text("发送")
+                Text("Send")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
@@ -1522,16 +1535,16 @@ private struct SwitchMovieSheet: View {
         NavigationStack {
             Group {
                 if viewModel.isLoadingLibraryForSwitch && viewModel.libraryMovies.isEmpty {
-                    ProgressView("加载片库…")
+                    ProgressView("Loading library…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewModel.filteredLibraryMovies.isEmpty {
                     ContentUnavailableView(
-                        viewModel.switchQuery.isEmpty ? "暂无影片" : "无匹配影片",
+                        viewModel.switchQuery.isEmpty ? "No movies" : "No matching movies",
                         systemImage: "film",
                         description: Text(
                             viewModel.switchQuery.isEmpty
-                                ? "确认对象存储 Bucket 中有 mp4/m4v/mkv"
-                                : "试试其他关键词"
+                                ? "Make sure your object storage bucket contains mp4/m4v/mkv files"
+                                : "Try different keywords"
                         )
                     )
                 } else {
@@ -1553,8 +1566,8 @@ private struct SwitchMovieSheet: View {
                 }
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .searchable(text: $viewModel.switchQuery, prompt: "搜索片名")
-            .navigationTitle("切换影片")
+            .searchable(text: $viewModel.switchQuery, prompt: "Search titles")
+            .navigationTitle("Switch Movie")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -1565,7 +1578,7 @@ private struct SwitchMovieSheet: View {
                 if viewModel.isSwitchingMovie {
                     ZStack {
                         Color.black.opacity(0.28).ignoresSafeArea()
-                        ProgressView("正在换片…")
+                        ProgressView("Switching movie…")
                             .padding(20)
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
@@ -1621,7 +1634,7 @@ private struct SwitchMovieRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(movie.title)
-        .accessibilityValue(isPlaying ? "播放中" : (movie.year ?? ""))
+        .accessibilityValue(isPlaying ? "Playing" : (movie.year ?? ""))
     }
 
     private var subtitle: String {
@@ -1630,7 +1643,7 @@ private struct SwitchMovieRow: View {
             parts.append(year)
         }
         if isPlaying {
-            parts.append("播放中")
+            parts.append("Playing")
         }
         return parts.joined(separator: " · ")
     }
@@ -1647,7 +1660,7 @@ private struct InviteSheetView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(spacing: 0) {
                         ShareLink(item: url) {
-                            inviteRow(title: "系统分享", trailing: .chevron)
+                            inviteRow(title: "System Share", trailing: .chevron)
                         }
                         .buttonStyle(.plain)
 
@@ -1658,8 +1671,8 @@ private struct InviteSheetView: View {
                             copied = true
                         } label: {
                             inviteRow(
-                                title: "复制邀请链接",
-                                trailing: .text(copied ? "已复制" : "复制", emphasized: copied)
+                                title: "Copy Invite Link",
+                                trailing: .text(copied ? "Copied" : "Copy", emphasized: copied)
                             )
                         }
                         .buttonStyle(.plain)
@@ -1667,7 +1680,7 @@ private struct InviteSheetView: View {
                     .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                    Text("链接预览")
+                    Text("Link preview")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(TandemColors.secondaryLabel)
                         .padding(.horizontal, 4)
@@ -1683,7 +1696,7 @@ private struct InviteSheetView: View {
                         .background(TandemColors.secondaryGrouped)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                    Text("好友打开链接并登录后，将加入当前观影房间并对齐进度。")
+                    Text("After friends open the link and sign in, they join this watch room and sync playback.")
                         .font(.system(size: 13))
                         .foregroundStyle(TandemColors.secondaryLabel)
                         .lineSpacing(2)
@@ -1694,11 +1707,11 @@ private struct InviteSheetView: View {
                 .padding(.bottom, 24)
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("邀请好友")
+            .navigationTitle("Invite Friends")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    ToolbarCloseButton(accessibilityLabel: "关闭") { dismiss() }
+                    ToolbarCloseButton(accessibilityLabel: "Close") { dismiss() }
                 }
             }
         }

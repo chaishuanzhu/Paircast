@@ -6,27 +6,27 @@ public struct AcknowledgementsView: View {
 
     public var body: some View {
         List {
-            Section("播放") {
-                Text("VLCKit / MobileVLCKit（VideoLAN，LGPLv2.1+）以动态框架链接。完整许可见 VideoLAN 网站。")
+            Section("Playback") {
+                Text("VLCKit / MobileVLCKit (VideoLAN, LGPLv2.1+) is linked as a dynamic framework. Full license text is available on the VideoLAN website.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Section("即时通讯") {
-                Text("腾讯云 IM SDK。使用受腾讯云服务协议约束。")
+            Section("Messaging") {
+                Text("Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Section("字幕与元数据") {
-                Text("在线字幕检索使用 OpenSubtitles API（需你自己的 Key）。可选的封面补全使用 OMDb（需你自己的 Key）。本应用不抓取豆瓣或 IMDb。")
+            Section("Subtitles & Metadata") {
+                Text("Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            Section("隐私") {
-                Link("隐私政策", destination: URL(string: "https://chai-sz.github.io/tandem/privacy")!)
-                Link("支持与举报", destination: URL(string: "https://chai-sz.github.io/tandem/support")!)
+            Section("Privacy") {
+                Link("Privacy Policy", destination: URL(string: "https://chai-sz.github.io/tandem/privacy")!)
+                Link("Support & Reports", destination: URL(string: "https://chai-sz.github.io/tandem/support")!)
             }
         }
-        .navigationTitle("开源许可")
+        .navigationTitle("Acknowledgements")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

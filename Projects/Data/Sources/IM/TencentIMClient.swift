@@ -260,7 +260,7 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
             id: messageId,
             roomId: roomId.lowercased(),
             senderId: asSystem ? nil : (senderId ?? currentUserId),
-            senderNickname: asSystem ? "系统" : (senderNickname ?? currentUserId ?? "我"),
+            senderNickname: asSystem ? "System" : (senderNickname ?? currentUserId ?? "Me"),
             text: text,
             kind: asSystem ? .system : .user
         )
@@ -378,7 +378,7 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
             id: msgID,
             roomId: roomId,
             senderId: sender?.userID,
-            senderNickname: isSystem ? "系统" : (nick?.isEmpty == false ? nick! : (sender?.userID ?? "未知")),
+            senderNickname: isSystem ? "System" : (nick?.isEmpty == false ? nick! : (sender?.userID ?? "Unknown")),
             text: body,
             kind: isSystem ? .system : .user
         )

@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct ThemeSettingsView: View {
     @ObservedObject var theme: ThemeStore
+    @Environment(\.locale) private var locale
 
     public init(theme: ThemeStore) {
         self.theme = theme
@@ -25,7 +26,7 @@ public struct ThemeSettingsView: View {
                         theme.appearance = option
                     } label: {
                         HStack {
-                            Text(option.title)
+                            Text(appearanceTitle(option))
                                 .font(.system(size: 17))
                                 .foregroundStyle(Color.primary)
                             Spacer()
@@ -41,20 +42,28 @@ public struct ThemeSettingsView: View {
                     .accessibilityAddTraits(theme.appearance == option ? .isSelected : [])
                 }
             } header: {
-                Text("外观")
+                Text("Appearance")
             } footer: {
-                Text("选择「跟随系统」时，Tandem 会与 iOS 外观设置保持一致。")
+                Text("When System is selected, Tandem follows your iOS appearance settings.")
             }
         }
-        .id(theme.appearance)
+        .id("\(theme.appearance.rawValue)-\(locale.identifier)")
         .scrollContentBackground(.hidden)
         .background(TandemColors.groupedBackground.ignoresSafeArea())
-        .navigationTitle("主题设置")
+        .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(theme.appearance.preferredColorScheme)
         .onAppear { ThemeWindowApplier.apply(theme.appearance) }
         .onChange(of: theme.appearance) { _, appearance in
             ThemeWindowApplier.apply(appearance)
+        }
+    }
+
+    private func appearanceTitle(_ option: AppAppearance) -> LocalizedStringKey {
+        switch option {
+        case .system: "Match System"
+        case .light: "Light"
+        case .dark: "Dark"
         }
     }
 

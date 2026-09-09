@@ -56,7 +56,7 @@ public struct SplashView: View {
                             .opacity(titleVisible ? 1 : 0)
                             .offset(y: titleVisible ? 0 : 12)
 
-                        Text("一起看电影")
+                        Text("Watch together")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Color.white.opacity(0.62))
                             .opacity(subtitleVisible ? 1 : 0)
@@ -73,7 +73,7 @@ public struct SplashView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Tandem，一起看电影")
+        .accessibilityLabel("Tandem, Watch together")
         .onAppear { runEntrance() }
     }
 

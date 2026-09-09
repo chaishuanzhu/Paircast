@@ -61,7 +61,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
                     language: lang.code,
                     source: .oss,
                     url: url,
-                    detail: "片库外挂 · \(ext)",
+                    detail: "Library sidecar · \(ext)",
                     languageBadge: lang.badge,
                     format: ext
                 )
@@ -77,7 +77,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
         guard let apiKey, !apiKey.isEmpty else {
-            throw AppError.validation("请先在服务配置中填写 OpenSubtitles API Key")
+            throw AppError.validation("Add an OpenSubtitles API Key in Service Configuration first")
         }
 
         var components = URLComponents(string: "https://api.opensubtitles.com/api/v1/subtitles")!
@@ -106,7 +106,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         }
         guard (200..<300).contains(http.statusCode) else {
             if http.statusCode == 401 || http.statusCode == 403 {
-                throw AppError.validation("OpenSubtitles API Key 无效")
+                throw AppError.validation("Invalid OpenSubtitles API Key")
             }
             throw AppError.subtitleUnavailable
         }
@@ -115,7 +115,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         return decoded.data.compactMap { item -> SubtitleTrack? in
             guard let file = item.attributes.files?.first else { return nil }
             let fileId = file.fileId
-            let name = file.fileName ?? item.attributes.release ?? "字幕 \(fileId)"
+            let name = file.fileName ?? item.attributes.release ?? "Subtitle \(fileId)"
             let lang = item.attributes.language ?? ""
             let downloads = item.attributes.downloadCount ?? 0
             let format = ((name as NSString).pathExtension.uppercased()).nilIfEmpty ?? "SRT"
@@ -132,7 +132,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
                 language: lang,
                 source: .online,
                 url: URL(string: "opensubtitles://file/\(fileId)"),
-                detail: "OpenSubtitles · 下载 \(downloadLabel) · \(format)",
+                detail: "OpenSubtitles · Downloads \(downloadLabel) · \(format)",
                 languageBadge: guessed.badge.isEmpty ? lang.uppercased() : guessed.badge,
                 format: format
             )
@@ -153,7 +153,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         case .online:
             let apiKey = config?.subtitleApiKey
             guard let apiKey, !apiKey.isEmpty else {
-                throw AppError.validation("请先在服务配置中填写 OpenSubtitles API Key")
+                throw AppError.validation("Add an OpenSubtitles API Key in Service Configuration first")
             }
             let fileId = try parseOpenSubtitlesFileId(from: track)
             let link = try await requestOpenSubtitlesDownloadLink(fileId: fileId, apiKey: apiKey)
@@ -214,7 +214,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
 
     private static func displayLabel(for filename: String, language: (code: String?, badge: String)) -> String {
         if !language.badge.isEmpty {
-            return "\(language.badge)（外挂）"
+            return "\(language.badge) (sidecar)"
         }
         return filename
     }
@@ -224,16 +224,16 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         if lower.contains("zh-cn") || lower.contains("zh_cn") || lower.contains(".chs")
             || lower.contains("简体") || lower.contains("chi") || lower.contains(".zh.")
             || lower.hasSuffix(".zh") || lower.contains("chinese") {
-            return ("zh", "简中")
+            return ("zh", "ZH")
         }
         if lower.contains("zh-tw") || lower.contains("zh_tw") || lower.contains(".cht") || lower.contains("繁体") {
-            return ("zh-tw", "繁中")
+            return ("zh-tw", "ZH-TW")
         }
         if lower.contains(".en") || lower.contains("eng") || lower.contains("english") {
             return ("en", "English")
         }
         if lower.contains("双语") || lower.contains("dual") {
-            return (nil, "双语")
+            return (nil, "Bilingual")
         }
         return (nil, "")
     }

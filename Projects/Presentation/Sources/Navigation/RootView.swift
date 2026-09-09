@@ -3,10 +3,12 @@ import SwiftUI
 public struct RootView: View {
     @ObservedObject var session: AppSession
     @ObservedObject var theme: ThemeStore
+    @ObservedObject var language: LanguageStore
 
-    public init(session: AppSession, theme: ThemeStore) {
+    public init(session: AppSession, theme: ThemeStore, language: LanguageStore) {
         self.session = session
         self.theme = theme
+        self.language = language
     }
 
     public var body: some View {
@@ -22,10 +24,12 @@ public struct RootView: View {
                 ServiceConfigView(session: session, fromLogin: fromLogin)
                     .transition(.opacity)
             case .library:
-                LibraryView(session: session, theme: theme)
+                LibraryView(session: session, theme: theme, language: language)
                     .transition(.opacity)
             }
         }
+        .environment(\.locale, language.effectiveLocale)
+        // Do not `.id(locale)` here — it tears down presented sheets mid-language change.
         .preferredColorScheme(theme.appearance.preferredColorScheme)
         .onAppear { ThemeWindowApplier.apply(theme.appearance) }
         .onChange(of: theme.appearance) { _, appearance in
@@ -34,7 +38,7 @@ public struct RootView: View {
         .animation(.easeInOut(duration: 0.35), value: session.route)
         .overlay(alignment: .bottom) {
             if let toast = session.toast {
-                Text(toast)
+                Text(LocalizedStringKey(toast))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(.ultraThinMaterial)

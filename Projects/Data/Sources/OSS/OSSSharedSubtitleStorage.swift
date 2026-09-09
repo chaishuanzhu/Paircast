@@ -45,7 +45,7 @@ public final class OSSSharedSubtitleStorage: SharedSubtitleStorageGateway, @unch
         guard config.storage.isComplete else { throw AppError.notConfigured }
         let key = objectKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard SharedSubtitleObjectKey.isValid(key) else {
-            throw AppError.validation("无效的共享字幕 key")
+            throw AppError.validation("Invalid shared subtitle key")
         }
         let remote = try signedGETURL(objectKey: key, config: config)
         let (data, response) = try await session.data(from: remote)

@@ -28,7 +28,7 @@ public final class OSSAvatarStorage: AvatarStorageGateway, @unchecked Sendable {
         guard config.storage.isComplete else { throw AppError.notConfigured }
         let key = objectKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard key.hasPrefix(Self.objectKeyPrefix) else {
-            throw AppError.validation("无效的头像 key")
+            throw AppError.validation("Invalid avatar key")
         }
         let url = try objectURL(key: key, config: config)
         let region = config.storage.signingRegion

@@ -41,9 +41,9 @@ public final class LoginViewModel: ObservableObject {
             session.consumePendingInviteIfPossible()
             session.route = .library
         } catch let error as AppError {
-            errorMessage = error.userMessage
+            errorMessage = TandemL10n.format(error)
         } catch {
-            errorMessage = AppError.network.userMessage
+            errorMessage = TandemL10n.format(AppError.network)
         }
     }
 }
@@ -79,14 +79,14 @@ public struct LoginView: View {
                     Text("Tandem")
                         .font(.system(size: 34, weight: .bold))
                         .tracking(-0.4)
-                    Text("一起看电影")
+                    Text("Watch together")
                         .font(.system(size: 15))
                         .foregroundStyle(TandemColors.secondaryLabel)
                 }
                 .frame(maxWidth: .infinity)
 
                 VStack(spacing: 12) {
-                    TandemTextField("用户 ID", text: $viewModel.userId)
+                    TandemTextField("User ID", text: $viewModel.userId)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     if let summary = viewModel.configSummary {
@@ -95,7 +95,7 @@ public struct LoginView: View {
                             .foregroundStyle(TandemColors.secondaryLabel)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
-                        Text("请先完成服务配置")
+                        Text("Finish service configuration first")
                             .font(.footnote)
                             .foregroundStyle(.orange)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -112,20 +112,20 @@ public struct LoginView: View {
                         if viewModel.isLoading {
                             ProgressView()
                         } else {
-                            Text("登录")
+                            Text("Sign In")
                         }
                     }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(viewModel.isLoading)
 
-                    Button("服务配置") {
+                    Button("Service Configuration") {
                         session.route = .config(fromLogin: true)
                     }
                     .font(.system(size: 17))
                     .foregroundStyle(TandemColors.systemBlue)
-                    .accessibilityLabel("服务配置")
+                    .accessibilityLabel("Service Configuration")
 
-                    Text("账号由管理员分配 · 不提供注册")
+                    Text("Accounts are assigned by an admin · No sign-up")
                         .font(.system(size: 13))
                         .foregroundStyle(TandemColors.tertiaryLabel)
                         .multilineTextAlignment(.center)
@@ -137,9 +137,9 @@ public struct LoginView: View {
             .padding(.top, 32)
             .padding(.bottom, 40)
         }
-        .alert("请先完成服务配置", isPresented: $viewModel.showConfigAlert) {
-            Button("去配置") { session.route = .config(fromLogin: true) }
-            Button("取消", role: .cancel) {}
+        .alert("Finish service configuration first", isPresented: $viewModel.showConfigAlert) {
+            Button("Configure") { session.route = .config(fromLogin: true) }
+            Button("Cancel", role: .cancel) {}
         }
     }
 }

@@ -15,9 +15,9 @@ public struct SubtitleTrack: Equatable, Sendable, Identifiable {
     public var url: URL?
     /// VLC embedded track index when `source == .embedded`.
     public var embeddedIndex: Int?
-    /// Secondary line in search results, e.g. "OpenSubtitles · 下载 12.4k · SRT".
+    /// Secondary line in search results, e.g. "OpenSubtitles · Downloads 12.4k · SRT".
     public var detail: String?
-    /// Compact language badge, e.g. "简中".
+    /// Compact language badge, e.g. "ZH".
     public var languageBadge: String?
     public var format: String?
 
@@ -48,7 +48,7 @@ public struct SubtitleTrack: Equatable, Sendable, Identifiable {
         let labelLower = label.lowercased()
         let badge = (languageBadge ?? "").lowercased()
         if lang.contains("zh") || lang.contains("chi") || lang.contains("cn") { return true }
-        if badge.contains("简") || badge.contains("繁") || badge.contains("中") { return true }
+        if badge.contains("zh") || badge.contains("简") || badge.contains("繁") || badge.contains("中") { return true }
         if labelLower.contains("简体") || labelLower.contains("中文") || labelLower.contains("chinese") {
             return true
         }

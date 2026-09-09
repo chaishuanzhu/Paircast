@@ -60,9 +60,9 @@ public enum ObjectStorageProvider: String, Codable, CaseIterable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .qiniu: return "七牛云"
-        case .aliyunOSS: return "阿里云 OSS"
-        case .tencentCOS: return "腾讯云 COS"
+        case .qiniu: return "Qiniu"
+        case .aliyunOSS: return "Alibaba Cloud OSS"
+        case .tencentCOS: return "Tencent Cloud COS"
         case .minio: return "MinIO"
         }
     }

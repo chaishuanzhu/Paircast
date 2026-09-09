@@ -5,6 +5,10 @@ let deploymentTargets: DeploymentTargets = .iOS("26.0")
 let project = Project(
     name: "Tandem",
     organizationName: "Tandem",
+    options: .options(
+        defaultKnownRegions: ["en", "zh-Hans"],
+        developmentRegion: "en"
+    ),
     targets: [
         .target(
             name: "Tandem",
@@ -34,8 +38,8 @@ let project = Project(
                     "UIInterfaceOrientationLandscapeLeft",
                     "UIInterfaceOrientationLandscapeRight",
                 ],
-                "NSPhotoLibraryUsageDescription": "选择头像与保存配置二维码",
-                "NSPhotoLibraryAddUsageDescription": "保存配置分享二维码到相册",
+                "NSPhotoLibraryUsageDescription": "Choose a profile photo and save configuration QR codes",
+                "NSPhotoLibraryAddUsageDescription": "Save configuration QR codes to Photos",
                 "ITSAppUsesNonExemptEncryption": false,
             ]),
             sources: ["Sources/**"],

@@ -34,9 +34,9 @@ public struct QRCodeView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: dimension, height: dimension)
-                    .accessibilityLabel("配置二维码")
+                    .accessibilityLabel("Configuration QR code")
             } else {
-                Text("无法生成二维码")
+                Text("Unable to generate QR code")
                     .foregroundStyle(.secondary)
             }
         }

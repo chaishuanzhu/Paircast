@@ -129,7 +129,7 @@ public final class InMemoryChatGateway: ChatGateway, @unchecked Sendable {
         let message = ChatMessage(
             id: UUID().uuidString,
             roomId: roomId,
-            senderNickname: "系统",
+            senderNickname: "System",
             text: text,
             kind: .system
         )

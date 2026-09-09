@@ -168,7 +168,7 @@ public struct OSSMovieCatalogGateway: MovieCatalogGateway {
         } catch S3ListObjectsV2Parser.ParseError.errorResponse(let code, let message) {
             throw mapS3Error(code: code, message: message)
         } catch {
-            throw AppError.unknown("列表解析失败")
+            throw AppError.unknown("Failed to parse listing")
         }
     }
 
@@ -202,7 +202,7 @@ public struct OSSMovieCatalogGateway: MovieCatalogGateway {
         if statusCode == 403 || statusCode == 401 {
             return .catalogUnauthorized
         }
-        return .unknown("列目录失败（HTTP \(statusCode)）")
+        return .unknown("Failed to list objects (HTTP \(statusCode))")
     }
 
     private func mapS3Error(code: String, message: String) -> AppError {
@@ -212,7 +212,7 @@ public struct OSSMovieCatalogGateway: MovieCatalogGateway {
         case "NoSuchBucket":
             return .incompleteConfig(missing: ["Bucket"])
         default:
-            return .unknown("对象存储：\(code) — \(message)")
+            return .unknown("Object storage: \(code) — \(message)")
         }
     }
 }

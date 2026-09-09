@@ -45,7 +45,7 @@ public extension ListSubtitleTracksUseCase {
     func listSubtitleTracks(for movie: Movie) async throws -> [SubtitleTrack] {
         let config = try await configGateway.load()
         var tracks: [SubtitleTrack] = [
-            SubtitleTrack(id: "off", label: "关闭字幕", source: .off),
+            SubtitleTrack(id: "off", label: "Off", source: .off),
         ]
         tracks += try await subtitleGateway.listEmbedded(for: movie)
         if let config {

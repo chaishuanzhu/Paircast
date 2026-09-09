@@ -13,10 +13,10 @@ struct SubtitlePanelView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    sectionLabel("当前")
+                    sectionLabel("Current")
                     groupCard {
                         trackRow(
-                            title: "关闭字幕",
+                            title: "Off",
                             selected: viewModel.subtitleState.source == .off
                                 || viewModel.subtitleState.trackId == "off"
                                 || viewModel.subtitleState.trackId == nil
@@ -33,7 +33,7 @@ struct SubtitlePanelView: View {
 
                     let embedded = viewModel.subtitleTracks.filter { $0.source == .embedded }
                     if !embedded.isEmpty {
-                        sectionLabel("内嵌")
+                        sectionLabel("Embedded")
                         groupCard {
                             ForEach(Array(embedded.enumerated()), id: \.element.id) { index, track in
                                 if index > 0 { Divider().padding(.leading, 16) }
@@ -50,7 +50,7 @@ struct SubtitlePanelView: View {
 
                     let sidecars = viewModel.subtitleTracks.filter { $0.source == .oss }
                     if !sidecars.isEmpty {
-                        sectionLabel("片库外挂")
+                        sectionLabel("Library sidecars")
                         groupCard {
                             ForEach(Array(sidecars.enumerated()), id: \.element.id) { index, track in
                                 if index > 0 { Divider().padding(.leading, 16) }
@@ -65,12 +65,12 @@ struct SubtitlePanelView: View {
                         }
                     }
 
-                    sectionLabel("更多")
+                    sectionLabel("More")
                     groupCard {
                         Button {
                             showSearch = true
                         } label: {
-                            rowContent(title: "在线搜索", trailing: .chevron)
+                            rowContent(title: "Online Search", trailing: .chevron)
                         }
                         .buttonStyle(.plain)
 
@@ -87,7 +87,7 @@ struct SubtitlePanelView: View {
                             }
                         } label: {
                             rowContent(
-                                title: "字幕同步",
+                                title: "Subtitle Sync",
                                 trailing: .value(viewModel.subtitleState.offsetLabel)
                             )
                         }
@@ -99,7 +99,7 @@ struct SubtitlePanelView: View {
                 .padding(.bottom, 24)
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("字幕")
+            .navigationTitle("Subtitles")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -110,7 +110,7 @@ struct SubtitlePanelView: View {
                 if viewModel.isApplyingSubtitle {
                     ZStack {
                         Color.black.opacity(0.2).ignoresSafeArea()
-                        ProgressView("加载字幕…")
+                        ProgressView("Loading subtitles…")
                             .padding(20)
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
@@ -207,7 +207,7 @@ struct SubtitlePanelView: View {
 
 private extension SubtitleTrack {
     static var offTrack: SubtitleTrack {
-        SubtitleTrack(id: "off", label: "关闭字幕", source: .off)
+        SubtitleTrack(id: "off", label: "Off", source: .off)
     }
 }
 
@@ -226,13 +226,13 @@ struct SubtitleSyncView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 12)
 
-                Text("提前字幕 · 延迟字幕")
+                Text("Earlier · Later")
                     .font(.system(size: 13))
                     .foregroundStyle(TandemColors.secondaryLabel)
 
                 HStack(spacing: 12) {
                     syncButton("− 0.5s") { viewModel.adjustSubtitle(deltaMs: -500) }
-                    syncButton("重置", emphasized: false) { viewModel.resetSubtitleOffset() }
+                    syncButton("Reset", emphasized: false) { viewModel.resetSubtitleOffset() }
                     syncButton("+ 0.5s", primary: true) { viewModel.adjustSubtitle(deltaMs: 500) }
                 }
 
@@ -241,7 +241,7 @@ struct SubtitleSyncView: View {
                     syncButton("+ 0.1s") { viewModel.adjustSubtitle(deltaMs: 100) }
                 }
 
-                Button("完成") { dismiss() }
+                Button("Done") { dismiss() }
                     .buttonStyle(PrimaryButtonStyle())
                     .padding(.top, 8)
 
@@ -250,7 +250,7 @@ struct SubtitleSyncView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 16)
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("字幕同步")
+            .navigationTitle("Subtitle Sync")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -285,7 +285,7 @@ struct OnlineSubtitleSearchView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
-                    TextField("片名 年份", text: $viewModel.onlineQuery)
+                    TextField("Title year", text: $viewModel.onlineQuery)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .padding(.horizontal, 12)
@@ -293,7 +293,7 @@ struct OnlineSubtitleSearchView: View {
                         .background(TandemColors.secondaryGrouped)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                    Button("搜索") {
+                    Button("Search") {
                         Task { await viewModel.searchOnline() }
                     }
                     .font(.system(size: 15, weight: .semibold))
@@ -308,30 +308,30 @@ struct OnlineSubtitleSearchView: View {
                 .padding(.vertical, 12)
 
                 if viewModel.isSearchingOnline {
-                    ProgressView("搜索中…")
+                    ProgressView("Searching…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = viewModel.onlineSearchError {
                     ContentUnavailableView {
-                        Label("搜索失败", systemImage: "exclamationmark.triangle")
+                        Label("Search failed", systemImage: "exclamationmark.triangle")
                     } description: {
                         Text(error)
                     } actions: {
-                        Button("重新搜索") { Task { await viewModel.searchOnline() } }
+                        Button("Search Again") { Task { await viewModel.searchOnline() } }
                     }
                 } else if viewModel.didSearchOnline && viewModel.onlineResults.isEmpty {
                     ContentUnavailableView {
-                        Label("未找到字幕", systemImage: "captions.bubble")
+                        Label("No subtitles found", systemImage: "captions.bubble")
                     } description: {
-                        Text("换个关键词试试，或稍后重试")
+                        Text("Try different keywords, or try again later")
                     } actions: {
-                        Button("重新搜索") { Task { await viewModel.searchOnline() } }
+                        Button("Search Again") { Task { await viewModel.searchOnline() } }
                             .buttonStyle(.borderedProminent)
                     }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             if !viewModel.onlineResults.isEmpty {
-                                Text("搜索结果")
+                                Text("Results")
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(TandemColors.secondaryLabel)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -380,7 +380,7 @@ struct OnlineSubtitleSearchView: View {
                 }
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("在线搜索")
+            .navigationTitle("Online Search")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -391,7 +391,7 @@ struct OnlineSubtitleSearchView: View {
                 if viewModel.isApplyingSubtitle {
                     ZStack {
                         Color.black.opacity(0.2).ignoresSafeArea()
-                        ProgressView("加载字幕…")
+                        ProgressView("Loading subtitles…")
                             .padding(20)
                             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }

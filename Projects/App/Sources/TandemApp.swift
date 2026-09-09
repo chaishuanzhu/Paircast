@@ -19,10 +19,11 @@ struct TandemApp: App {
         sharedSubtitleStorage: DataAssembly.makeSharedSubtitleStorage()
     )
     @StateObject private var theme = ThemeStore()
+    @StateObject private var language = LanguageStore()
 
     var body: some Scene {
         WindowGroup {
-            RootView(session: session, theme: theme)
+            RootView(session: session, theme: theme, language: language)
                 .task { await session.bootstrap() }
                 .onOpenURL { session.handleDeepLink($0) }
         }

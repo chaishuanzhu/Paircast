@@ -94,10 +94,10 @@ public final class AppSession: ObservableObject {
         route = next
         libraryPath = nextLibraryPath
         if case .login = next, pendingInvite != nil {
-            showToast("请先登录再加入房间")
+            showToast("Sign in to join the room")
         }
         if pendingConfigImportRaw != nil {
-            showToast("检测到配置链接，请确认后导入")
+            showToast("Configuration link detected. Confirm to import")
         }
     }
 
@@ -121,7 +121,7 @@ public final class AppSession: ObservableObject {
             pendingConfigImportRaw = url.absoluteString
             if route != .splash {
                 openConfig(fromLogin: currentUser == nil)
-                showToast("检测到配置链接，请确认后导入")
+                showToast("Configuration link detected. Confirm to import")
             }
             return
         }
@@ -130,7 +130,7 @@ public final class AppSession: ObservableObject {
             pendingInvite = invite
             if route != .splash {
                 resetToLogin()
-                showToast("请先登录再加入房间")
+                showToast("Sign in to join the room")
             }
         } else {
             pendingInvite = nil
@@ -187,7 +187,7 @@ public final class AppSession: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.handleForcedLogout(message: AppError.kickedOffline.userMessage)
+                self?.handleForcedLogout(message: TandemL10n.format(AppError.kickedOffline))
             }
         }
         NotificationCenter.default.addObserver(
@@ -196,7 +196,7 @@ public final class AppSession: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.handleForcedLogout(message: AppError.userSigExpired.userMessage)
+                self?.handleForcedLogout(message: TandemL10n.format(AppError.userSigExpired))
             }
         }
     }

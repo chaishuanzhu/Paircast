@@ -163,7 +163,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
             let rawIndex = (indexes[i] as? NSNumber)?.intValue ?? (indexes[i] as? Int) ?? -1
             if rawIndex < 0 { continue }
             let rawName = (names[i] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let label = rawName.isEmpty ? "内嵌轨 \(rawIndex)" : rawName
+            let label = rawName.isEmpty ? "Embedded track \(rawIndex)" : rawName
             let lang = Self.guessLanguage(from: label)
             tracks.append(
                 SubtitleTrack(
@@ -292,10 +292,10 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     private static func guessLanguage(from name: String) -> (code: String?, badge: String) {
         let lower = name.lowercased()
         if lower.contains("zh") || lower.contains("chi") || lower.contains("中文") || lower.contains("简") {
-            return ("zh", "简中")
+            return ("zh", "ZH")
         }
         if lower.contains("繁") {
-            return ("zh-tw", "繁中")
+            return ("zh-tw", "ZH-TW")
         }
         if lower.contains("en") || lower.contains("eng") || lower.contains("english") {
             return ("en", "English")

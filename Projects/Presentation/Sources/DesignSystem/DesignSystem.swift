@@ -96,7 +96,7 @@ public struct TandemTextField: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             if isSecure {
-                Button(reveal ? "隐藏" : "显示") { reveal.toggle() }
+                Button(reveal ? "Hide" : "Show") { reveal.toggle() }
                     .font(.footnote)
                     .foregroundStyle(TandemColors.systemBlue)
             }
@@ -225,14 +225,14 @@ public enum TandemToolbarIcon {
     public static let close = "xmark"
 }
 
-/// Navigation bar “完成 / 保存 / 继续” — checkmark.
+/// Navigation bar Done / Save / Continue — checkmark.
 public struct ToolbarDoneButton: View {
     public var accessibilityLabel: String
     public var disabled: Bool
     public var action: () -> Void
 
     public init(
-        accessibilityLabel: String = "完成",
+        accessibilityLabel: String = "Done",
         disabled: Bool = false,
         action: @escaping () -> Void
     ) {
@@ -251,12 +251,12 @@ public struct ToolbarDoneButton: View {
     }
 }
 
-/// Navigation bar “返回” — chevron.
+/// Navigation bar Back — chevron.
 public struct ToolbarBackButton: View {
     public var accessibilityLabel: String
     public var action: () -> Void
 
-    public init(accessibilityLabel: String = "返回", action: @escaping () -> Void) {
+    public init(accessibilityLabel: String = "Back", action: @escaping () -> Void) {
         self.accessibilityLabel = accessibilityLabel
         self.action = action
     }
@@ -270,12 +270,12 @@ public struct ToolbarBackButton: View {
     }
 }
 
-/// Navigation bar “取消 / 关闭” — xmark.
+/// Navigation bar Cancel / Close — xmark.
 public struct ToolbarCloseButton: View {
     public var accessibilityLabel: String
     public var action: () -> Void
 
-    public init(accessibilityLabel: String = "取消", action: @escaping () -> Void) {
+    public init(accessibilityLabel: String = "Cancel", action: @escaping () -> Void) {
         self.accessibilityLabel = accessibilityLabel
         self.action = action
     }

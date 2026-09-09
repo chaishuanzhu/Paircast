@@ -8,20 +8,23 @@ public enum ProfileRules {
     public static func validatedNickname(_ raw: String) throws -> String {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            throw AppError.validation("昵称不能为空")
+            throw AppError.validation("Nickname cannot be empty")
         }
         guard trimmed.count <= nicknameMaxLength else {
-            throw AppError.validation("昵称最多 \(nicknameMaxLength) 字")
+            throw AppError.validation(
+                "Nickname can be at most {{count}} characters",
+                args: ["count": "\(nicknameMaxLength)"]
+            )
         }
         return trimmed
     }
 
     public static func validatedAvatarData(_ data: Data) throws -> Data {
         guard !data.isEmpty else {
-            throw AppError.validation("请选择头像图片")
+            throw AppError.validation("Please choose a profile photo")
         }
         guard data.count <= avatarMaxBytes else {
-            throw AppError.validation("头像需压缩到 1MB 以内")
+            throw AppError.validation("Avatar must be under 1 MB after compression")
         }
         return data
     }
@@ -31,7 +34,7 @@ public enum LoginRules {
     public static func validateUserId(_ userId: String) throws {
         let id = userId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !id.isEmpty else {
-            throw AppError.validation("请输入用户 ID")
+            throw AppError.validation("Please enter a user ID")
         }
     }
 }
@@ -123,7 +126,7 @@ public enum ConfigValidation {
             throw AppError.incompleteConfig(missing: ["\(provider.displayName) Endpoint"])
         }
         guard isAPIEndpointHost(host, provider: provider) else {
-            throw AppError.validation(endpointHint(for: provider))
+            throw AppError.validation(endpointHint(for: provider), args: endpointHintArgs(for: provider))
         }
         return host
     }
@@ -133,7 +136,7 @@ public enum ConfigValidation {
         let host = normalizedHost(raw)
         guard !host.isEmpty else { return nil }
         if isAPIEndpointHost(host, provider: provider) {
-            throw AppError.validation("自定义域名不能填写 API Endpoint，请填写 CDN / 公网域名")
+            throw AppError.validation("Custom domain cannot be an API endpoint. Use a CDN or public domain")
         }
         return host
     }
@@ -141,14 +144,18 @@ public enum ConfigValidation {
     private static func endpointHint(for provider: ObjectStorageProvider) -> String {
         switch provider {
         case .qiniu:
-            return "Endpoint 需为七牛 S3 地址（如 \(provider.endpointPlaceholder)）"
+            return "Endpoint must be a Qiniu S3 host (e.g. {{example}})"
         case .aliyunOSS:
-            return "Endpoint 需为阿里云 OSS 地址（如 \(provider.endpointPlaceholder)）"
+            return "Endpoint must be an Alibaba Cloud OSS host (e.g. {{example}})"
         case .tencentCOS:
-            return "Endpoint 需为腾讯云 COS 地址（如 \(provider.endpointPlaceholder)）"
+            return "Endpoint must be a Tencent Cloud COS host (e.g. {{example}})"
         case .minio:
-            return "Endpoint 需为 MinIO 主机（如 \(provider.endpointPlaceholder)）"
+            return "Endpoint must be a MinIO host (e.g. {{example}})"
         }
+    }
+
+    private static func endpointHintArgs(for provider: ObjectStorageProvider) -> [String: String] {
+        ["example": provider.endpointPlaceholder]
     }
 
     private static func normalizedPrefix(_ raw: String?) -> String? {

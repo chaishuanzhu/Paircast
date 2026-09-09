@@ -77,13 +77,13 @@ public final class ServiceConfigViewModel: ObservableObject {
             let harness = ConfigHarness(configGateway: session.configGateway)
             try await harness.saveCloudConfig(config)
             session.config = config
-            statusMessage = "已保存"
+            statusMessage = TandemL10n.string("Saved")
             return true
         } catch let error as AppError {
-            statusMessage = error.userMessage
+            statusMessage = TandemL10n.format(error)
             return false
         } catch {
-            statusMessage = AppError.unknown(error.localizedDescription).userMessage
+            statusMessage = TandemL10n.format(AppError.unknown(error.localizedDescription))
             return false
         }
     }
@@ -101,11 +101,11 @@ public final class ServiceConfigViewModel: ObservableObject {
             session.config = config
             exportShareURL = try await harness.exportConfigQR()
             showExportSheet = true
-            statusMessage = "已生成配置链接（含密钥，请勿公开分享）"
+            statusMessage = TandemL10n.string("Configuration link generated (contains secrets — do not share publicly)")
         } catch let error as AppError {
-            statusMessage = error.userMessage
+            statusMessage = TandemL10n.format(error)
         } catch {
-            statusMessage = AppError.invalidConfigQR.userMessage
+            statusMessage = TandemL10n.format(AppError.invalidConfigQR)
         }
     }
 
@@ -117,9 +117,9 @@ public final class ServiceConfigViewModel: ObservableObject {
             showImportPaste = false
             showImportConfirm = true
         } catch let error as AppError {
-            statusMessage = error.userMessage
+            statusMessage = TandemL10n.format(error)
         } catch {
-            statusMessage = AppError.invalidConfigQR.userMessage
+            statusMessage = TandemL10n.format(AppError.invalidConfigQR)
         }
     }
 
@@ -131,12 +131,12 @@ public final class ServiceConfigViewModel: ObservableObject {
             let saved = try await harness.importConfigQR(raw)
             session.config = saved
             apply(saved)
-            statusMessage = "配置成功"
+            statusMessage = TandemL10n.string("Configuration imported")
             self.pendingImportConfig = nil
         } catch let error as AppError {
-            statusMessage = error.userMessage
+            statusMessage = TandemL10n.format(error)
         } catch {
-            statusMessage = AppError.invalidConfigQR.userMessage
+            statusMessage = TandemL10n.format(AppError.invalidConfigQR)
         }
         showImportConfirm = false
     }
@@ -202,8 +202,8 @@ public struct ServiceConfigView: View {
             Form {
                 Section {
                     ConfigTransferRow(
-                        title: "粘贴导入",
-                        subtitle: "粘贴 tandem://config?args=… 链接",
+                        title: "Paste to Import",
+                        subtitle: "Paste a tandem://config?args=… link",
                         systemImage: "arrow.down.doc.fill",
                         tint: Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255)
                     ) {
@@ -211,27 +211,27 @@ public struct ServiceConfigView: View {
                         viewModel.showImportPaste = true
                     }
                     ConfigTransferRow(
-                        title: "分享配置",
-                        subtitle: "生成加密链接，复制或分享给好友",
+                        title: "Share Configuration",
+                        subtitle: "Generate an encrypted link to copy or share with friends",
                         systemImage: "square.and.arrow.up.fill",
                         tint: TandemColors.systemBlue
                     ) {
                         viewModel.prepareExport()
                     }
                 } header: {
-                    Text("分享与导入")
+                    Text("Share & Import")
                 } footer: {
-                    Text("链接含密钥，仅发给可信好友")
+                    Text("Links contain secrets — share only with trusted friends")
                 }
 
-                Section("腾讯云 IM") {
+                Section("Tencent Cloud IM") {
                     TextField("SDKAppID", text: $viewModel.sdkAppId)
                         .keyboardType(.numberPad)
                     SecureField("SecretKey", text: $viewModel.imSecretKey)
                 }
                 Section {
                     Picker(
-                        "提供商",
+                        "Provider",
                         selection: Binding(
                             get: { viewModel.provider },
                             set: { viewModel.selectProvider($0) }
@@ -244,33 +244,33 @@ public struct ServiceConfigView: View {
                     SecureField("AccessKey", text: $viewModel.accessKey)
                     SecureField("SecretKey", text: $viewModel.secretKey)
                     TextField("Bucket", text: $viewModel.bucket)
-                    TextField("Endpoint（\(viewModel.provider.endpointPlaceholder)）", text: $viewModel.endpoint)
+                    TextField("Endpoint (\(viewModel.provider.endpointPlaceholder))", text: $viewModel.endpoint)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Region（可选，\(viewModel.provider.regionPlaceholder)）", text: $viewModel.region)
+                    TextField("Region (optional, \(viewModel.provider.regionPlaceholder))", text: $viewModel.region)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("自定义域名（可选）", text: $viewModel.domain)
+                    TextField("Custom domain (optional)", text: $viewModel.domain)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
-                    TextField("Prefix（可选）", text: $viewModel.prefix)
+                    TextField("Prefix (optional)", text: $viewModel.prefix)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Toggle("HTTPS", isOn: $viewModel.useSSL)
                     Toggle("Path-Style URL", isOn: $viewModel.forcePathStyle)
                 } header: {
-                    Text("对象存储")
+                    Text("Object Storage")
                 } footer: {
-                    Text(storageFooter(for: viewModel.provider))
+                    Text(LocalizedStringKey(storageFooter(for: viewModel.provider)))
                 }
                 Section {
                     SecureField("OpenSubtitles API Key", text: $viewModel.subtitleApiKey)
                     SecureField("OMDb API Key", text: $viewModel.omdbApiKey)
                 } header: {
-                    Text("扩展")
+                    Text("Extensions")
                 } footer: {
-                    Text("Tandem 只播放你自己网盘里的文件，不会从公网抓取影视海报。填写 OMDb Key 后，才用文件名向 OMDb 补全封面与简介。")
+                    Text("Tandem only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews.")
                 }
                 if let status = viewModel.statusMessage {
                     Section {
@@ -278,7 +278,7 @@ public struct ServiceConfigView: View {
                     }
                 }
             }
-            .navigationTitle("服务配置")
+            .navigationTitle("Service Configuration")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if fromLogin {
@@ -289,10 +289,10 @@ public struct ServiceConfigView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    ToolbarDoneButton(accessibilityLabel: "保存") {
+                    ToolbarDoneButton(accessibilityLabel: "Save") {
                         Task {
                             if await viewModel.save() {
-                                session.showToast("已保存")
+                                session.showToast("Saved")
                                 if fromLogin {
                                     session.resetToLogin()
                                 } else {
@@ -306,11 +306,11 @@ public struct ServiceConfigView: View {
             .task {
                 viewModel.consumePendingDeepLinkIfNeeded()
             }
-            .alert("分享含密钥，勿发到公开场合", isPresented: $viewModel.showExportRisk) {
-                Button("继续分享") { Task { await viewModel.confirmExport() } }
-                Button("取消", role: .cancel) {}
+            .alert("Sharing includes secrets — do not post publicly", isPresented: $viewModel.showExportRisk) {
+                Button("Continue Sharing") { Task { await viewModel.confirmExport() } }
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("链接内含腾讯云 IM 与对象存储凭证，仅发给可信好友。")
+                Text("The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends.")
             }
             .sheet(isPresented: $viewModel.showExportSheet) {
                 if let shareURL = viewModel.exportShareURL {
@@ -344,13 +344,13 @@ public struct ServiceConfigView: View {
     private func storageFooter(for provider: ObjectStorageProvider) -> String {
         switch provider {
         case .qiniu:
-            return "Endpoint 填七牛 S3 地址（如 \(provider.endpointPlaceholder)）。自定义域名只用于头像下载，不要填进 Endpoint。"
+            return "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint."
         case .aliyunOSS:
-            return "Endpoint 填 OSS 地域域名（如 \(provider.endpointPlaceholder)），Region 可留空由 Endpoint 推断。"
+            return "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
         case .tencentCOS:
-            return "Endpoint 填 COS 地域域名（如 \(provider.endpointPlaceholder)），Region 可留空由 Endpoint 推断。"
+            return "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint."
         case .minio:
-            return "Endpoint 填主机:端口（如 \(provider.endpointPlaceholder)）。自建 MinIO 通常关 HTTPS、开 Path-Style；Region 默认 us-east-1。"
+            return "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1."
         }
     }
 }
@@ -411,7 +411,7 @@ private struct ConfigExportShareView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     VStack(spacing: 12) {
-                        Text("AES-GCM 加密")
+                        Text("AES-GCM encrypted")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(TandemColors.systemBlue)
                             .padding(.horizontal, 10)
@@ -419,11 +419,11 @@ private struct ConfigExportShareView: View {
                             .background(TandemColors.systemBlue.opacity(0.1))
                             .clipShape(Capsule())
 
-                        Text("发给好友即可导入")
+                        Text("Send to a friend to import")
                             .font(.system(size: 20, weight: .bold))
                             .tracking(-0.3)
 
-                        Text("对方打开链接或粘贴到「服务配置」即可写入同一套环境")
+                        Text("They can open the link or paste it into Service Configuration to apply the same environment")
                             .font(.system(size: 14))
                             .foregroundStyle(TandemColors.secondaryLabel)
                             .multilineTextAlignment(.center)
@@ -443,7 +443,7 @@ private struct ConfigExportShareView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("配置链接")
+                        Text("Configuration link")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(TandemColors.secondaryLabel)
                             .textCase(.uppercase)
@@ -459,11 +459,11 @@ private struct ConfigExportShareView: View {
                             .accessibilityLabel(truncatedURL)
 
                         HStack {
-                            Text("含 IM / 对象存储密钥")
+                            Text("Includes IM / object storage secrets")
                                 .font(.system(size: 13))
                                 .foregroundStyle(TandemColors.secondaryLabel)
                             Spacer()
-                            Button(copied ? "已复制" : "复制") {
+                            Button(copied ? "Copied" : "Copy") {
                                 UIPasteboard.general.string = shareURL
                                 copied = true
                             }
@@ -479,26 +479,26 @@ private struct ConfigExportShareView: View {
                     .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                    TandemWarningBanner("链接含密钥，请勿发到公开群或社交平台")
+                    TandemWarningBanner("Link contains secrets — do not post to public groups or social media")
 
                     Button {
                         UIPasteboard.general.string = shareURL
                         copied = true
                     } label: {
-                        Text(copied ? "已复制链接" : "复制链接")
+                        Text(copied ? "Link copied" : "Copy Link")
                     }
                     .buttonStyle(PrimaryButtonStyle())
 
                     HStack(spacing: 10) {
                         if let url = URL(string: shareURL) {
                             ShareLink(item: url) {
-                                Text("系统分享")
+                                Text("System Share")
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 46)
                             }
                             .buttonStyle(SecondaryButtonStyle())
                         }
-                        Button("保存二维码") {
+                        Button("Save QR Code") {
                             saveQRToPhotos()
                         }
                         .buttonStyle(SecondaryButtonStyle())
@@ -515,7 +515,7 @@ private struct ConfigExportShareView: View {
                 .padding(.vertical, 12)
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("分享配置")
+            .navigationTitle("Share Configuration")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -527,7 +527,7 @@ private struct ConfigExportShareView: View {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.system(size: 17, weight: .semibold))
                         }
-                        .accessibilityLabel("分享")
+                        .accessibilityLabel("Share")
                     }
                 }
             }
@@ -536,11 +536,11 @@ private struct ConfigExportShareView: View {
 
     private func saveQRToPhotos() {
         guard let image = QRCodeImageRenderer.image(from: shareURL, dimension: 1024) else {
-            saveMessage = "无法生成二维码"
+            saveMessage = "Unable to generate QR code"
             return
         }
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-        saveMessage = "已保存到相册"
+        saveMessage = "Saved to Photos"
     }
 }
 
@@ -566,11 +566,11 @@ private struct ConfigPasteImportView: View {
                             .background(Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255))
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                        Text("粘贴配置链接")
+                        Text("Paste configuration link")
                             .font(.system(size: 20, weight: .bold))
                             .tracking(-0.3)
 
-                        Text("支持完整深链，或聊天消息中带有的 tandem://config?args=…")
+                        Text("Supports a full deep link, or a tandem://config?args=… link found in a chat message")
                             .font(.system(size: 14))
                             .foregroundStyle(TandemColors.secondaryLabel)
                             .multilineTextAlignment(.center)
@@ -598,21 +598,21 @@ private struct ConfigPasteImportView: View {
                                 )
                         }
 
-                    Button("从剪贴板粘贴") {
+                    Button("Paste from Clipboard") {
                         if let clip = UIPasteboard.general.string, !clip.isEmpty {
                             text = clip
                         }
                     }
                     .buttonStyle(SecondaryButtonStyle())
 
-                    Button("继续解析") {
+                    Button("Continue") {
                         onContinue()
                     }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(!canContinue)
                     .opacity(canContinue ? 1 : 0.45)
 
-                    Text("解析成功后会展示脱敏预览，确认才会覆盖本机配置")
+                    Text("After parsing, a masked preview is shown. Local configuration is overwritten only after you confirm.")
                         .font(.system(size: 12))
                         .foregroundStyle(TandemColors.tertiaryLabel)
                         .multilineTextAlignment(.center)
@@ -621,14 +621,14 @@ private struct ConfigPasteImportView: View {
                 .padding(.bottom, 28)
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("导入配置")
+            .navigationTitle("Import Configuration")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     ToolbarCloseButton(action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    ToolbarDoneButton(accessibilityLabel: "继续", disabled: !canContinue) {
+                    ToolbarDoneButton(accessibilityLabel: "Continue", disabled: !canContinue) {
                         onContinue()
                     }
                 }
@@ -649,7 +649,7 @@ private struct ConfigImportConfirmView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("加密链接已解析")
+                    Text("Encrypted link parsed")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color(red: 36 / 255, green: 138 / 255, blue: 61 / 255))
                         .padding(.horizontal, 10)
@@ -657,9 +657,9 @@ private struct ConfigImportConfirmView: View {
                         .background(Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255).opacity(0.12))
                         .clipShape(Capsule())
 
-                    TandemWarningBanner("将覆盖本机现有云服务配置")
+                    TandemWarningBanner("This will overwrite your local cloud service configuration")
 
-                    confirmSection(title: "腾讯云 IM", rows: [
+                    confirmSection(title: "Tencent Cloud IM", rows: [
                         ("SDKAppID", ConfigQRCodec.maskedSDKAppId(config.im.sdkAppId)),
                         ("SecretKey", ConfigQRCodec.maskSecret(config.im.secretKey)),
                     ])
@@ -671,21 +671,21 @@ private struct ConfigImportConfirmView: View {
                     ])
 
                     Button(action: onConfirm) {
-                        Text("确认导入并覆盖")
+                        Text("Confirm Import & Overwrite")
                     }
                     .buttonStyle(PrimaryButtonStyle())
                 }
                 .padding(16)
             }
             .background(TandemColors.groupedBackground.ignoresSafeArea())
-            .navigationTitle("确认导入")
+            .navigationTitle("Confirm Import")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     ToolbarCloseButton(action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    ToolbarDoneButton(accessibilityLabel: "导入", action: onConfirm)
+                    ToolbarDoneButton(accessibilityLabel: "Import", action: onConfirm)
                 }
             }
             .accessibilityHint(preview)

@@ -12,9 +12,12 @@ public enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .system: "跟随系统"
-        case .light: "浅色"
-        case .dark: "深色"
+        case .system:
+            return TandemL10n.string("Match System")
+        case .light:
+            return TandemL10n.string("Light")
+        case .dark:
+            return TandemL10n.string("Dark")
         }
     }
 

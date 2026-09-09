@@ -38,15 +38,15 @@ public final class LibraryViewModel: ObservableObject {
             return
         } catch let error as AppError {
             if movies.isEmpty {
-                errorMessage = error.userMessage
+                errorMessage = TandemL10n.format(error)
             } else {
-                session.showToast(error.userMessage)
+                session.showToast(TandemL10n.format(error))
             }
         } catch {
             if movies.isEmpty {
-                errorMessage = AppError.catalogUnauthorized.userMessage
+                errorMessage = TandemL10n.format(AppError.catalogUnauthorized)
             } else {
-                session.showToast(AppError.catalogUnauthorized.userMessage)
+                session.showToast(TandemL10n.format(AppError.catalogUnauthorized))
             }
         }
     }
@@ -57,7 +57,7 @@ public final class LibraryViewModel: ObservableObject {
             let room = try await session.roomGateway.createRoom(movieId: movie.id, hostUserId: user.id)
             session.openWatch(roomId: room.id, movieId: movie.id, hostUserId: user.id)
         } catch {
-            session.showToast(AppError.unknown("建房失败").userMessage)
+            session.showToast(TandemL10n.format(AppError.unknown("Failed to create room")))
         }
     }
 }
@@ -93,12 +93,14 @@ private struct LibraryHarness: ListMoviesUseCase {
 public struct LibraryView: View {
     @ObservedObject var session: AppSession
     @ObservedObject var theme: ThemeStore
+    @ObservedObject var language: LanguageStore
     @StateObject private var viewModel: LibraryViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    public init(session: AppSession, theme: ThemeStore) {
+    public init(session: AppSession, theme: ThemeStore, language: LanguageStore) {
         self.session = session
         self.theme = theme
+        self.language = language
         _viewModel = StateObject(wrappedValue: LibraryViewModel(session: session))
     }
 
@@ -115,21 +117,21 @@ public struct LibraryView: View {
         NavigationStack(path: $session.libraryPath) {
             Group {
                 if viewModel.isLoading && viewModel.movies.isEmpty {
-                    ProgressView("加载片库…")
+                    ProgressView("Loading library…")
                 } else if let error = viewModel.errorMessage, viewModel.movies.isEmpty {
                     ContentUnavailableView {
-                        Label("片库不可用", systemImage: "exclamationmark.triangle")
+                        Label("Library unavailable", systemImage: "exclamationmark.triangle")
                     } description: {
                         Text(error)
                     } actions: {
-                        Button("重试") { Task { await viewModel.load() } }
-                        Button("去配置") { session.openLibraryConfig() }
+                        Button("Retry") { Task { await viewModel.load() } }
+                        Button("Configure") { session.openLibraryConfig() }
                     }
                 } else if viewModel.movies.isEmpty {
                     ContentUnavailableView(
-                        "暂无影片",
+                        "No movies",
                         systemImage: "film",
-                        description: Text("确认对象存储 Bucket 中有 mp4/m4v/mkv")
+                        description: Text("Make sure your object storage bucket contains mp4/m4v/mkv files")
                     )
                 } else {
                     ScrollView {
@@ -164,13 +166,14 @@ public struct LibraryView: View {
                             size: 36,
                             avatarURL: session.currentUser?.avatarURL
                         )
-                        .accessibilityLabel("我的")
+                        .accessibilityLabel("Me")
                     }
                     .buttonStyle(.plain)
                 }
             }
             .sheet(isPresented: $viewModel.showMe) {
-                MeSheetView(session: session, theme: theme)
+                MeSheetView(session: session, theme: theme, language: language)
+                    .environment(\.locale, language.effectiveLocale)
                     .preferredColorScheme(theme.appearance.preferredColorScheme)
                     .presentationDetents(meSheetDetents)
                     .presentationDragIndicator(.visible)

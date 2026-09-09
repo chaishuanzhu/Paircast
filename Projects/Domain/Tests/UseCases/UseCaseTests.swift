@@ -261,7 +261,7 @@ private final class FakeChatGateway: ChatGateway, @unchecked Sendable {
     }
     func postSystemMessage(roomId: String, text: String) async throws -> ChatMessage {
         systemTexts.append(text)
-        return ChatMessage(id: UUID().uuidString, roomId: roomId, senderNickname: "系统", text: text, kind: .system)
+        return ChatMessage(id: UUID().uuidString, roomId: roomId, senderNickname: "System", text: text, kind: .system)
     }
 }
 

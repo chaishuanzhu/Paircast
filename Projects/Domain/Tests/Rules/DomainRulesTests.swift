@@ -174,7 +174,7 @@ final class ConfigValidationTests: XCTestCase {
             )
         )
         XCTAssertThrowsError(try ConfigValidation.validate(config)) { error in
-            guard case AppError.validation(let message) = error else {
+            guard case AppError.validation(let message, _) = error else {
                 return XCTFail("expected validation, got \(error)")
             }
             XCTAssertTrue(message.contains("Endpoint"))
@@ -459,7 +459,7 @@ final class ChatSafetyStoreTests: XCTestCase {
             [
                 ChatMessage(id: "1", roomId: "r", senderId: "bob", senderNickname: "Bob", text: "hi"),
                 ChatMessage(id: "2", roomId: "r", senderId: "alice", senderNickname: "Alice", text: "hey"),
-                ChatMessage(id: "3", roomId: "r", senderNickname: "系统", text: "joined", kind: .system),
+                ChatMessage(id: "3", roomId: "r", senderNickname: "System", text: "joined", kind: .system),
             ],
             ownerId: "alice"
         )
@@ -485,5 +485,21 @@ private extension AppCloudConfig {
 private extension WatchRoom {
     static func fixture(host: String = "host1") -> WatchRoom {
         WatchRoom(id: "room1", movieId: "m1", hostUserId: host)
+    }
+}
+
+final class StringTemplateTests: XCTestCase {
+    func test_replacesNamedPlaceholders() {
+        let result = StringTemplate.apply(
+            "Host is now {{name}} ({{role}})",
+            ["name": "Alice", "role": "host"]
+        )
+        XCTAssertEqual(result, "Host is now Alice (host)")
+    }
+
+    func test_incompleteConfigUserMessage() {
+        let error = AppError.incompleteConfig(missing: ["Bucket", "Endpoint"])
+        XCTAssertEqual(error.localizationKey, "Incomplete configuration: {{fields}}")
+        XCTAssertEqual(error.userMessage, "Incomplete configuration: Bucket, Endpoint")
     }
 }

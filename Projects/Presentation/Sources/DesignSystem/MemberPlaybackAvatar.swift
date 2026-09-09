@@ -84,8 +84,8 @@ public struct MemberPlaybackAvatar: View {
     private var accessibilityText: String {
         let pct = Int((min(1, max(0, progress())) * 100).rounded())
         if isHost {
-            return "\(displayName)，房主，播放进度 \(pct)%"
+            return "\(displayName), host, playback \(pct)%"
         }
-        return "\(displayName)，播放进度 \(pct)%"
+        return "\(displayName), playback \(pct)%"
     }
 }

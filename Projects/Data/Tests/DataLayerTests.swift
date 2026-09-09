@@ -557,7 +557,7 @@ final class OSSSidecarMatchingTests: XCTestCase {
     func test_parsesObjectKeyFromTrackId() {
         let track = SubtitleTrack(
             id: "oss:films/a.zh.srt",
-            label: "简中（外挂）",
+            label: "ZH (sidecar)",
             source: .oss
         )
         XCTAssertEqual(OpenSubtitlesGateway.ossObjectKey(from: track), "films/a.zh.srt")
