@@ -6,12 +6,16 @@ import Domain
 public final class ServiceConfigViewModel: ObservableObject {
     @Published public var sdkAppId = ""
     @Published public var imSecretKey = ""
+    @Published public var provider: ObjectStorageProvider = .qiniu
     @Published public var accessKey = ""
     @Published public var secretKey = ""
     @Published public var bucket = ""
     @Published public var endpoint = ""
+    @Published public var region = ""
     @Published public var domain = ""
     @Published public var prefix = ""
+    @Published public var useSSL = true
+    @Published public var forcePathStyle = true
     @Published public var subtitleApiKey = ""
     @Published public var omdbApiKey = ""
     @Published public var statusMessage: String?
@@ -36,14 +40,33 @@ public final class ServiceConfigViewModel: ObservableObject {
     private func apply(_ config: AppCloudConfig) {
         sdkAppId = String(config.im.sdkAppId)
         imSecretKey = config.im.secretKey
-        accessKey = config.qiniu.accessKey
-        secretKey = config.qiniu.secretKey
-        bucket = config.qiniu.bucket
-        endpoint = config.qiniu.endpoint
-        domain = config.qiniu.domain ?? ""
-        prefix = config.qiniu.prefix ?? ""
+        provider = config.storage.provider
+        accessKey = config.storage.accessKey
+        secretKey = config.storage.secretKey
+        bucket = config.storage.bucket
+        endpoint = config.storage.endpoint
+        region = config.storage.region ?? ""
+        domain = config.storage.domain ?? ""
+        prefix = config.storage.prefix ?? ""
+        useSSL = config.storage.useSSL
+        forcePathStyle = config.storage.forcePathStyle
         subtitleApiKey = config.subtitleApiKey ?? ""
         omdbApiKey = config.omdbApiKey ?? ""
+    }
+
+    public func selectProvider(_ newProvider: ObjectStorageProvider) {
+        guard newProvider != provider else { return }
+        provider = newProvider
+        applyProviderDefaults(newProvider)
+    }
+
+    public func applyProviderDefaults(_ newProvider: ObjectStorageProvider) {
+        useSSL = newProvider.defaultUseSSL
+        forcePathStyle = newProvider.defaultForcePathStyle
+        if region.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let defaultRegion = newProvider.defaultRegion {
+            region = defaultRegion
+        }
     }
 
     /// Returns `true` when config was persisted successfully.
@@ -130,13 +153,17 @@ public final class ServiceConfigViewModel: ObservableObject {
         }
         let draft = AppCloudConfig(
             im: .init(sdkAppId: appId, secretKey: imSecretKey),
-            qiniu: .init(
+            storage: .init(
+                provider: provider,
                 accessKey: accessKey,
                 secretKey: secretKey,
                 bucket: bucket,
                 endpoint: endpoint,
+                region: region.isEmpty ? nil : region,
                 domain: domain.isEmpty ? nil : domain,
-                prefix: prefix.isEmpty ? nil : prefix
+                prefix: prefix.isEmpty ? nil : prefix,
+                useSSL: useSSL,
+                forcePathStyle: forcePathStyle
             ),
             subtitleApiKey: subtitleApiKey.isEmpty ? nil : subtitleApiKey,
             omdbApiKey: omdbApiKey.isEmpty ? nil : omdbApiKey
@@ -203,10 +230,24 @@ public struct ServiceConfigView: View {
                     SecureField("SecretKey", text: $viewModel.imSecretKey)
                 }
                 Section {
+                    Picker(
+                        "提供商",
+                        selection: Binding(
+                            get: { viewModel.provider },
+                            set: { viewModel.selectProvider($0) }
+                        )
+                    ) {
+                        ForEach(ObjectStorageProvider.allCases, id: \.self) { item in
+                            Text(item.displayName).tag(item)
+                        }
+                    }
                     SecureField("AccessKey", text: $viewModel.accessKey)
                     SecureField("SecretKey", text: $viewModel.secretKey)
                     TextField("Bucket", text: $viewModel.bucket)
-                    TextField("Endpoint", text: $viewModel.endpoint)
+                    TextField("Endpoint（\(viewModel.provider.endpointPlaceholder)）", text: $viewModel.endpoint)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("Region（可选，\(viewModel.provider.regionPlaceholder)）", text: $viewModel.region)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     TextField("自定义域名（可选）", text: $viewModel.domain)
@@ -216,14 +257,20 @@ public struct ServiceConfigView: View {
                     TextField("Prefix（可选）", text: $viewModel.prefix)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                    Toggle("HTTPS", isOn: $viewModel.useSSL)
+                    Toggle("Path-Style URL", isOn: $viewModel.forcePathStyle)
                 } header: {
-                    Text("七牛云")
+                    Text("对象存储")
                 } footer: {
-                    Text("Endpoint 填 S3 地址（如 s3.cn-south-1.qiniucs.com），片库列表/播放走这里。自定义域名只用于头像下载（如 qiniu.chaisz.com），不要填进 Endpoint。")
+                    Text(storageFooter(for: viewModel.provider))
                 }
-                Section("扩展") {
+                Section {
                     SecureField("OpenSubtitles API Key", text: $viewModel.subtitleApiKey)
                     SecureField("OMDb API Key", text: $viewModel.omdbApiKey)
+                } header: {
+                    Text("扩展")
+                } footer: {
+                    Text("Tandem 只播放你自己网盘里的文件，不会从公网抓取影视海报。填写 OMDb Key 后，才用文件名向 OMDb 补全封面与简介。")
                 }
                 if let status = viewModel.statusMessage {
                     Section {
@@ -263,7 +310,7 @@ public struct ServiceConfigView: View {
                 Button("继续分享") { Task { await viewModel.confirmExport() } }
                 Button("取消", role: .cancel) {}
             } message: {
-                Text("链接内含腾讯云 IM 与七牛凭证，仅发给可信好友。")
+                Text("链接内含腾讯云 IM 与对象存储凭证，仅发给可信好友。")
             }
             .sheet(isPresented: $viewModel.showExportSheet) {
                 if let shareURL = viewModel.exportShareURL {
@@ -292,6 +339,19 @@ public struct ServiceConfigView: View {
                     )
                 }
             }
+    }
+
+    private func storageFooter(for provider: ObjectStorageProvider) -> String {
+        switch provider {
+        case .qiniu:
+            return "Endpoint 填七牛 S3 地址（如 \(provider.endpointPlaceholder)）。自定义域名只用于头像下载，不要填进 Endpoint。"
+        case .aliyunOSS:
+            return "Endpoint 填 OSS 地域域名（如 \(provider.endpointPlaceholder)），Region 可留空由 Endpoint 推断。"
+        case .tencentCOS:
+            return "Endpoint 填 COS 地域域名（如 \(provider.endpointPlaceholder)），Region 可留空由 Endpoint 推断。"
+        case .minio:
+            return "Endpoint 填主机:端口（如 \(provider.endpointPlaceholder)）。自建 MinIO 通常关 HTTPS、开 Path-Style；Region 默认 us-east-1。"
+        }
     }
 }
 
@@ -399,7 +459,7 @@ private struct ConfigExportShareView: View {
                             .accessibilityLabel(truncatedURL)
 
                         HStack {
-                            Text("含 IM / 七牛密钥")
+                            Text("含 IM / 对象存储密钥")
                                 .font(.system(size: 13))
                                 .foregroundStyle(TandemColors.secondaryLabel)
                             Spacer()
@@ -603,10 +663,11 @@ private struct ConfigImportConfirmView: View {
                         ("SDKAppID", ConfigQRCodec.maskedSDKAppId(config.im.sdkAppId)),
                         ("SecretKey", ConfigQRCodec.maskSecret(config.im.secretKey)),
                     ])
-                    confirmSection(title: "七牛云", rows: [
-                        ("AccessKey", ConfigQRCodec.maskedAccessKey(config.qiniu.accessKey)),
-                        ("Bucket", config.qiniu.bucket),
-                        ("Endpoint", ConfigQRCodec.truncate(config.qiniu.endpoint, max: 22)),
+                    confirmSection(title: config.storage.provider.displayName, rows: [
+                        ("AccessKey", ConfigQRCodec.maskedAccessKey(config.storage.accessKey)),
+                        ("Bucket", config.storage.bucket),
+                        ("Endpoint", ConfigQRCodec.truncate(config.storage.endpoint, max: 22)),
+                        ("Region", config.storage.region ?? config.storage.signingRegion),
                     ])
 
                     Button(action: onConfirm) {

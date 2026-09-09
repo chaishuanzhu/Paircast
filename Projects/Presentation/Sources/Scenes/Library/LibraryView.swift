@@ -129,7 +129,7 @@ public struct LibraryView: View {
                     ContentUnavailableView(
                         "暂无影片",
                         systemImage: "film",
-                        description: Text("确认七牛 Bucket 中有 mp4/m4v/mkv")
+                        description: Text("确认对象存储 Bucket 中有 mp4/m4v/mkv")
                     )
                 } else {
                     ScrollView {

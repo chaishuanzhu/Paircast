@@ -21,7 +21,7 @@ public struct CascadingMetadataGateway: MetadataGateway {
             return cached
         }
 
-        // Prefer existing Qiniu NFO / art sidecars — skip live scrape when present.
+        // Prefer existing OSS NFO / art sidecars — skip live scrape when present.
         if let storage,
            let stored = await storage.load(for: movie, config: config) {
             await cache.store(stored, for: movie.objectKey)
@@ -33,30 +33,8 @@ public struct CascadingMetadataGateway: MetadataGateway {
         result.title = parsed.title
         result.year = parsed.year ?? result.year
 
-        if let douban = await fetchDouban(title: result.title, year: result.year) {
-            result = merge(result, with: douban)
-            TandemLog.catalog.info(
-                "metadata douban hit movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public) poster=\(result.posterURL != nil, privacy: .public)"
-            )
-        }
-
-        // Douban down / miss / no poster → IMDb suggestion (no API key), then OMDb.
-        if result.posterURL == nil {
-            if let imdb = await fetchIMDb(title: result.title, year: result.year) {
-                if let poster = imdb.posterURL {
-                    result.posterURL = poster
-                }
-                if result.year == nil { result.year = imdb.year }
-                // Keep CJK titles from filename/Douban; fill Latin titles from IMDb.
-                if let imdbTitle = imdb.title,
-                   !result.title.unicodeScalars.contains(where: { $0.value > 0x2E80 }) {
-                    result.title = imdbTitle
-                }
-                TandemLog.catalog.info(
-                    "metadata imdb hit movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public) poster=\(result.posterURL != nil, privacy: .public)"
-                )
-            }
-        }
+        // Guideline 5.2: do not scrape Douban / IMDb. Cover art comes from
+        // OSS NFO sidecars, or OMDb when the user supplies their own key.
         if result.posterURL == nil || (result.overview ?? "").isEmpty {
             if let omdb = await fetchOMDb(title: result.title, year: result.year, apiKey: config.omdbApiKey) {
                 result = merge(result, with: omdb)
@@ -71,12 +49,12 @@ public struct CascadingMetadataGateway: MetadataGateway {
             )
         }
 
-        // Persist to Qiniu so the next launch reads sidecars instead of re-scraping.
+        // Persist to object storage so the next launch reads sidecars instead of re-scraping.
         if let storage, result.posterURL != nil || !(result.overview ?? "").isEmpty {
             result = await storage.save(result, config: config)
         }
 
-        // Only cache successful scrapes so missing keys / transient Douban fails can retry.
+        // Only cache successful enrichments so missing OMDb keys can retry later.
         if result.posterURL != nil || !(result.overview ?? "").isEmpty {
             await cache.store(result, for: movie.objectKey)
         }

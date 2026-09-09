@@ -2,8 +2,8 @@ import Foundation
 import Domain
 
 /// Host-shared subtitles saved beside the movie: `{movieBase}.{srt|vtt|ass}`.
-public final class QiniuSharedSubtitleStorage: SharedSubtitleStorageGateway, @unchecked Sendable {
-    public static let sigV4MaxExpiresSeconds = QiniuAvatarStorage.sigV4MaxExpiresSeconds
+public final class OSSSharedSubtitleStorage: SharedSubtitleStorageGateway, @unchecked Sendable {
+    public static let sigV4MaxExpiresSeconds = OSSAvatarStorage.sigV4MaxExpiresSeconds
     private let session: URLSession
 
     public init(session: URLSession = .shared) {
@@ -16,7 +16,7 @@ public final class QiniuSharedSubtitleStorage: SharedSubtitleStorageGateway, @un
         movieId: String,
         config: AppCloudConfig
     ) async throws -> String {
-        guard config.qiniu.isComplete else { throw AppError.notConfigured }
+        guard config.storage.isComplete else { throw AppError.notConfigured }
         let data = try Data(contentsOf: fileURL)
         guard !data.isEmpty else { throw AppError.subtitleShareFailed }
 
@@ -42,7 +42,7 @@ public final class QiniuSharedSubtitleStorage: SharedSubtitleStorageGateway, @un
     }
 
     public func download(objectKey: String, config: AppCloudConfig) async throws -> URL {
-        guard config.qiniu.isComplete else { throw AppError.notConfigured }
+        guard config.storage.isComplete else { throw AppError.notConfigured }
         let key = objectKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard SharedSubtitleObjectKey.isValid(key) else {
             throw AppError.validation("无效的共享字幕 key")
@@ -66,23 +66,23 @@ public final class QiniuSharedSubtitleStorage: SharedSubtitleStorageGateway, @un
 
     private func signedGETURL(objectKey: String, config: AppCloudConfig) throws -> URL {
         let url = try objectURL(key: objectKey, config: config)
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         return try AWSV4Signer.presignGET(
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             expires: Self.sigV4MaxExpiresSeconds
         )
     }
 
     private func putObject(data: Data, url: URL, config: AppCloudConfig, contentType: String) async throws {
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         let payloadHash = AWSV4Signer.sha256Hex(data)
         let signed = try AWSV4Signer.signHeader(
             method: "PUT",
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             headers: ["content-type": contentType],
             payloadHash: payloadHash
         )
@@ -104,15 +104,7 @@ public final class QiniuSharedSubtitleStorage: SharedSubtitleStorageGateway, @un
     }
 
     private func objectURL(key: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        components.percentEncodedPath = "/" + ([config.qiniu.bucket] + key.split(separator: "/").map(String.init))
-            .map { AWSV4Signer.uriEncodePublic($0) }
-            .joined(separator: "/")
-        guard let url = components.url else { throw AppError.subtitleShareFailed }
-        return url
+        try S3CompatibleURL.objectURL(objectKey: key, storage: config.storage)
     }
 
     private func contentType(for ext: String) -> String {

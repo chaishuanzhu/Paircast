@@ -15,26 +15,26 @@ public enum DataAssembly {
     public static func makeAuthGateway(configGateway: ConfigGateway = makeConfigGateway()) -> AuthGateway {
         TencentIMAuthGateway(
             configGateway: configGateway,
-            avatarStorage: QiniuAvatarStorage(),
+            avatarStorage: OSSAvatarStorage(),
             client: imClient
         )
     }
 
     public static func makeCatalogGateway() -> MovieCatalogGateway {
-        QiniuMovieCatalogGateway()
+        OSSMovieCatalogGateway()
     }
 
     public static func makeMetadataGateway() -> MetadataGateway {
-        CascadingMetadataGateway(storage: QiniuMovieMetadataStorage())
+        CascadingMetadataGateway(storage: OSSMovieMetadataStorage())
     }
 
     public static func makeMovieMetadataStorage() -> MovieMetadataStorageGateway {
-        QiniuMovieMetadataStorage()
+        OSSMovieMetadataStorage()
     }
 
     public static func makeRoomGateway(configGateway: ConfigGateway = makeConfigGateway()) -> RoomGateway {
         IMSyncedRoomGateway(
-            storage: QiniuRoomGateway(configGateway: configGateway),
+            storage: OSSRoomGateway(configGateway: configGateway),
             client: imClient
         )
     }
@@ -52,6 +52,6 @@ public enum DataAssembly {
     }
 
     public static func makeSharedSubtitleStorage() -> SharedSubtitleStorageGateway {
-        QiniuSharedSubtitleStorage()
+        OSSSharedSubtitleStorage()
     }
 }

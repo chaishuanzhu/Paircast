@@ -8,6 +8,8 @@ public protocol AuthGateway: AnyObject, Sendable {
     func fetchProfile() async throws -> User
     /// Batch profile lookup (nickname + avatar key → resolved avatarURL).
     func fetchUsers(userIds: [String]) async throws -> [User]
+    /// Best-effort wipe of IM nickname/avatar, remote avatar object, then logout.
+    func deleteAccount() async throws
 }
 
 public protocol ConfigGateway: AnyObject, Sendable {
@@ -16,6 +18,8 @@ public protocol ConfigGateway: AnyObject, Sendable {
     func clearSessionUserId() async throws
     func saveSessionUserId(_ userId: String) async throws
     func loadSessionUserId() async throws -> String?
+    /// Deletes cloud config and the persisted session user id.
+    func clearAll() async throws
 }
 
 public protocol UserSigGateway: Sendable {
@@ -28,24 +32,26 @@ public protocol MovieCatalogGateway: Sendable {
     func playURL(for movie: Movie, config: AppCloudConfig) async throws -> URL
 }
 
-/// Uploads profile avatars to Qiniu S3 and resolves short-lived download URLs from object keys.
+/// Uploads profile avatars to object storage and resolves short-lived download URLs from object keys.
 public protocol AvatarStorageGateway: Sendable {
     /// Uploads JPEG bytes; returns the object key (IM stores this, not a signed URL).
     func uploadAvatar(imageData: Data, userId: String, config: AppCloudConfig) async throws -> String
     /// SigV4 presigned GET against the configured S3 Endpoint.
     func signedURL(objectKey: String, config: AppCloudConfig) throws -> URL
+    /// Best-effort S3 DELETE of a previously uploaded avatar object.
+    func deleteAvatar(objectKey: String, config: AppCloudConfig) async throws
 }
 
 public protocol MetadataGateway: Sendable {
     func enrich(_ movie: Movie, config: AppCloudConfig) async -> Movie
 }
 
-/// Reads/writes Kodi-style NFO + poster/fanart sidecars beside the movie on Qiniu.
+/// Reads/writes Kodi-style NFO + poster/fanart sidecars beside the movie in object storage.
 public protocol MovieMetadataStorageGateway: Sendable {
     /// Returns metadata from existing `{base}.nfo` (+ art) when present; otherwise `nil`.
     func load(for movie: Movie, config: AppCloudConfig) async -> Movie?
     /// Persists NFO and downloads remote art into `{base}-poster.jpg` / `{base}-fanart.jpg`.
-    /// Returns a movie whose art URLs are Qiniu SigV4 GET links when upload succeeded.
+    /// Returns a movie whose art URLs are SigV4 GET links when upload succeeded.
     func save(_ movie: Movie, config: AppCloudConfig) async -> Movie
 }
 
@@ -77,9 +83,9 @@ public protocol PlaybackSyncGateway: AnyObject, Sendable {
 
 public protocol SubtitleGateway: Sendable {
     func listEmbedded(for movie: Movie) async throws -> [SubtitleTrack]
-    func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack]
+    func listOSSSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack]
     func searchOnline(query: String, year: String?, apiKey: String?) async throws -> [SubtitleTrack]
-    /// Downloads a track. Pass cloud config so Qiniu sidecars can be re-presigned at download time.
+    /// Downloads a track. Pass cloud config so OSS sidecars can be re-presigned at download time.
     func download(_ track: SubtitleTrack, config: AppCloudConfig?) async throws -> URL
 }
 

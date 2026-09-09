@@ -1,7 +1,7 @@
 import Foundation
 import Domain
 
-/// Lists Qiniu sidecar subtitles + OpenSubtitles online search/download.
+/// Lists OSS sidecar subtitles + OpenSubtitles online search/download.
 public struct OpenSubtitlesGateway: SubtitleGateway {
     private let session: URLSession
     private let presignExpires: Int
@@ -9,7 +9,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
 
     public init(
         session: URLSession = .shared,
-        presignExpires: Int = QiniuMovieCatalogGateway.defaultPresignExpiresSeconds
+        presignExpires: Int = OSSMovieCatalogGateway.defaultPresignExpiresSeconds
     ) {
         self.session = session
         self.presignExpires = presignExpires
@@ -21,7 +21,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         return []
     }
 
-    public func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] {
+    public func listOSSSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] {
         let base = (movie.objectKey as NSString).deletingPathExtension
         guard !base.isEmpty else { return [] }
 
@@ -32,7 +32,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
             keys = try await listAllObjectKeys(config: config, prefix: base)
         } catch {
             TandemLog.catalog.error(
-                "listQiniuSidecars list failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
+                "listOSSSidecars list failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
             )
             keys = []
         }
@@ -56,10 +56,10 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
             let lang = Self.guessLanguage(from: leaf)
             tracks.append(
                 SubtitleTrack(
-                    id: "qiniu:\(key)",
+                    id: "oss:\(key)",
                     label: Self.displayLabel(for: leaf, language: lang),
                     language: lang.code,
-                    source: .qiniu,
+                    source: .oss,
                     url: url,
                     detail: "片库外挂 · \(ext)",
                     languageBadge: lang.badge,
@@ -68,7 +68,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
             )
         }
         TandemLog.catalog.info(
-            "listQiniuSidecars movie=\(movie.objectKey, privacy: .public) tracks=\(tracks.count, privacy: .public)"
+            "listOSSSidecars movie=\(movie.objectKey, privacy: .public) tracks=\(tracks.count, privacy: .public)"
         )
         return tracks
     }
@@ -141,10 +141,10 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
 
     public func download(_ track: SubtitleTrack, config: AppCloudConfig?) async throws -> URL {
         switch track.source {
-        case .qiniu:
-            if let key = Self.qiniuObjectKey(from: track),
+        case .oss:
+            if let key = Self.ossObjectKey(from: track),
                let config,
-               config.qiniu.isComplete,
+               config.storage.isComplete,
                let fresh = try? makePresignedGetURL(objectKey: key, config: config) {
                 return try await downloadRemoteFile(fresh, suggestedName: track.label)
             }
@@ -163,7 +163,7 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         }
     }
 
-    // MARK: - Qiniu helpers
+    // MARK: - OSS sidecar helpers
 
     /// Object keys that are sidecar subtitles for `movieObjectKey`.
     public static func matchingSidecarKeys(from keys: [String], movieObjectKey: String) -> [String] {
@@ -191,9 +191,9 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         return result
     }
 
-    public static func qiniuObjectKey(from track: SubtitleTrack) -> String? {
-        guard track.source == .qiniu, track.id.hasPrefix("qiniu:") else { return nil }
-        let key = String(track.id.dropFirst("qiniu:".count))
+    public static func ossObjectKey(from track: SubtitleTrack) -> String? {
+        guard track.source == .oss, track.id.hasPrefix("oss:") else { return nil }
+        let key = String(track.id.dropFirst("oss:".count))
         return key.isEmpty ? nil : key
     }
 
@@ -265,17 +265,10 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         prefix: String,
         continuationToken: String?
     ) async throws -> S3ListObjectsV2Page {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let region = AWSV4Signer.region(fromEndpoint: host)
-        let credentials = AWSV4Signer.Credentials(
-            accessKey: config.qiniu.accessKey,
-            secretKey: config.qiniu.secretKey
-        )
+        let region = config.storage.signingRegion
+        let credentials = S3CompatibleURL.credentials(config.storage)
 
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        components.path = "/\(config.qiniu.bucket)"
+        var components = URLComponents(url: try S3CompatibleURL.bucketURL(storage: config.storage), resolvingAgainstBaseURL: false)
         var query: [URLQueryItem] = [
             URLQueryItem(name: "list-type", value: "2"),
             URLQueryItem(name: "max-keys", value: "1000"),
@@ -284,8 +277,8 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
         if let continuationToken, !continuationToken.isEmpty {
             query.append(URLQueryItem(name: "continuation-token", value: continuationToken))
         }
-        components.queryItems = query
-        guard let url = components.url else { throw AppError.catalogUnauthorized }
+        components?.queryItems = query
+        guard let url = components?.url else { throw AppError.catalogUnauthorized }
 
         let signed = try AWSV4Signer.signHeader(
             method: "GET",
@@ -306,14 +299,13 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
     }
 
     private func probeAndPresign(objectKey: String, config: AppCloudConfig) async throws -> URL? {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let region = AWSV4Signer.region(fromEndpoint: host)
+        let region = config.storage.signingRegion
         let objectURL = try makeObjectURL(objectKey: objectKey, config: config)
         let signed = try AWSV4Signer.signHeader(
             method: "HEAD",
             url: objectURL,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey)
+            credentials: S3CompatibleURL.credentials(config.storage)
         )
         var request = URLRequest(url: signed.url)
         request.httpMethod = "HEAD"
@@ -328,25 +320,16 @@ public struct OpenSubtitlesGateway: SubtitleGateway {
     }
 
     private func makeObjectURL(objectKey: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        components.percentEncodedPath = "/" + ([config.qiniu.bucket] + objectKey.split(separator: "/").map(String.init))
-            .map { AWSV4Signer.uriEncodePublic($0) }
-            .joined(separator: "/")
-        guard let url = components.url else { throw AppError.playbackFailed }
-        return url
+        try S3CompatibleURL.objectURL(objectKey: objectKey, storage: config.storage)
     }
 
     private func makePresignedGetURL(objectKey: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let region = AWSV4Signer.region(fromEndpoint: host)
+        let region = config.storage.signingRegion
         let url = try makeObjectURL(objectKey: objectKey, config: config)
         return try AWSV4Signer.presignGET(
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             expires: presignExpires
         )
     }

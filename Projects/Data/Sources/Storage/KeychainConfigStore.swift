@@ -48,6 +48,13 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
         }
     }
 
+    public func clearAll() async throws {
+        try lock.withLock {
+            try delete(service: configService, account: configAccount)
+            try delete(service: sessionService, account: sessionAccount)
+        }
+    }
+
     private func read(service: String, account: String) throws -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -96,12 +103,16 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
 struct AppCloudConfigDTO: Codable {
     var imSdkAppId: Int
     var imSecretKey: String
-    var qiniuAccessKey: String
-    var qiniuSecretKey: String
-    var qiniuBucket: String
-    var qiniuEndpoint: String
-    var qiniuDomain: String?
-    var qiniuPrefix: String?
+    var storageProvider: String
+    var storageAccessKey: String
+    var storageSecretKey: String
+    var storageBucket: String
+    var storageEndpoint: String
+    var storageRegion: String?
+    var storageDomain: String?
+    var storagePrefix: String?
+    var storageUseSSL: Bool
+    var storageForcePathStyle: Bool
     var subtitleApiKey: String?
     var omdbApiKey: String?
     var userSigExpireSeconds: Int
@@ -111,12 +122,16 @@ struct AppCloudConfigDTO: Codable {
     init(_ config: AppCloudConfig) {
         imSdkAppId = config.im.sdkAppId
         imSecretKey = config.im.secretKey
-        qiniuAccessKey = config.qiniu.accessKey
-        qiniuSecretKey = config.qiniu.secretKey
-        qiniuBucket = config.qiniu.bucket
-        qiniuEndpoint = config.qiniu.endpoint
-        qiniuDomain = config.qiniu.domain
-        qiniuPrefix = config.qiniu.prefix
+        storageProvider = config.storage.provider.rawValue
+        storageAccessKey = config.storage.accessKey
+        storageSecretKey = config.storage.secretKey
+        storageBucket = config.storage.bucket
+        storageEndpoint = config.storage.endpoint
+        storageRegion = config.storage.region
+        storageDomain = config.storage.domain
+        storagePrefix = config.storage.prefix
+        storageUseSSL = config.storage.useSSL
+        storageForcePathStyle = config.storage.forcePathStyle
         subtitleApiKey = config.subtitleApiKey
         omdbApiKey = config.omdbApiKey
         userSigExpireSeconds = config.userSigExpireSeconds
@@ -125,15 +140,20 @@ struct AppCloudConfigDTO: Codable {
     }
 
     func toDomain() -> AppCloudConfig {
-        AppCloudConfig(
+        let provider = ObjectStorageProvider(rawValue: storageProvider) ?? .qiniu
+        return AppCloudConfig(
             im: IMConfig(sdkAppId: imSdkAppId, secretKey: imSecretKey),
-            qiniu: QiniuConfig(
-                accessKey: qiniuAccessKey,
-                secretKey: qiniuSecretKey,
-                bucket: qiniuBucket,
-                endpoint: qiniuEndpoint,
-                domain: qiniuDomain,
-                prefix: qiniuPrefix
+            storage: ObjectStorageConfig(
+                provider: provider,
+                accessKey: storageAccessKey,
+                secretKey: storageSecretKey,
+                bucket: storageBucket,
+                endpoint: storageEndpoint,
+                region: storageRegion,
+                domain: storageDomain,
+                prefix: storagePrefix,
+                useSSL: storageUseSSL,
+                forcePathStyle: storageForcePathStyle
             ),
             subtitleApiKey: subtitleApiKey,
             omdbApiKey: omdbApiKey,

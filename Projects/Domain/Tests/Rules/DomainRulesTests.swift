@@ -41,21 +41,43 @@ final class ConfigQRCodecTests: XCTestCase {
         let encoded = try ConfigQRCodec.encode(config)
         let decoded = try ConfigQRCodec.decode(encoded)
         XCTAssertEqual(decoded.im.sdkAppId, config.im.sdkAppId)
-        XCTAssertEqual(decoded.qiniu.bucket, config.qiniu.bucket)
+        XCTAssertEqual(decoded.storage.bucket, config.storage.bucket)
     }
 
     func test_invalidTypeDoesNotDecode() {
-        let raw = #"{"v":1,"type":"other","im":{"sdkAppId":1,"secretKey":"x"},"qiniu":{"accessKey":"a","secretKey":"b","bucket":"c","endpoint":"d"}}"#
+        let raw = #"{"v":1,"type":"other","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"d","useSSL":true,"forcePathStyle":true}}"#
         XCTAssertThrowsError(try ConfigQRCodec.decode(raw)) { error in
             XCTAssertEqual(error as? AppError, .invalidConfigQR)
         }
+    }
+
+    func test_roundTripPreservesProviderAndFlags() throws {
+        let config = AppCloudConfig(
+            im: .init(sdkAppId: 1, secretKey: "im"),
+            storage: .init(
+                provider: .minio,
+                accessKey: "a",
+                secretKey: "b",
+                bucket: "bucket",
+                endpoint: "minio.local:9000",
+                region: "us-east-1",
+                useSSL: false,
+                forcePathStyle: true
+            )
+        )
+        let decoded = try ConfigQRCodec.decode(try ConfigQRCodec.encode(config))
+        XCTAssertEqual(decoded.storage.provider, .minio)
+        XCTAssertEqual(decoded.storage.endpoint, "minio.local:9000")
+        XCTAssertEqual(decoded.storage.useSSL, false)
+        XCTAssertEqual(decoded.storage.forcePathStyle, true)
+        XCTAssertEqual(decoded.configVersion, 2)
     }
 
     func test_tooLargeRejected() {
         let hugeSecret = String(repeating: "x", count: 3_000)
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: hugeSecret),
-            qiniu: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d")
+            storage: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d")
         )
         XCTAssertThrowsError(try ConfigQRCodec.encode(config)) { error in
             XCTAssertEqual(error as? AppError, .configQRTooLarge)
@@ -72,7 +94,7 @@ final class ConfigShareLinkTests: XCTestCase {
         XCTAssertNotNil(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "args" })?.value)
         let decoded = try ConfigShareLink.decode(url.absoluteString)
         XCTAssertEqual(decoded.im.sdkAppId, config.im.sdkAppId)
-        XCTAssertEqual(decoded.qiniu.bucket, config.qiniu.bucket)
+        XCTAssertEqual(decoded.storage.bucket, config.storage.bucket)
         XCTAssertEqual(decoded.im.secretKey, config.im.secretKey)
     }
 
@@ -90,7 +112,7 @@ final class ConfigShareLinkTests: XCTestCase {
         let url = try ConfigShareLink.shareURL(for: .fixture())
         let pasted = "给你配置：\(url.absoluteString) 打开即可"
         let decoded = try ConfigShareLink.decode(pasted)
-        XCTAssertEqual(decoded.qiniu.bucket, AppCloudConfig.fixture().qiniu.bucket)
+        XCTAssertEqual(decoded.storage.bucket, AppCloudConfig.fixture().storage.bucket)
     }
 
     func test_legacyJSONStillDecodes() throws {
@@ -143,7 +165,7 @@ final class ConfigValidationTests: XCTestCase {
     func test_rejectsCustomDomainAsEndpoint() {
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "s"),
-            qiniu: .init(
+            storage: .init(
                 accessKey: "a",
                 secretKey: "b",
                 bucket: "c",
@@ -162,7 +184,7 @@ final class ConfigValidationTests: XCTestCase {
     func test_normalizesSchemeAndRejectsS3AsDomain() throws {
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "s"),
-            qiniu: .init(
+            storage: .init(
                 accessKey: "a",
                 secretKey: "b",
                 bucket: "c",
@@ -171,12 +193,63 @@ final class ConfigValidationTests: XCTestCase {
             )
         )
         let normalized = try ConfigValidation.normalized(config)
-        XCTAssertEqual(normalized.qiniu.endpoint, "s3.cn-south-1.qiniucs.com")
-        XCTAssertEqual(normalized.qiniu.domain, "qiniu.chaisz.com")
+        XCTAssertEqual(normalized.storage.endpoint, "s3.cn-south-1.qiniucs.com")
+        XCTAssertEqual(normalized.storage.domain, "qiniu.chaisz.com")
 
         XCTAssertThrowsError(
-            try ConfigValidation.validatedDomain("s3.cn-south-1.qiniucs.com")
+            try ConfigValidation.validatedDomain("s3.cn-south-1.qiniucs.com", provider: .qiniu)
         )
+    }
+
+    func test_acceptsAliyunOSSEndpoint() throws {
+        let config = AppCloudConfig(
+            im: .init(sdkAppId: 1, secretKey: "s"),
+            storage: .init(
+                provider: .aliyunOSS,
+                accessKey: "a",
+                secretKey: "b",
+                bucket: "c",
+                endpoint: "https://oss-cn-hangzhou.aliyuncs.com/"
+            )
+        )
+        let normalized = try ConfigValidation.normalized(config)
+        XCTAssertEqual(normalized.storage.endpoint, "oss-cn-hangzhou.aliyuncs.com")
+        XCTAssertEqual(normalized.storage.signingRegion, "cn-hangzhou")
+    }
+
+    func test_acceptsTencentCOSAndMinio() throws {
+        let cos = try ConfigValidation.normalizedStorage(
+            .init(
+                provider: .tencentCOS,
+                accessKey: "a",
+                secretKey: "b",
+                bucket: "c",
+                endpoint: "cos.ap-guangzhou.myqcloud.com"
+            )
+        )
+        XCTAssertEqual(cos.signingRegion, "ap-guangzhou")
+
+        let minio = try ConfigValidation.normalizedStorage(
+            .init(
+                provider: .minio,
+                accessKey: "a",
+                secretKey: "b",
+                bucket: "c",
+                endpoint: "192.168.1.10:9000",
+                useSSL: false,
+                forcePathStyle: true
+            )
+        )
+        XCTAssertEqual(minio.endpoint, "192.168.1.10:9000")
+        XCTAssertEqual(minio.signingRegion, "us-east-1")
+        XCTAssertFalse(minio.useSSL)
+    }
+
+    func test_rejectsV1QRPayload() {
+        let raw = #"{"v":1,"type":"tandem-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"#
+        XCTAssertThrowsError(try ConfigQRCodec.decode(raw)) { error in
+            XCTAssertEqual(error as? AppError, .invalidConfigQR)
+        }
     }
 }
 
@@ -375,11 +448,30 @@ final class HostTransferRulesTests: XCTestCase {
     }
 }
 
+final class ChatSafetyStoreTests: XCTestCase {
+    func test_blockHidesOtherUsersMessages() {
+        let defaults = UserDefaults(suiteName: "tandem.tests.chat-safety")!
+        defaults.removePersistentDomain(forName: "tandem.tests.chat-safety")
+        let store = ChatSafetyStore(defaults: defaults)
+        store.block("bob", ownerId: "alice")
+        XCTAssertTrue(store.isBlocked("bob", ownerId: "alice"))
+        let visible = store.visibleMessages(
+            [
+                ChatMessage(id: "1", roomId: "r", senderId: "bob", senderNickname: "Bob", text: "hi"),
+                ChatMessage(id: "2", roomId: "r", senderId: "alice", senderNickname: "Alice", text: "hey"),
+                ChatMessage(id: "3", roomId: "r", senderNickname: "系统", text: "joined", kind: .system),
+            ],
+            ownerId: "alice"
+        )
+        XCTAssertEqual(visible.map(\.id), ["2", "3"])
+    }
+}
+
 private extension AppCloudConfig {
     static func fixture() -> AppCloudConfig {
         AppCloudConfig(
             im: .init(sdkAppId: 123456789, secretKey: "im-secret"),
-            qiniu: .init(
+            storage: .init(
                 accessKey: "ak",
                 secretKey: "sk",
                 bucket: "movies",

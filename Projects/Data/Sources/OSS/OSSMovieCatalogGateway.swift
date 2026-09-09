@@ -1,8 +1,8 @@
 import Foundation
 import Domain
 
-/// Qiniu Kodo via S3-compatible ListObjectsV2 + SigV4 (with pagination).
-public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
+/// S3-compatible object storage via ListObjectsV2 + SigV4 (with pagination).
+public struct OSSMovieCatalogGateway: MovieCatalogGateway {
     private let session: URLSession
     private let presignExpires: Int
     private let maxKeysPerPage: Int
@@ -24,10 +24,10 @@ public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
     }
 
     public func listMovies(config: AppCloudConfig) async throws -> [Movie] {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let region = AWSV4Signer.region(fromEndpoint: host)
+        let host = AWSV4Signer.normalizedHost(config.storage.endpoint)
+        let region = config.storage.signingRegion
         TandemLog.catalog.info(
-            "listMovies begin bucket=\(config.qiniu.bucket, privacy: .public) host=\(host, privacy: .public) region=\(region, privacy: .public) prefix=\(config.qiniu.prefix ?? "", privacy: .public)"
+            "listMovies begin bucket=\(config.storage.bucket, privacy: .public) host=\(host, privacy: .public) region=\(region, privacy: .public) prefix=\(config.storage.prefix ?? "", privacy: .public) provider=\(config.storage.provider.rawValue, privacy: .public)"
         )
         do {
             let keys = try await listAllObjectKeys(config: config)
@@ -106,30 +106,23 @@ public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
         config: AppCloudConfig,
         continuationToken: String?
     ) async throws -> S3ListObjectsV2Page {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let region = AWSV4Signer.region(fromEndpoint: host)
-        let credentials = AWSV4Signer.Credentials(
-            accessKey: config.qiniu.accessKey,
-            secretKey: config.qiniu.secretKey
-        )
+        let region = config.storage.signingRegion
+        let credentials = S3CompatibleURL.credentials(config.storage)
 
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        components.path = "/\(config.qiniu.bucket)"
+        var components = URLComponents(url: try S3CompatibleURL.bucketURL(storage: config.storage), resolvingAgainstBaseURL: false)
         var query: [URLQueryItem] = [
             URLQueryItem(name: "list-type", value: "2"),
             URLQueryItem(name: "max-keys", value: String(maxKeysPerPage)),
         ]
-        if let prefix = config.qiniu.prefix, !prefix.isEmpty {
+        if let prefix = config.storage.prefix, !prefix.isEmpty {
             query.append(URLQueryItem(name: "prefix", value: prefix))
         }
         if let continuationToken, !continuationToken.isEmpty {
             query.append(URLQueryItem(name: "continuation-token", value: continuationToken))
         }
-        components.queryItems = query
+        components?.queryItems = query
 
-        guard let url = components.url else {
+        guard let url = components?.url else {
             throw AppError.catalogUnauthorized
         }
 
@@ -175,34 +168,22 @@ public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
         } catch S3ListObjectsV2Parser.ParseError.errorResponse(let code, let message) {
             throw mapS3Error(code: code, message: message)
         } catch {
-            throw AppError.unknown("七牛列表解析失败")
+            throw AppError.unknown("列表解析失败")
         }
     }
 
     private func makeObjectURL(objectKey: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        // Must percent-encode with SigV4 rules (parens/spaces/CJK); do not use `path=`.
-        components.percentEncodedPath = "/" + ([config.qiniu.bucket] + objectKey.split(separator: "/").map(String.init))
-            .map { AWSV4Signer.uriEncodePublic($0) }
-            .joined(separator: "/")
-        guard let url = components.url else {
-            throw AppError.playbackFailed
-        }
-        return url
+        try S3CompatibleURL.objectURL(objectKey: objectKey, storage: config.storage)
     }
 
     private func makePresignedGetURL(objectKey: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let region = AWSV4Signer.region(fromEndpoint: host)
+        let region = config.storage.signingRegion
         let url = try makeObjectURL(objectKey: objectKey, config: config)
         do {
             return try AWSV4Signer.presignGET(
                 url: url,
                 region: region,
-                credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+                credentials: S3CompatibleURL.credentials(config.storage),
                 expires: presignExpires
             )
         } catch {
@@ -221,7 +202,7 @@ public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
         if statusCode == 403 || statusCode == 401 {
             return .catalogUnauthorized
         }
-        return .unknown("七牛列目录失败（HTTP \(statusCode)）")
+        return .unknown("列目录失败（HTTP \(statusCode)）")
     }
 
     private func mapS3Error(code: String, message: String) -> AppError {
@@ -229,9 +210,9 @@ public struct QiniuMovieCatalogGateway: MovieCatalogGateway {
         case "InvalidAccessKeyId", "SignatureDoesNotMatch", "AccessDenied", "InvalidToken":
             return .catalogUnauthorized
         case "NoSuchBucket":
-            return .incompleteConfig(missing: ["七牛 Bucket"])
+            return .incompleteConfig(missing: ["Bucket"])
         default:
-            return .unknown("七牛：\(code) — \(message)")
+            return .unknown("对象存储：\(code) — \(message)")
         }
     }
 }

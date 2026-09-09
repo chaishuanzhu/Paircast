@@ -47,10 +47,11 @@ public enum ConfigValidation {
         if config.im.secretKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             missing.append("IM SecretKey")
         }
-        if config.qiniu.accessKey.isEmpty { missing.append("七牛 AccessKey") }
-        if config.qiniu.secretKey.isEmpty { missing.append("七牛 SecretKey") }
-        if config.qiniu.bucket.isEmpty { missing.append("七牛 Bucket") }
-        if config.qiniu.endpoint.isEmpty { missing.append("七牛 Endpoint") }
+        let label = config.storage.provider.displayName
+        if config.storage.accessKey.isEmpty { missing.append("\(label) AccessKey") }
+        if config.storage.secretKey.isEmpty { missing.append("\(label) SecretKey") }
+        if config.storage.bucket.isEmpty { missing.append("\(label) Bucket") }
+        if config.storage.endpoint.isEmpty { missing.append("\(label) Endpoint") }
         return missing
     }
 
@@ -59,16 +60,14 @@ public enum ConfigValidation {
         if !missing.isEmpty {
             throw AppError.incompleteConfig(missing: missing)
         }
-        _ = try normalizedQiniu(config.qiniu)
+        _ = try normalizedStorage(config.storage)
     }
 
-    /// Strips schemes/paths and enforces Endpoint = S3 API host, Domain = CDN host only.
     public static func normalized(_ config: AppCloudConfig) throws -> AppCloudConfig {
         try validate(config)
-        let qiniu = try normalizedQiniu(config.qiniu)
         return AppCloudConfig(
             im: config.im,
-            qiniu: qiniu,
+            storage: try normalizedStorage(config.storage),
             subtitleApiKey: config.subtitleApiKey,
             omdbApiKey: config.omdbApiKey,
             userSigExpireSeconds: config.userSigExpireSeconds,
@@ -77,20 +76,26 @@ public enum ConfigValidation {
         )
     }
 
-    public static func normalizedQiniu(_ qiniu: QiniuConfig) throws -> QiniuConfig {
-        let endpoint = try validatedEndpoint(qiniu.endpoint)
-        let domain = try validatedDomain(qiniu.domain)
-        return QiniuConfig(
-            accessKey: qiniu.accessKey.trimmingCharacters(in: .whitespacesAndNewlines),
-            secretKey: qiniu.secretKey.trimmingCharacters(in: .whitespacesAndNewlines),
-            bucket: qiniu.bucket.trimmingCharacters(in: .whitespacesAndNewlines),
+    public static func normalizedStorage(_ storage: ObjectStorageConfig) throws -> ObjectStorageConfig {
+        let endpoint = try validatedEndpoint(storage.endpoint, provider: storage.provider)
+        let domain = try validatedDomain(storage.domain, provider: storage.provider)
+        let region = storage.region?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return ObjectStorageConfig(
+            provider: storage.provider,
+            accessKey: storage.accessKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            secretKey: storage.secretKey.trimmingCharacters(in: .whitespacesAndNewlines),
+            bucket: storage.bucket.trimmingCharacters(in: .whitespacesAndNewlines),
             endpoint: endpoint,
+            region: (region?.isEmpty == false) ? region : storage.provider.defaultRegion,
             domain: domain,
-            prefix: normalizedPrefix(qiniu.prefix)
+            prefix: normalizedPrefix(storage.prefix),
+            useSSL: storage.useSSL,
+            forcePathStyle: storage.forcePathStyle
         )
     }
 
-    /// Host only: `https://s3.cn-south-1.qiniucs.com/path` → `s3.cn-south-1.qiniucs.com`
+    /// Host (+ optional port): `https://s3.cn-south-1.qiniucs.com/path` → `s3.cn-south-1.qiniucs.com`
     public static func normalizedHost(_ raw: String) -> String {
         raw
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -101,33 +106,53 @@ public enum ConfigValidation {
             .map(String.init) ?? ""
     }
 
-    public static func isQiniuS3APIHost(_ host: String) -> Bool {
+    public static func isAPIEndpointHost(_ host: String, provider: ObjectStorageProvider) -> Bool {
         let h = normalizedHost(host).lowercased()
-        guard h.contains("qiniucs.com") else { return false }
-        return h.hasPrefix("s3.") || h.hasPrefix("s3-")
+        switch provider {
+        case .qiniu:
+            guard h.contains("qiniucs.com") else { return false }
+            return h.hasPrefix("s3.") || h.hasPrefix("s3-")
+        case .aliyunOSS:
+            return h.contains("aliyuncs.com") && h.hasPrefix("oss-")
+        case .tencentCOS:
+            return h.contains("myqcloud.com") && h.hasPrefix("cos.")
+        case .minio:
+            return !h.isEmpty
+        }
     }
 
-    public static func validatedEndpoint(_ raw: String) throws -> String {
+    public static func validatedEndpoint(_ raw: String, provider: ObjectStorageProvider) throws -> String {
         let host = normalizedHost(raw)
         guard !host.isEmpty else {
-            throw AppError.incompleteConfig(missing: ["七牛 Endpoint"])
+            throw AppError.incompleteConfig(missing: ["\(provider.displayName) Endpoint"])
         }
-        guard isQiniuS3APIHost(host) else {
-            throw AppError.validation(
-                "Endpoint 需为七牛 S3 地址（如 s3.cn-south-1.qiniucs.com）。自定义域名请填到「自定义域名」，填错会导致片库列表无法加载"
-            )
+        guard isAPIEndpointHost(host, provider: provider) else {
+            throw AppError.validation(endpointHint(for: provider))
         }
         return host
     }
 
-    public static func validatedDomain(_ raw: String?) throws -> String? {
+    public static func validatedDomain(_ raw: String?, provider: ObjectStorageProvider) throws -> String? {
         guard let raw else { return nil }
         let host = normalizedHost(raw)
         guard !host.isEmpty else { return nil }
-        if isQiniuS3APIHost(host) {
-            throw AppError.validation("自定义域名不能填写 S3 Endpoint，请填写已绑定的 CDN 域名（如 qiniu.example.com）")
+        if isAPIEndpointHost(host, provider: provider) {
+            throw AppError.validation("自定义域名不能填写 API Endpoint，请填写 CDN / 公网域名")
         }
         return host
+    }
+
+    private static func endpointHint(for provider: ObjectStorageProvider) -> String {
+        switch provider {
+        case .qiniu:
+            return "Endpoint 需为七牛 S3 地址（如 \(provider.endpointPlaceholder)）"
+        case .aliyunOSS:
+            return "Endpoint 需为阿里云 OSS 地址（如 \(provider.endpointPlaceholder)）"
+        case .tencentCOS:
+            return "Endpoint 需为腾讯云 COS 地址（如 \(provider.endpointPlaceholder)）"
+        case .minio:
+            return "Endpoint 需为 MinIO 主机（如 \(provider.endpointPlaceholder)）"
+        }
     }
 
     private static func normalizedPrefix(_ raw: String?) -> String? {

@@ -1,10 +1,10 @@
 import Foundation
 import Domain
 
-/// Persists scraped metadata beside the movie on Qiniu:
+/// Persists scraped metadata beside the movie in object storage:
 /// `{base}.nfo`, `{base}-poster.jpg`, `{base}-fanart.jpg`.
-public final class QiniuMovieMetadataStorage: MovieMetadataStorageGateway, @unchecked Sendable {
-    public static let sigV4MaxExpiresSeconds = QiniuAvatarStorage.sigV4MaxExpiresSeconds
+public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchecked Sendable {
+    public static let sigV4MaxExpiresSeconds = OSSAvatarStorage.sigV4MaxExpiresSeconds
     private let session: URLSession
 
     public init(session: URLSession = .shared) {
@@ -12,7 +12,7 @@ public final class QiniuMovieMetadataStorage: MovieMetadataStorageGateway, @unch
     }
 
     public func load(for movie: Movie, config: AppCloudConfig) async -> Movie? {
-        guard config.qiniu.isComplete else { return nil }
+        guard config.storage.isComplete else { return nil }
         guard let nfoKey = MovieMetadataObjectKey.nfoKey(for: movie.objectKey) else { return nil }
 
         guard let nfoData = try? await getObject(objectKey: nfoKey, config: config),
@@ -38,13 +38,13 @@ public final class QiniuMovieMetadataStorage: MovieMetadataStorageGateway, @unch
         }
 
         TandemLog.catalog.info(
-            "metadata qiniu hit movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public) poster=\(result.posterURL != nil, privacy: .public) fanart=\(result.backdropURL != nil, privacy: .public)"
+            "metadata oss hit movie=\(movie.objectKey, privacy: .public) title=\(result.title, privacy: .public) poster=\(result.posterURL != nil, privacy: .public) fanart=\(result.backdropURL != nil, privacy: .public)"
         )
         return result
     }
 
     public func save(_ movie: Movie, config: AppCloudConfig) async -> Movie {
-        guard config.qiniu.isComplete else { return movie }
+        guard config.storage.isComplete else { return movie }
         guard let nfoKey = MovieMetadataObjectKey.nfoKey(for: movie.objectKey),
               let posterKey = MovieMetadataObjectKey.posterKey(for: movie.objectKey),
               let fanartKey = MovieMetadataObjectKey.fanartKey(for: movie.objectKey) else {
@@ -123,11 +123,11 @@ public final class QiniuMovieMetadataStorage: MovieMetadataStorageGateway, @unch
                 result.backdropURL = try? signedGETURL(objectKey: fanartKey, config: config)
             }
             TandemLog.catalog.info(
-                "metadata qiniu saved movie=\(movie.objectKey, privacy: .public) nfo=\(nfoKey, privacy: .public)"
+                "metadata oss saved movie=\(movie.objectKey, privacy: .public) nfo=\(nfoKey, privacy: .public)"
             )
         } catch {
             TandemLog.catalog.error(
-                "metadata qiniu save failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
+                "metadata oss save failed movie=\(movie.objectKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
             )
         }
         return result
@@ -195,12 +195,12 @@ public final class QiniuMovieMetadataStorage: MovieMetadataStorageGateway, @unch
     private func objectExists(objectKey: String, config: AppCloudConfig) async -> Bool {
         do {
             let objectURL = try makeObjectURL(objectKey: objectKey, config: config)
-            let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+            let region = config.storage.signingRegion
             let signed = try AWSV4Signer.signHeader(
                 method: "HEAD",
                 url: objectURL,
                 region: region,
-                credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey)
+                credentials: S3CompatibleURL.credentials(config.storage)
             )
             var request = URLRequest(url: signed.url)
             request.httpMethod = "HEAD"
@@ -221,13 +221,13 @@ public final class QiniuMovieMetadataStorage: MovieMetadataStorageGateway, @unch
         contentType: String
     ) async throws {
         let url = try makeObjectURL(objectKey: objectKey, config: config)
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         let payloadHash = AWSV4Signer.sha256Hex(data)
         let signed = try AWSV4Signer.signHeader(
             method: "PUT",
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             headers: ["content-type": contentType],
             payloadHash: payloadHash
         )
@@ -250,25 +250,17 @@ public final class QiniuMovieMetadataStorage: MovieMetadataStorageGateway, @unch
 
     private func signedGETURL(objectKey: String, config: AppCloudConfig) throws -> URL {
         let url = try makeObjectURL(objectKey: objectKey, config: config)
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         return try AWSV4Signer.presignGET(
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             expires: Self.sigV4MaxExpiresSeconds
         )
     }
 
     private func makeObjectURL(objectKey: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        components.percentEncodedPath = "/" + ([config.qiniu.bucket] + objectKey.split(separator: "/").map(String.init))
-            .map { AWSV4Signer.uriEncodePublic($0) }
-            .joined(separator: "/")
-        guard let url = components.url else { throw AppError.network }
-        return url
+        try S3CompatibleURL.objectURL(objectKey: objectKey, storage: config.storage)
     }
 
     private func directoryJoined(movieObjectKey: String, fileName: String?) -> String? {

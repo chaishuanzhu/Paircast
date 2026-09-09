@@ -1,7 +1,7 @@
 import Foundation
 import Domain
 
-/// Persists room JSON via Qiniu and mirrors lifecycle onto a Tencent IM Meeting group.
+/// Persists room JSON via object storage and mirrors lifecycle onto a Tencent IM Meeting group.
 public final class IMSyncedRoomGateway: RoomGateway, @unchecked Sendable {
     private let storage: RoomGateway
     private let client: TencentIMClient

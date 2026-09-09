@@ -155,6 +155,7 @@ private final class FakeConfig: ConfigGateway, @unchecked Sendable {
     func clearSessionUserId() async throws {}
     func saveSessionUserId(_ userId: String) async throws {}
     func loadSessionUserId() async throws -> String? { nil }
+    func clearAll() async throws {}
 }
 private final class FakeAuth: AuthGateway, @unchecked Sendable {
     func login(userId: String, userSig: String) async throws {}
@@ -165,6 +166,7 @@ private final class FakeAuth: AuthGateway, @unchecked Sendable {
     func fetchUsers(userIds: [String]) async throws -> [User] {
         userIds.map { User(id: $0, nickname: $0) }
     }
+    func deleteAccount() async throws {}
 }
 private final class FakeSig: UserSigGateway, @unchecked Sendable {
     func generateUserSig(userId: String, config: AppCloudConfig) throws -> String { "sig" }
@@ -211,7 +213,7 @@ private final class FakeSync: PlaybackSyncGateway, @unchecked Sendable {
 }
 private final class FakeSubtitle: SubtitleGateway, @unchecked Sendable {
     func listEmbedded(for movie: Movie) async throws -> [SubtitleTrack] { [] }
-    func listQiniuSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] { [] }
+    func listOSSSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] { [] }
     func searchOnline(query: String, year: String?, apiKey: String?) async throws -> [SubtitleTrack] { [] }
     func download(_ track: SubtitleTrack, config: AppCloudConfig?) async throws -> URL {
         URL(string: "https://example.com")!
@@ -236,7 +238,7 @@ private extension AppCloudConfig {
     static func fixture() -> AppCloudConfig {
         AppCloudConfig(
             im: .init(sdkAppId: 123456789, secretKey: "im-secret"),
-            qiniu: .init(
+            storage: .init(
                 accessKey: "ak",
                 secretKey: "sk",
                 bucket: "movies",

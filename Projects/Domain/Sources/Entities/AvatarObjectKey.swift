@@ -1,7 +1,7 @@
 import Foundation
 
 /// Object key stored in Tencent IM `faceURL` (not a downloadable HTTPS URL).
-/// Display URLs are resolved at login / profile fetch via Qiniu S3 SigV4.
+/// Display URLs are resolved at login / profile fetch via S3 SigV4.
 public enum AvatarObjectKey {
     public static let prefix = "_tandem/avatars/"
 

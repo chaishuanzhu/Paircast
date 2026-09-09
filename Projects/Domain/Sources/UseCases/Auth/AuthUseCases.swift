@@ -39,6 +39,18 @@ public extension LogoutUseCase {
     }
 }
 
+public protocol DeleteAccountUseCase {
+    var authGateway: AuthGateway { get }
+    var configGateway: ConfigGateway { get }
+}
+
+public extension DeleteAccountUseCase {
+    func deleteAccount() async throws {
+        try await authGateway.deleteAccount()
+        try await configGateway.clearAll()
+    }
+}
+
 public protocol UpdateProfileUseCase {
     var authGateway: AuthGateway { get }
 }

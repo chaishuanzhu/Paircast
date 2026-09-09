@@ -1,7 +1,7 @@
 import Foundation
 import CommonCrypto
 
-/// AWS Signature Version 4 signer for Qiniu S3-compatible APIs.
+/// AWS Signature Version 4 signer for S3-compatible APIs.
 public enum AWSV4Signer {
     public static let emptyPayloadHash =
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -41,12 +41,13 @@ public enum AWSV4Signer {
         guard let host = url.host else {
             throw SignerError.invalidURL
         }
+        let hostHeader = hostHeaderValue(host: host, port: url.port, scheme: url.scheme)
 
         var normalized: [String: String] = [:]
         for (key, value) in headers {
             normalized[key.lowercased()] = trimmedHeaderValue(value)
         }
-        normalized["host"] = host
+        normalized["host"] = hostHeader
         normalized["x-amz-content-sha256"] = payloadHash
         normalized["x-amz-date"] = amzDate
 
@@ -84,7 +85,7 @@ public enum AWSV4Signer {
             "AWS4-HMAC-SHA256 Credential=\(credentials.accessKey)/\(credentialScope), SignedHeaders=\(signedHeaders), Signature=\(signature)"
 
         var outputHeaders: [String: String] = [
-            "Host": host,
+            "Host": hostHeader,
             "x-amz-content-sha256": payloadHash,
             "x-amz-date": amzDate,
             "Authorization": authorization,
@@ -111,6 +112,7 @@ public enum AWSV4Signer {
         guard let host = url.host else {
             throw SignerError.invalidURL
         }
+        let hostHeader = hostHeaderValue(host: host, port: url.port, scheme: url.scheme)
         let credentialScope = "\(dateStamp)/\(region)/\(service)/aws4_request"
         let credential = "\(credentials.accessKey)/\(credentialScope)"
 
@@ -133,7 +135,7 @@ public enum AWSV4Signer {
             "GET",
             canonicalPath,
             canonicalQuery,
-            "host:\(host)\n",
+            "host:\(hostHeader)\n",
             "host",
             "UNSIGNED-PAYLOAD",
         ].joined(separator: "\n")
@@ -154,13 +156,25 @@ public enum AWSV4Signer {
         let signature = hmacSHA256Hex(key: signingKey, message: stringToSign)
         items.append(("X-Amz-Signature", signature))
 
-        // Assemble with the exact path/query used for signing — avoid URLComponents
-        // re-encoding parentheses/spaces differently than SigV4 expects.
         let signedQuery = canonicalQueryPairs(items)
-        guard let signedURL = URL(string: "https://\(host)\(canonicalPath)?\(signedQuery)") else {
+        var components = URLComponents()
+        components.scheme = url.scheme ?? "https"
+        components.host = host
+        components.port = url.port
+        components.percentEncodedPath = canonicalPath
+        components.percentEncodedQuery = signedQuery
+        guard let signedURL = components.url else {
             throw SignerError.invalidURL
         }
         return signedURL
+    }
+
+    public static func hostHeaderValue(host: String, port: Int?, scheme: String?) -> String {
+        guard let port else { return host }
+        let scheme = (scheme ?? "https").lowercased()
+        if scheme == "https", port == 443 { return host }
+        if scheme == "http", port == 80 { return host }
+        return "\(host):\(port)"
     }
 
     public static func amzDateString(_ date: Date) -> String {

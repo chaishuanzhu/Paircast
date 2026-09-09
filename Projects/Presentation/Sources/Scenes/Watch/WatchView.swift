@@ -45,6 +45,7 @@ public final class WatchViewModel: ObservableObject {
     private var memberProfileTask: Task<Void, Never>?
     /// Last object key the host successfully shared this session; used to clear members only when needed.
     private var lastHostSharedSubtitleKey: String?
+    private let chatSafety = ChatSafetyStore()
 
     public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
@@ -203,7 +204,7 @@ public final class WatchViewModel: ObservableObject {
         do {
             let config = try await session.configGateway.load() ?? AppCloudConfig(
                 im: .init(sdkAppId: 0, secretKey: ""),
-                qiniu: .init(accessKey: "", secretKey: "", bucket: "", endpoint: "")
+                storage: .init(accessKey: "", secretKey: "", bucket: "", endpoint: "")
             )
             let url = try await session.catalogGateway.playURL(for: movie, config: config)
             try await player.prepare(url: url)
@@ -240,7 +241,7 @@ public final class WatchViewModel: ObservableObject {
         chatTask = Task { @concurrent in
             for await message in chatGateway.messages(roomId: roomId) {
                 await MainActor.run {
-                    messages.append(message)
+                    ingestChat(message)
                 }
             }
         }
@@ -533,6 +534,35 @@ public final class WatchViewModel: ObservableObject {
         _ = try? await session.chatGateway.send(roomId: room.id, text: text, sender: user)
     }
 
+    public func canModerate(_ message: ChatMessage) -> Bool {
+        guard message.kind != .system else { return false }
+        guard let senderId = message.senderId, let me = session.currentUser?.id else { return false }
+        return senderId != me
+    }
+
+    public func blockSender(of message: ChatMessage) {
+        guard let ownerId = session.currentUser?.id, let senderId = message.senderId else { return }
+        chatSafety.block(senderId, ownerId: ownerId)
+        messages = chatSafety.visibleMessages(messages, ownerId: ownerId)
+        session.showToast("已屏蔽 \(message.senderNickname.isEmpty ? senderId : message.senderNickname)")
+    }
+
+    public func report(_ message: ChatMessage) {
+        guard let ownerId = session.currentUser?.id, let senderId = message.senderId else { return }
+        chatSafety.recordReport(targetUserId: senderId, ownerId: ownerId, snippet: message.text)
+        session.showToast("已记录举报，将打开反馈页")
+    }
+
+    public var chatReportURL: URL { ChatSafetyStore.reportURL }
+
+    private func ingestChat(_ message: ChatMessage) {
+        if let ownerId = session.currentUser?.id {
+            messages = chatSafety.visibleMessages(messages + [message], ownerId: ownerId)
+        } else {
+            messages.append(message)
+        }
+    }
+
     public func refreshSubtitles(autoSelectChinese: Bool = false) async {
         guard let movie else { return }
         let harness = SubtitleHarness(
@@ -548,16 +578,16 @@ public final class WatchViewModel: ObservableObject {
         }
         let embedded = player.embeddedSubtitleTracks()
         let off = listed.filter { $0.source == .off }
-        let qiniu = listed.filter { $0.source == .qiniu }
-        // Keep host-shared / online selections that aren't in the fresh Qiniu sidecar list.
+        let ossTracks = listed.filter { $0.source == .oss }
+        // Keep host-shared / online selections that aren't in the fresh OSS sidecar list.
         let preserved = subtitleTracks.filter { track in
             guard track.source != .off, track.source != .embedded else { return false }
-            if qiniu.contains(where: { $0.id == track.id }) { return false }
+            if ossTracks.contains(where: { $0.id == track.id }) { return false }
             if track.id.hasPrefix("shared:") { return true }
             if track.source == .online, track.id == subtitleState.trackId { return true }
             return false
         }
-        subtitleTracks = off + embedded + qiniu + preserved
+        subtitleTracks = off + embedded + ossTracks + preserved
 
         if autoSelectChinese,
            subtitleState.source == .off || subtitleState.trackId == nil || subtitleState.trackId == "off",
@@ -603,7 +633,7 @@ public final class WatchViewModel: ObservableObject {
                 player.selectEmbeddedSubtitle(index: index)
                 // Re-apply after index change; some VLC builds reset delay on track switch.
                 player.applySubtitleOffsetMs(retainedOffset)
-            case .qiniu, .online:
+            case .oss, .online:
                 let config = try? await session.configGateway.load()
                 let localURL = try await session.subtitleGateway.download(
                     track,
@@ -633,7 +663,7 @@ public final class WatchViewModel: ObservableObject {
             }
             showSubtitlePanel = false
 
-            // Host: upload downloaded file to Qiniu and instruct members to load it.
+            // Host: upload downloaded file to object storage and instruct members to load it.
             // Member downloads remain local-only (no upload / no signal).
             // Embedded tracks have no portable file — host-only, not shared.
             if isHost, let localURL = sharedLocalURL {
@@ -657,7 +687,7 @@ public final class WatchViewModel: ObservableObject {
         movieId: String
     ) async {
         guard let room, session.currentUser != nil, isHost else { return }
-        guard let config = try? await session.configGateway.load(), config.qiniu.isComplete else {
+        guard let config = try? await session.configGateway.load(), config.storage.isComplete else {
             session.showToast("字幕已加载（片库未配置，无法同步给成员）")
             return
         }
@@ -681,10 +711,10 @@ public final class WatchViewModel: ObservableObject {
             )
             // Sidecar now lives beside the movie — refresh「片库外挂」and mark it current.
             await refreshSubtitles()
-            if let sidecar = subtitleTracks.first(where: { $0.id == "qiniu:\(key)" }) {
+            if let sidecar = subtitleTracks.first(where: { $0.id == "oss:\(key)" }) {
                 subtitleState = SubtitleState(
                     movieId: movieObjectKey,
-                    source: .qiniu,
+                    source: .oss,
                     trackId: sidecar.id,
                     url: sidecar.url,
                     offsetMs: subtitleState.offsetMs
@@ -716,7 +746,7 @@ public final class WatchViewModel: ObservableObject {
         playback.lastSeq = seq
     }
 
-    /// Member follows host-shared subtitle from Qiniu (local offset retained).
+    /// Member follows host-shared subtitle from object storage (local offset retained).
     private func applyHostSharedSubtitle(_ signal: PlaybackSyncSignal) async {
         if let signalMovie = signal.movieId, let current = movie?.id, !signalMovie.isEmpty, signalMovie != current {
             return
@@ -735,7 +765,7 @@ public final class WatchViewModel: ObservableObject {
             return
         }
 
-        guard let config = try? await session.configGateway.load(), config.qiniu.isComplete else {
+        guard let config = try? await session.configGateway.load(), config.storage.isComplete else {
             session.showToast(AppError.subtitleUnavailable.userMessage)
             return
         }
@@ -755,14 +785,14 @@ public final class WatchViewModel: ObservableObject {
                 id: "shared:\(key)",
                 label: label,
                 language: nil,
-                source: .qiniu,
+                source: .oss,
                 detail: "房主共享",
                 languageBadge: nil,
                 format: (key as NSString).pathExtension.uppercased()
             )
             subtitleState = SubtitleState(
                 movieId: movieId,
-                source: .qiniu,
+                source: .oss,
                 trackId: track.id,
                 offsetMs: retainedOffset
             )
@@ -893,6 +923,7 @@ public struct WatchView: View {
     @State private var scrubProgress: CGFloat?
     @State private var chromeHideTask: Task<Void, Never>?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.openURL) private var openURL
 
     private static let chromeAutoHideSeconds: UInt64 = 5_000_000_000
     private static let compactStageHeight: CGFloat = 248
@@ -1376,6 +1407,11 @@ public struct WatchView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
+                Text("邀请制房间 · 长按消息可屏蔽或举报")
+                    .font(.system(size: 11))
+                    .foregroundStyle(TandemColors.tertiaryLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 8)
             }
             .onChange(of: viewModel.messages.count) { _, _ in
                 if let last = viewModel.messages.last {
@@ -1430,6 +1466,17 @@ public struct WatchView: View {
             }
             .frame(maxWidth: .infinity, alignment: isMe ? .trailing : .leading)
             .padding(isMe ? .leading : .trailing, 40)
+            .contextMenu {
+                if viewModel.canModerate(message) {
+                    Button("屏蔽此人", role: .destructive) {
+                        viewModel.blockSender(of: message)
+                    }
+                    Button("举报") {
+                        viewModel.report(message)
+                        openURL(viewModel.chatReportURL)
+                    }
+                }
+            }
         }
     }
 
@@ -1483,7 +1530,7 @@ private struct SwitchMovieSheet: View {
                         systemImage: "film",
                         description: Text(
                             viewModel.switchQuery.isEmpty
-                                ? "确认七牛 Bucket 中有 mp4/m4v/mkv"
+                                ? "确认对象存储 Bucket 中有 mp4/m4v/mkv"
                                 : "试试其他关键词"
                         )
                     )

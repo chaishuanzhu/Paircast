@@ -48,7 +48,7 @@ struct SubtitlePanelView: View {
                         }
                     }
 
-                    let sidecars = viewModel.subtitleTracks.filter { $0.source == .qiniu }
+                    let sidecars = viewModel.subtitleTracks.filter { $0.source == .oss }
                     if !sidecars.isEmpty {
                         sectionLabel("片库外挂")
                         groupCard {

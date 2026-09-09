@@ -1,9 +1,9 @@
 import Foundation
 import Domain
 
-/// Persists watch rooms as JSON objects in the configured Qiniu bucket so friends on
+/// Persists watch rooms as JSON objects in the configured object-storage bucket so friends on
 /// other devices can join via invite (in-memory rooms cannot cross processes/devices).
-public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
+public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
     public static let objectKeyPrefix = "_tandem/rooms/"
 
     private let configGateway: ConfigGateway
@@ -64,7 +64,7 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
 
     public func updateRoom(_ room: WatchRoom) async throws {
         if room.status == .ended {
-            // Notify local observers first, then remove the Qiniu object so dissolved
+            // Notify local observers first, then remove the storage object so dissolved
             // rooms do not leave orphan `_tandem/rooms/{id}.json` files.
             cacheAndBroadcast(room)
             do {
@@ -122,7 +122,7 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
         }
     }
 
-    // MARK: - Qiniu IO
+    // MARK: - Object storage IO
 
     private func pollLoop(roomId: String) async {
         while !Task.isCancelled {
@@ -147,12 +147,12 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
     private func fetchRoom(id: String) async throws -> WatchRoom? {
         let config = try await requireConfig()
         let url = try objectURL(roomId: id, config: config)
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         let signed = try AWSV4Signer.signHeader(
             method: "GET",
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey)
+            credentials: S3CompatibleURL.credentials(config.storage)
         )
         var request = URLRequest(url: signed.url)
         request.httpMethod = signed.method
@@ -175,13 +175,13 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
         let dto = WatchRoomDTO(room)
         let body = try JSONEncoder().encode(dto)
         let url = try objectURL(roomId: room.id, config: config)
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         let payloadHash = AWSV4Signer.sha256Hex(body)
         let signed = try AWSV4Signer.signHeader(
             method: "PUT",
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             headers: ["content-type": "application/json"],
             payloadHash: payloadHash
         )
@@ -203,12 +203,12 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
     private func deleteRoomObject(id: String) async throws {
         let config = try await requireConfig()
         let url = try objectURL(roomId: id, config: config)
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         let signed = try AWSV4Signer.signHeader(
             method: "DELETE",
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey)
+            credentials: S3CompatibleURL.credentials(config.storage)
         )
         var request = URLRequest(url: signed.url)
         request.httpMethod = signed.method
@@ -231,20 +231,11 @@ public final class QiniuRoomGateway: RoomGateway, @unchecked Sendable {
     }
 
     private func objectURL(roomId: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        let key = Self.objectKey(roomId: roomId)
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        components.percentEncodedPath = "/" + ([config.qiniu.bucket] + key.split(separator: "/").map(String.init))
-            .map { AWSV4Signer.uriEncodePublic($0) }
-            .joined(separator: "/")
-        guard let url = components.url else { throw AppError.network }
-        return url
+        try S3CompatibleURL.objectURL(objectKey: Self.objectKey(roomId: roomId), storage: config.storage)
     }
 
     private func requireConfig() async throws -> AppCloudConfig {
-        guard let config = try await configGateway.load(), config.qiniu.isComplete else {
+        guard let config = try await configGateway.load(), config.storage.isComplete else {
             throw AppError.notConfigured
         }
         return config

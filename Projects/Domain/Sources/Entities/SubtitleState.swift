@@ -2,7 +2,7 @@ import Foundation
 
 public enum SubtitleSource: String, Equatable, Sendable {
     case embedded
-    case qiniu
+    case oss
     case online
     case off
 }

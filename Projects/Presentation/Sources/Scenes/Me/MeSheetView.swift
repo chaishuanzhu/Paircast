@@ -8,6 +8,7 @@ public final class MeViewModel: ObservableObject {
     @Published public var nickname = ""
     @Published public var statusMessage: String?
     @Published public var showLogoutConfirm = false
+    @Published public var showDeleteConfirm = false
     @Published public var pendingAvatarData: Data?
     @Published public var pendingAvatarPreview: UIImage?
     @Published public var isSaving = false
@@ -91,9 +92,29 @@ public final class MeViewModel: ObservableObject {
             statusMessage = AppError.network.userMessage
         }
     }
+
+    public func deleteAccount() async {
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let harness = MeHarness(
+                authGateway: session.authGateway,
+                configGateway: session.configGateway
+            )
+            if let userId = session.currentUser?.id {
+                ChatSafetyStore().clear(ownerId: userId)
+            }
+            try await harness.deleteAccount()
+            session.config = nil
+            session.currentUser = nil
+            session.resetToLogin()
+        } catch {
+            statusMessage = AppError.network.userMessage
+        }
+    }
 }
 
-private struct MeHarness: UpdateProfileUseCase, LogoutUseCase {
+private struct MeHarness: UpdateProfileUseCase, LogoutUseCase, DeleteAccountUseCase {
     let authGateway: AuthGateway
     let configGateway: ConfigGateway
 }
@@ -187,6 +208,17 @@ public struct MeSheetView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        Divider().padding(.leading, 16)
+                        NavigationLink {
+                            AcknowledgementsView()
+                        } label: {
+                            meRow(title: "开源许可") {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(TandemColors.tertiaryLabel)
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
                     .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -195,6 +227,19 @@ public struct MeSheetView: View {
                         viewModel.showLogoutConfirm = true
                     } label: {
                         Text("退出登录")
+                            .font(.system(size: 17))
+                            .foregroundStyle(TandemColors.danger)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(TandemColors.secondaryGrouped)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        viewModel.showDeleteConfirm = true
+                    } label: {
+                        Text("删除账号")
                             .font(.system(size: 17))
                             .foregroundStyle(TandemColors.danger)
                             .frame(maxWidth: .infinity)
@@ -234,6 +279,14 @@ public struct MeSheetView: View {
                 Button("取消", role: .cancel) {}
             } message: {
                 Text("将保留本地云服务配置")
+            }
+            .confirmationDialog("确定删除账号？", isPresented: $viewModel.showDeleteConfirm, titleVisibility: .visible) {
+                Button("删除账号", role: .destructive) {
+                    Task { await viewModel.deleteAccount() }
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("将清除本机云配置、登录会话、头像与昵称，并退出登录。IM 控制台中的预置账号需管理员另行停用。")
             }
             .overlay {
                 if viewModel.isSaving {

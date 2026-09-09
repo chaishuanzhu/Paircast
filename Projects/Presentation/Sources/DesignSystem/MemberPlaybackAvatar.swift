@@ -5,7 +5,7 @@ import Domain
 /// Track uses opacity 0.3; progress maps `position / duration` for that member.
 ///
 /// Progress ticks via an internal `TimelineView` so the avatar `AsyncImage` is not
-/// rebuilt every tick (rebuilding forced repeated Qiniu downloads).
+/// rebuilt every tick (rebuilding forced repeated avatar downloads).
 public struct MemberPlaybackAvatar: View {
     public var userId: String
     public var displayName: String

@@ -29,6 +29,16 @@ final class LoginUseCaseTests: XCTestCase {
         XCTAssertNil(sut.fakeConfig.sessionUserId)
         XCTAssertNotNil(sut.fakeConfig.config)
     }
+
+    func test_deleteAccountClearsConfigAndSession() async throws {
+        let sut = AuthUseCaseHarness()
+        sut.fakeConfig.config = .fixture()
+        sut.fakeConfig.sessionUserId = "alice"
+        try await sut.deleteAccount()
+        XCTAssertTrue(sut.fakeAuth.deleteAccountCalled)
+        XCTAssertNil(sut.fakeConfig.sessionUserId)
+        XCTAssertNil(sut.fakeConfig.config)
+    }
 }
 
 final class ImportConfigQRUseCaseTests: XCTestCase {
@@ -48,11 +58,11 @@ final class ImportConfigQRUseCaseTests: XCTestCase {
         let sut = ConfigUseCaseHarness()
         sut.fakeConfig.config = .fixture()
         var next = AppCloudConfig.fixture()
-        next.qiniu.bucket = "other-bucket"
+        next.storage.bucket = "other-bucket"
         let raw = try ConfigShareLink.shareURL(for: next).absoluteString
         let imported = try await sut.importConfigQR(raw)
-        XCTAssertEqual(imported.qiniu.bucket, "other-bucket")
-        XCTAssertEqual(sut.fakeConfig.config?.qiniu.bucket, "other-bucket")
+        XCTAssertEqual(imported.storage.bucket, "other-bucket")
+        XCTAssertEqual(sut.fakeConfig.config?.storage.bucket, "other-bucket")
     }
 
     func test_exportReturnsEncryptedShareLink() async throws {
@@ -61,7 +71,7 @@ final class ImportConfigQRUseCaseTests: XCTestCase {
         let exported = try await sut.exportConfigQR()
         XCTAssertTrue(exported.hasPrefix("tandem://config?args="))
         let decoded = try ConfigShareLink.decode(exported)
-        XCTAssertEqual(decoded.qiniu.bucket, AppCloudConfig.fixture().qiniu.bucket)
+        XCTAssertEqual(decoded.storage.bucket, AppCloudConfig.fixture().storage.bucket)
     }
 }
 
@@ -113,7 +123,7 @@ final class ApplyPlaybackSignalUseCaseTests: XCTestCase {
 
 // MARK: - Harnesses & Fakes
 
-private final class AuthUseCaseHarness: LoginUseCase, LogoutUseCase, @unchecked Sendable {
+private final class AuthUseCaseHarness: LoginUseCase, LogoutUseCase, DeleteAccountUseCase, @unchecked Sendable {
     let configGateway: ConfigGateway
     let authGateway: AuthGateway
     let userSigGateway: UserSigGateway
@@ -171,10 +181,15 @@ private final class FakeConfigGateway: ConfigGateway, @unchecked Sendable {
     func clearSessionUserId() async throws { sessionUserId = nil }
     func saveSessionUserId(_ userId: String) async throws { sessionUserId = userId }
     func loadSessionUserId() async throws -> String? { sessionUserId }
+    func clearAll() async throws {
+        config = nil
+        sessionUserId = nil
+    }
 }
 
 private final class FakeAuthGateway: AuthGateway, @unchecked Sendable {
     var loginCalled = false
+    var deleteAccountCalled = false
     func login(userId: String, userSig: String) async throws { loginCalled = true }
     func logout() async throws {}
     func currentUserId() async -> String? { nil }
@@ -185,6 +200,7 @@ private final class FakeAuthGateway: AuthGateway, @unchecked Sendable {
     func fetchUsers(userIds: [String]) async throws -> [User] {
         userIds.map { User(id: $0, nickname: $0) }
     }
+    func deleteAccount() async throws { deleteAccountCalled = true }
 }
 
 private final class FakeUserSigGateway: UserSigGateway, @unchecked Sendable {
@@ -253,7 +269,7 @@ private extension AppCloudConfig {
     static func fixture() -> AppCloudConfig {
         AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "s"),
-            qiniu: .init(
+            storage: .init(
                 accessKey: "a",
                 secretKey: "b",
                 bucket: "c",

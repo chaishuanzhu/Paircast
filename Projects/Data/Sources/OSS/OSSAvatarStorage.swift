@@ -1,11 +1,11 @@
 import Foundation
 import Domain
 
-/// Uploads avatars to `_tandem/avatars/{userId}/{uuid}.jpg` via Qiniu S3 Endpoint.
+/// Uploads avatars to `_tandem/avatars/{userId}/{uuid}.jpg` via S3-compatible Endpoint.
 /// IM stores only the object key; signed GET URLs are minted on login / profile fetch.
-public final class QiniuAvatarStorage: AvatarStorageGateway, @unchecked Sendable {
+public final class OSSAvatarStorage: AvatarStorageGateway, @unchecked Sendable {
     public static let objectKeyPrefix = AvatarObjectKey.prefix
-    /// Qiniu rejects longer query-presign lifetimes (`ErrAuthorizationQuery`).
+    /// Some providers reject longer query-presign lifetimes (`ErrAuthorizationQuery`).
     public static let sigV4MaxExpiresSeconds = 7 * 24 * 3600
     private let session: URLSession
 
@@ -15,7 +15,7 @@ public final class QiniuAvatarStorage: AvatarStorageGateway, @unchecked Sendable
 
     public func uploadAvatar(imageData: Data, userId: String, config: AppCloudConfig) async throws -> String {
         let data = try ProfileRules.validatedAvatarData(imageData)
-        guard config.qiniu.isComplete else { throw AppError.notConfigured }
+        guard config.storage.isComplete else { throw AppError.notConfigured }
 
         let safeUser = sanitize(userId)
         let key = "\(Self.objectKeyPrefix)\(safeUser)/\(UUID().uuidString.lowercased()).jpg"
@@ -25,31 +25,57 @@ public final class QiniuAvatarStorage: AvatarStorageGateway, @unchecked Sendable
     }
 
     public func signedURL(objectKey: String, config: AppCloudConfig) throws -> URL {
-        guard config.qiniu.isComplete else { throw AppError.notConfigured }
+        guard config.storage.isComplete else { throw AppError.notConfigured }
         let key = objectKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard key.hasPrefix(Self.objectKeyPrefix) else {
             throw AppError.validation("无效的头像 key")
         }
         let url = try objectURL(key: key, config: config)
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         return try AWSV4Signer.presignGET(
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             expires: Self.sigV4MaxExpiresSeconds
         )
+    }
+
+    public func deleteAvatar(objectKey: String, config: AppCloudConfig) async throws {
+        guard config.storage.isComplete else { throw AppError.notConfigured }
+        let key = objectKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard key.hasPrefix(Self.objectKeyPrefix) else { return }
+        let url = try objectURL(key: key, config: config)
+        let region = config.storage.signingRegion
+        let signed = try AWSV4Signer.signHeader(
+            method: "DELETE",
+            url: url,
+            region: region,
+            credentials: S3CompatibleURL.credentials(config.storage)
+        )
+        var request = URLRequest(url: signed.url)
+        request.httpMethod = signed.method
+        request.timeoutInterval = 20
+        for (header, value) in signed.headers where header.lowercased() != "host" {
+            request.setValue(value, forHTTPHeaderField: header)
+        }
+        let (_, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw AppError.network }
+        guard http.statusCode == 404 || (200..<300).contains(http.statusCode) else {
+            TandemLog.catalog.error("avatar DELETE HTTP \(http.statusCode, privacy: .public)")
+            throw AppError.network
+        }
     }
 
     // MARK: - PUT
 
     private func putObject(data: Data, url: URL, config: AppCloudConfig, contentType: String) async throws {
-        let region = AWSV4Signer.region(fromEndpoint: config.qiniu.endpoint)
+        let region = config.storage.signingRegion
         let payloadHash = AWSV4Signer.sha256Hex(data)
         let signed = try AWSV4Signer.signHeader(
             method: "PUT",
             url: url,
             region: region,
-            credentials: .init(accessKey: config.qiniu.accessKey, secretKey: config.qiniu.secretKey),
+            credentials: S3CompatibleURL.credentials(config.storage),
             headers: ["content-type": contentType],
             payloadHash: payloadHash
         )
@@ -71,15 +97,7 @@ public final class QiniuAvatarStorage: AvatarStorageGateway, @unchecked Sendable
     }
 
     private func objectURL(key: String, config: AppCloudConfig) throws -> URL {
-        let host = AWSV4Signer.normalizedHost(config.qiniu.endpoint)
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = host
-        components.percentEncodedPath = "/" + ([config.qiniu.bucket] + key.split(separator: "/").map(String.init))
-            .map { AWSV4Signer.uriEncodePublic($0) }
-            .joined(separator: "/")
-        guard let url = components.url else { throw AppError.avatarUploadFailed }
-        return url
+        try S3CompatibleURL.objectURL(objectKey: key, storage: config.storage)
     }
 
     private func sanitize(_ userId: String) -> String {

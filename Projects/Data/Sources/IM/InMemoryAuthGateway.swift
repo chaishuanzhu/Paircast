@@ -65,4 +65,10 @@ public final class InMemoryAuthGateway: AuthGateway, @unchecked Sendable {
             }
         }
     }
+
+    public func deleteAccount() async throws {
+        lock.withLock {
+            currentUser = nil
+        }
+    }
 }

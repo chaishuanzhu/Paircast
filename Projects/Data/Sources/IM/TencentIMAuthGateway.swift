@@ -10,7 +10,7 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
 
     public init(
         configGateway: ConfigGateway,
-        avatarStorage: AvatarStorageGateway = QiniuAvatarStorage(),
+        avatarStorage: AvatarStorageGateway = OSSAvatarStorage(),
         client: TencentIMClient = .shared
     ) {
         self.configGateway = configGateway
@@ -51,7 +51,7 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
 
         var uploadedKey: String?
         if let avatarData {
-            guard let config = try await configGateway.load(), config.qiniu.isComplete else {
+            guard let config = try await configGateway.load(), config.storage.isComplete else {
                 throw AppError.notConfigured
             }
             do {
@@ -101,10 +101,24 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
         return resolved
     }
 
+    public func deleteAccount() async throws {
+        let userId = await currentUserId()
+        let avatarKey = lock.withLock { cachedUser?.avatarKey }
+        if let userId {
+            try? await client.updateProfile(nickname: userId, avatarKey: "")
+        }
+        if let avatarKey,
+           let config = try? await configGateway.load(),
+           config.storage.isComplete {
+            try? await avatarStorage.deleteAvatar(objectKey: avatarKey, config: config)
+        }
+        try await logout()
+    }
+
     /// Mints a SigV4 URL from the key stored in IM.
     private func resolveAvatar(_ user: User) async throws -> User {
         guard let key = user.avatarKey else { return user }
-        guard let config = try await configGateway.load(), config.qiniu.isComplete else {
+        guard let config = try await configGateway.load(), config.storage.isComplete else {
             return user
         }
         var copy = user

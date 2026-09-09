@@ -49,7 +49,7 @@ public extension ListSubtitleTracksUseCase {
         ]
         tracks += try await subtitleGateway.listEmbedded(for: movie)
         if let config {
-            tracks += try await subtitleGateway.listQiniuSidecars(for: movie, config: config)
+            tracks += try await subtitleGateway.listOSSSidecars(for: movie, config: config)
         }
         return tracks
     }

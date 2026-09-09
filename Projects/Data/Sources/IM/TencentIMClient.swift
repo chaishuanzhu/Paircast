@@ -125,7 +125,7 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
         let info = V2TIMUserFullInfo()
         info.nickName = nickname
         if let avatarKey {
-            info.faceURL = AvatarObjectKey.faceURLValue(forKey: avatarKey)
+            info.faceURL = avatarKey.isEmpty ? "" : AvatarObjectKey.faceURLValue(forKey: avatarKey)
         }
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             manager.setSelfInfo(info: info) {

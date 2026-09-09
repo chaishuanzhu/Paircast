@@ -8,7 +8,7 @@ final class LocalUserSigGatewayTests: XCTestCase {
         let gateway = LocalUserSigGateway()
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1400000000, secretKey: "test-secret"),
-            qiniu: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d")
+            storage: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d")
         )
         let sig = try gateway.generateUserSig(userId: "alice", config: config)
         XCTAssertFalse(sig.isEmpty)
@@ -21,7 +21,7 @@ final class LocalUserSigGatewayTests: XCTestCase {
         let gateway = LocalUserSigGateway()
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1_400_000_000, secretKey: "eJx*test-secret-key-for-hmac"),
-            qiniu: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d"),
+            storage: .init(accessKey: "a", secretKey: "b", bucket: "c", endpoint: "d"),
             userSigExpireSeconds: 86_400
         )
         let sig = try gateway.generateUserSig(userId: "bob", config: config)
@@ -98,6 +98,57 @@ final class AWSV4SignerTests: XCTestCase {
 
     func test_regionFromHyphenEndpoint() {
         XCTAssertEqual(AWSV4Signer.region(fromEndpoint: "s3-cn-east-1.qiniucs.com"), "cn-east-1")
+    }
+
+    func test_inferredSigningRegionPerProvider() {
+        XCTAssertEqual(
+            ObjectStorageConfig.inferredRegion(provider: .qiniu, endpoint: "s3.cn-south-1.qiniucs.com"),
+            "cn-south-1"
+        )
+        XCTAssertEqual(
+            ObjectStorageConfig.inferredRegion(provider: .aliyunOSS, endpoint: "oss-cn-beijing.aliyuncs.com"),
+            "cn-beijing"
+        )
+        XCTAssertEqual(
+            ObjectStorageConfig.inferredRegion(provider: .tencentCOS, endpoint: "cos.ap-shanghai.myqcloud.com"),
+            "ap-shanghai"
+        )
+        XCTAssertEqual(
+            ObjectStorageConfig.inferredRegion(provider: .minio, endpoint: "127.0.0.1:9000"),
+            "us-east-1"
+        )
+    }
+
+    func test_s3CompatibleURLPathStyleWithPort() throws {
+        let storage = ObjectStorageConfig(
+            provider: .minio,
+            accessKey: "a",
+            secretKey: "b",
+            bucket: "movies",
+            endpoint: "192.168.1.10:9000",
+            useSSL: false,
+            forcePathStyle: true
+        )
+        let url = try S3CompatibleURL.objectURL(objectKey: "films/a.mp4", storage: storage)
+        XCTAssertEqual(url.scheme, "http")
+        XCTAssertEqual(url.host, "192.168.1.10")
+        XCTAssertEqual(url.port, 9000)
+        XCTAssertEqual(url.path, "/movies/films/a.mp4")
+    }
+
+    func test_s3CompatibleURLVirtualHosted() throws {
+        let storage = ObjectStorageConfig(
+            provider: .aliyunOSS,
+            accessKey: "a",
+            secretKey: "b",
+            bucket: "movies",
+            endpoint: "oss-cn-hangzhou.aliyuncs.com",
+            useSSL: true,
+            forcePathStyle: false
+        )
+        let url = try S3CompatibleURL.objectURL(objectKey: "a.mp4", storage: storage)
+        XCTAssertEqual(url.host, "movies.oss-cn-hangzhou.aliyuncs.com")
+        XCTAssertEqual(url.path, "/a.mp4")
     }
 
     func test_signHeaderProducesAuthorization() throws {
@@ -235,7 +286,7 @@ final class S3ListObjectsV2ParserTests: XCTestCase {
     }
 }
 
-final class QiniuCatalogFilterTests: XCTestCase {
+final class OSSCatalogFilterTests: XCTestCase {
     func test_videoExtensionFilterStillApplies() {
         let keys = ["a.mp4", "b.mkv", "c.txt", "d.avi", "e.m4v"]
         let filtered = MovieCatalogRules.filterVideoKeys(keys)
@@ -243,12 +294,12 @@ final class QiniuCatalogFilterTests: XCTestCase {
     }
 }
 
-final class QiniuPlayURLTests: XCTestCase {
+final class OSSPlayURLTests: XCTestCase {
     func test_playURLAlwaysPresignsEvenWhenDomainSet() async throws {
-        let gateway = QiniuMovieCatalogGateway()
+        let gateway = OSSMovieCatalogGateway()
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "im"),
-            qiniu: .init(
+            storage: .init(
                 accessKey: "AK",
                 secretKey: "SK",
                 bucket: "870027381",
@@ -270,9 +321,9 @@ final class QiniuPlayURLTests: XCTestCase {
         XCTAssertTrue(items.contains(where: { $0.name == "X-Amz-Signature" }))
         XCTAssertEqual(
             items.first(where: { $0.name == "X-Amz-Expires" })?.value,
-            String(QiniuMovieCatalogGateway.defaultPresignExpiresSeconds)
+            String(OSSMovieCatalogGateway.defaultPresignExpiresSeconds)
         )
-        XCTAssertEqual(QiniuMovieCatalogGateway.defaultPresignExpiresSeconds, 6 * 3600)
+        XCTAssertEqual(OSSMovieCatalogGateway.defaultPresignExpiresSeconds, 6 * 3600)
         XCTAssertFalse(url.host?.contains("cdn.example.com") == true)
     }
 }
@@ -292,8 +343,8 @@ final class WatchRoomDTOTests: XCTestCase {
         let data = try JSONEncoder().encode(WatchRoomDTO(room))
         let decoded = try JSONDecoder().decode(WatchRoomDTO.self, from: data).toDomain()
         XCTAssertEqual(decoded, room)
-        XCTAssertEqual(QiniuRoomGateway.objectKeyPrefix, "_tandem/rooms/")
-        XCTAssertEqual(QiniuRoomGateway.objectKey(roomId: "AbC-123"), "_tandem/rooms/abc-123.json")
+        XCTAssertEqual(OSSRoomGateway.objectKeyPrefix, "_tandem/rooms/")
+        XCTAssertEqual(OSSRoomGateway.objectKey(roomId: "AbC-123"), "_tandem/rooms/abc-123.json")
     }
 }
 
@@ -392,51 +443,12 @@ final class MetadataGatewayHelpersTests: XCTestCase {
     }
 }
 
-final class QiniuDownloadURLTests: XCTestCase {
-    func test_signedURLContainsDeadlineAndToken() throws {
-        let base = URL(string: "https://cdn.example.com/_tandem/avatars/alice/a.jpg")!
-        let signed = try QiniuDownloadURL.signedURL(
-            resourceURL: base,
-            accessKey: "AKID",
-            secretKey: "secret",
-            expiresInSeconds: QiniuDownloadURL.oneYearSeconds,
-            now: Date(timeIntervalSince1970: 1_700_000_000)
-        )
-        let items = URLComponents(url: signed, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        let e = items.first(where: { $0.name == "e" })?.value
-        let token = items.first(where: { $0.name == "token" })?.value
-        XCTAssertEqual(e, String(1_700_000_000 + QiniuDownloadURL.oneYearSeconds))
-        XCTAssertEqual(token?.hasPrefix("AKID:"), true)
-        XCTAssertFalse(token?.contains("+") == true)
-        XCTAssertFalse(token?.contains("/") == true)
-    }
-
-    func test_roundTripStableForSameInputs() throws {
-        let base = URL(string: "https://cdn.example.com/key.jpg")!
-        let a = try QiniuDownloadURL.signedURL(
-            resourceURL: base,
-            accessKey: "ak",
-            secretKey: "sk",
-            expiresInSeconds: 3600,
-            now: Date(timeIntervalSince1970: 100)
-        )
-        let b = try QiniuDownloadURL.signedURL(
-            resourceURL: base,
-            accessKey: "ak",
-            secretKey: "sk",
-            expiresInSeconds: 3600,
-            now: Date(timeIntervalSince1970: 100)
-        )
-        XCTAssertEqual(a, b)
-    }
-}
-
-final class QiniuAvatarStorageTests: XCTestCase {
+final class OSSAvatarStorageTests: XCTestCase {
     func test_signedURLUsesEndpointPresign() {
-        let storage = QiniuAvatarStorage()
+        let storage = OSSAvatarStorage()
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "im"),
-            qiniu: .init(
+            storage: .init(
                 accessKey: "AK",
                 secretKey: "SK",
                 bucket: "b",
@@ -451,7 +463,7 @@ final class QiniuAvatarStorageTests: XCTestCase {
         XCTAssertNotNil(url)
         XCTAssertTrue(url?.absoluteString.contains("X-Amz-Signature=") == true)
         XCTAssertEqual(url?.host, "s3.cn-south-1.qiniucs.com")
-        XCTAssertEqual(QiniuAvatarStorage.sigV4MaxExpiresSeconds, 7 * 24 * 3600)
+        XCTAssertEqual(OSSAvatarStorage.sigV4MaxExpiresSeconds, 7 * 24 * 3600)
     }
 }
 
@@ -516,7 +528,7 @@ final class MovieNFOCodecTests: XCTestCase {
     }
 }
 
-final class QiniuSidecarMatchingTests: XCTestCase {
+final class OSSSidecarMatchingTests: XCTestCase {
     func test_matchesSameBasenameAndLanguageSuffixes() {
         let movie = "films/Inception.2010.mkv"
         let keys = [
@@ -544,11 +556,11 @@ final class QiniuSidecarMatchingTests: XCTestCase {
 
     func test_parsesObjectKeyFromTrackId() {
         let track = SubtitleTrack(
-            id: "qiniu:films/a.zh.srt",
+            id: "oss:films/a.zh.srt",
             label: "简中（外挂）",
-            source: .qiniu
+            source: .oss
         )
-        XCTAssertEqual(OpenSubtitlesGateway.qiniuObjectKey(from: track), "films/a.zh.srt")
+        XCTAssertEqual(OpenSubtitlesGateway.ossObjectKey(from: track), "films/a.zh.srt")
     }
 }
 
