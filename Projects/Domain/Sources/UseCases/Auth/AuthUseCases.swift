@@ -7,8 +7,8 @@ public protocol LoginUseCase {
 }
 
 public extension LoginUseCase {
-    func login(userId: String, password: String) async throws {
-        try LoginRules.validateCredentials(userId: userId, password: password)
+    func login(userId: String) async throws {
+        try LoginRules.validateUserId(userId)
         guard let config = try await configGateway.load() else {
             throw AppError.notConfigured
         }

@@ -6,7 +6,7 @@ final class LoginUseCaseTests: XCTestCase {
         let sut = AuthUseCaseHarness()
         sut.fakeConfig.config = nil
         do {
-            try await sut.login(userId: "u", password: "p")
+            try await sut.login(userId: "u")
             XCTFail("expected throw")
         } catch {
             XCTAssertEqual(error as? AppError, .notConfigured)
@@ -16,7 +16,7 @@ final class LoginUseCaseTests: XCTestCase {
     func test_login_successPersistsSession() async throws {
         let sut = AuthUseCaseHarness()
         sut.fakeConfig.config = .fixture()
-        try await sut.login(userId: "alice", password: "secret")
+        try await sut.login(userId: "alice")
         XCTAssertTrue(sut.fakeAuth.loginCalled)
         XCTAssertEqual(sut.fakeConfig.sessionUserId, "alice")
     }

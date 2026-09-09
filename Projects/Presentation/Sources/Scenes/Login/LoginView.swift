@@ -4,7 +4,6 @@ import Domain
 @MainActor
 public final class LoginViewModel: ObservableObject {
     @Published public var userId = ""
-    @Published public var password = ""
     @Published public var isLoading = false
     @Published public var errorMessage: String?
     @Published public var showConfigAlert = false
@@ -37,7 +36,7 @@ public final class LoginViewModel: ObservableObject {
                 authGateway: session.authGateway,
                 userSigGateway: session.userSigGateway
             )
-            try await harness.login(userId: userId, password: password)
+            try await harness.login(userId: userId)
             session.currentUser = try await session.authGateway.fetchProfile()
             session.consumePendingInviteIfPossible()
             session.route = .library
@@ -87,8 +86,9 @@ public struct LoginView: View {
                 .frame(maxWidth: .infinity)
 
                 VStack(spacing: 12) {
-                    TandemTextField("用户名", text: $viewModel.userId)
-                    TandemTextField("密码", text: $viewModel.password, isSecure: true)
+                    TandemTextField("用户 ID", text: $viewModel.userId)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                     if let summary = viewModel.configSummary {
                         Text(summary)
                             .font(.footnote)

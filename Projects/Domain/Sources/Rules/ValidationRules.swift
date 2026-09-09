@@ -28,14 +28,10 @@ public enum ProfileRules {
 }
 
 public enum LoginRules {
-    public static func validateCredentials(userId: String, password: String) throws {
+    public static func validateUserId(_ userId: String) throws {
         let id = userId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !id.isEmpty else {
-            throw AppError.validation("请输入用户名")
-        }
-        // Scheme A: password only needs to be non-empty; real auth is IM login.
-        guard !password.isEmpty else {
-            throw AppError.validation("请输入密码")
+            throw AppError.validation("请输入用户 ID")
         }
     }
 }

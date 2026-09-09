@@ -31,7 +31,7 @@ public enum AppError: Error, Equatable, Sendable {
         case .incompleteConfig(let missing):
             return "配置不完整：\(missing.joined(separator: "、"))"
         case .invalidCredentials:
-            return "用户名或密码错误"
+            return "用户 ID 无效或登录失败"
         case .accountUnavailable:
             return "账号不存在或未开通，请联系管理员"
         case .imInitFailed:

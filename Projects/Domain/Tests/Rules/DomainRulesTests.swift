@@ -133,12 +133,12 @@ final class ConfigShareLinkTests: XCTestCase {
 }
 
 final class LoginRulesTests: XCTestCase {
-    func test_emptyPasswordFails() {
-        XCTAssertThrowsError(try LoginRules.validateCredentials(userId: "u", password: ""))
+    func test_emptyUserIdFails() {
+        XCTAssertThrowsError(try LoginRules.validateUserId("   "))
     }
 
-    func test_nonEmptyPassesWeakCheck() throws {
-        try LoginRules.validateCredentials(userId: "u", password: "anything")
+    func test_nonEmptyUserIdPasses() throws {
+        try LoginRules.validateUserId("u")
     }
 }
 
