@@ -96,3 +96,34 @@ jobs:
           fi
 
           echo "Published $ASSET_NAME to release $TAG"
+
+      - name: Update LiveContainer source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
+          ./Scripts/update-livecontainer-source.sh docs/source.json
+
+          git fetch origin main
+          WORKTREE="$(mktemp -d)/paircast-source"
+          git worktree add "$WORKTREE" origin/main
+          mkdir -p "$WORKTREE/docs" "$WORKTREE/docs/livecontainer"
+          cp docs/source.json "$WORKTREE/docs/source.json"
+          cp docs/icon.png "$WORKTREE/docs/icon.png"
+          cp docs/livecontainer/index.html "$WORKTREE/docs/livecontainer/index.html"
+
+          cd "$WORKTREE"
+          git add docs/source.json docs/icon.png docs/livecontainer/index.html
+          if git diff --cached --quiet; then
+            echo "LiveContainer source unchanged"
+          else
+            git -c user.name="github-actions[bot]" \
+                -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+                commit -m "chore: update LiveContainer source for ${TAG}"
+            git push origin HEAD:main
+            echo "Pushed LiveContainer source to main (GitHub Pages)"
+          fi
+          cd -
+          git worktree remove "$WORKTREE" --force

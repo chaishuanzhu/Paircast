@@ -1,0 +1,36 @@
+{
+  "name": "Paircast",
+  "identifier": "com.chaisz.tandem.source",
+  "sourceURL": "https://blog.chaisz.com/Paircast/source.json",
+  "subtitle": "Invite-only private cloud sync player",
+  "description": "Paircast sideload source. Install or update from GitHub Releases IPAs.",
+  "iconURL": "https://blog.chaisz.com/Paircast/icon.png",
+  "website": "https://blog.chaisz.com/Paircast/",
+  "tintColor": "#1A73E8",
+  "apps": [
+    {
+      "name": "Paircast",
+      "bundleIdentifier": "com.chaisz.tandem",
+      "developerName": "ShuanZhu Chai",
+      "localizedDescription": "Invite-only private cloud sync player for watching together with friends. Videos come from your own S3-compatible bucket.",
+      "iconURL": "https://blog.chaisz.com/Paircast/icon.png",
+      "tintColor": "#1A73E8",
+      "version": "1.0.0",
+      "versionDate": "2026-09-10",
+      "versionDescription": "Paircast `v1.0.0` — signed App Store IPA.",
+      "downloadURL": "https://github.com/chaishuanzhu/Paircast/releases/download/v1.0.0/Paircast-v1.0.0-build4.ipa",
+      "size": 120839571,
+      "versions": [
+        {
+          "version": "1.0.0",
+          "date": "2026-09-10",
+          "localizedDescription": "Paircast `v1.0.0` — signed App Store IPA.",
+          "downloadURL": "https://github.com/chaishuanzhu/Paircast/releases/download/v1.0.0/Paircast-v1.0.0-build4.ipa",
+          "size": 120839571,
+          "buildVersion": "4"
+        }
+      ],
+      "buildVersion": "4"
+    }
+  ]
+}
