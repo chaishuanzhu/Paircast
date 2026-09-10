@@ -22,8 +22,8 @@ public struct AcknowledgementsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Privacy") {
-                Link("Privacy Policy", destination: URL(string: "https://github.com/chaishuanzhu/Paircast/blob/main/docs/privacy/index.html")!)
-                Link("Support & Reports", destination: URL(string: "https://github.com/chaishuanzhu/Paircast/blob/main/docs/support/index.html")!)
+                Link("Privacy Policy", destination: URL(string: "https://blog.chaisz.com/Paircast/privacy/")!)
+                Link("Support & Reports", destination: URL(string: "https://blog.chaisz.com/Paircast/support/")!)
             }
         }
         .navigationTitle("Acknowledgements")
