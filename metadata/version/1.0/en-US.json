@@ -1,0 +1,6 @@
+{
+  "description": "Paircast is an invite-only private cloud player for synchronized playback. Videos come from your own object storage. There is no public catalog, and the app does not distribute films or TV shows.\n\nSynced playback\nCreate a room and share an invite link. After friends join, play, pause, and playback position stay in sync among invited members.\n\nChat while you watch\nSend text messages in the room. Touch and hold a message to block the sender or file a report. Chat is visible only to invited members.\n\nSubtitles\nLoad embedded subtitles from the video, sidecar files stored next to the movie, or search results from an OpenSubtitles account you configure.\n\nYour storage and account\nYou supply your own object-storage and instant-messaging credentials. Secrets stay in the on-device Keychain. You can delete account data from the Me screen.\n\nPaircast is for friends who already have lawful private media and want to watch together from a distance.",
+  "keywords": "sync player,private cloud,subtitles,chat,invite,remote,room,playback,storage,movie night",
+  "promotionalText": "Use your own cloud storage to watch in sync with invited friends, and chat while you watch.",
+  "supportUrl": "https://chai-sz.github.io/tandem/support"
+}
