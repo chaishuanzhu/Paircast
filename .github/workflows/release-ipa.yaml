@@ -34,7 +34,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          # Use the workflow trigger ref (tag push commit, or --ref for dispatch).
+          # inputs.tag is only for the GitHub Release name, not the source tree.
 
       - name: Ensure vendor SDKs
         run: |

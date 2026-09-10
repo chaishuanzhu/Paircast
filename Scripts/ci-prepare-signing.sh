@@ -19,7 +19,7 @@ fi
 security list-keychains -d user -s "${SEARCH[@]}"
 security default-keychain -s "$LOGIN_KC"
 
-if [[ -n "${KEYCHAIN_PASSWORD:-}" ]]; then
+if [[ -n "${KEYCHAIN_PASSWORD// }" ]]; then
   echo "Unlocking keychain(s) for CI signing…"
   security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$LOGIN_KC"
   security set-keychain-settings -lut 21600 "$LOGIN_KC"
