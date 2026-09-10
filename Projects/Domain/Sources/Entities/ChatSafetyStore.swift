@@ -50,7 +50,7 @@ public struct ChatSafetyStore: @unchecked Sendable {
     }
 
     public static var reportURL: URL {
-        var components = URLComponents(string: "https://github.com/chaishuanzhu/Tandem/issues/new")!
+        var components = URLComponents(string: "https://github.com/chaishuanzhu/Paircast/issues/new")!
         components.queryItems = [
             URLQueryItem(name: "title", value: "Chat content report"),
             URLQueryItem(
@@ -58,7 +58,7 @@ public struct ChatSafetyStore: @unchecked Sendable {
                 value: "Please describe the violation (rooms are invite-only; we only handle rooms you joined)."
             ),
         ]
-        return components.url ?? URL(string: "https://github.com/chaishuanzhu/Tandem/issues")!
+        return components.url ?? URL(string: "https://github.com/chaishuanzhu/Paircast/issues")!
     }
 
     private func blockKey(_ ownerId: String) -> String {
