@@ -9,7 +9,6 @@ public final class WatchViewModel: ObservableObject {
     @Published public var playback = PlaybackState(movieId: "")
     @Published public var messages: [ChatMessage] = []
     @Published public var draft = ""
-    @Published public var syncLabel = ""
     @Published public var showSwitchMovie = false
     @Published public var showSwitchConfirm = false
     @Published public var pendingMovie: Movie?
@@ -94,7 +93,6 @@ public final class WatchViewModel: ObservableObject {
                 movieId: movie.id,
                 offsetMs: SubtitleOffsetStore.load(movieId: movie.id)
             )
-            syncLabel = isHost ? "You are the host — you control playback" : "Following the host"
             onlineQuery = [movie.title, movie.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
             await preparePlayer()
             listen()
@@ -250,7 +248,6 @@ public final class WatchViewModel: ObservableObject {
                 let membersChanged = await MainActor.run {
                     let changed = updated.memberIds != self.room?.memberIds
                     self.room = updated
-                    syncLabel = isHost ? "You are the host — you control playback" : "Following the host"
                     if updated.status == .ended {
                         errorMessage = TandemL10n.format(AppError.roomEnded)
                     }
@@ -316,9 +313,6 @@ public final class WatchViewModel: ObservableObject {
                 room.hostUserId = newHost
                 room.hostTransferSeq = signal.seq
                 self.room = room
-                syncLabel = isHost
-                    ? TandemL10n.string("You are the host — you control playback")
-                    : TandemL10n.string("Following the host")
                 session.showToast(TandemL10n.format("Host is now {{name}}", ["name": newHost]))
                 startHeartbeatIfNeeded()
             }
@@ -928,6 +922,7 @@ public struct WatchView: View {
     @State private var chromeHideTask: Task<Void, Never>?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.openURL) private var openURL
+    @Environment(\.locale) private var locale
 
     private static let chromeAutoHideSeconds: UInt64 = 5_000_000_000
     private static let compactStageHeight: CGFloat = 248
@@ -976,6 +971,7 @@ public struct WatchView: View {
         }
         .sheet(isPresented: $viewModel.showSwitchMovie) {
             SwitchMovieSheet(viewModel: viewModel)
+                .environment(\.locale, locale)
                 .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -1002,18 +998,21 @@ public struct WatchView: View {
         }
         .sheet(isPresented: $viewModel.showSubtitlePanel) {
             SubtitlePanelView(viewModel: viewModel)
+                .environment(\.locale, locale)
                 .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showSubtitleSync) {
             SubtitleSyncView(viewModel: viewModel)
+                .environment(\.locale, locale)
                 .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.height(340)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showInvite) {
             InviteSheetView(url: viewModel.inviteURL())
+                .environment(\.locale, locale)
                 .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
@@ -1158,6 +1157,14 @@ public struct WatchView: View {
         }
     }
 
+    private var movieTitleLabel: Text {
+        if let title = viewModel.movie?.title, !title.isEmpty {
+            Text(title)
+        } else {
+            Text("Movie")
+        }
+    }
+
     private var watchChrome: some View {
         HStack(spacing: 6) {
             Button {
@@ -1178,7 +1185,7 @@ public struct WatchView: View {
             }
             .accessibilityLabel(isFullscreen ? "Exit fullscreen" : "Back")
 
-            Text(viewModel.movie?.title ?? "Movie")
+            movieTitleLabel
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
@@ -1348,17 +1355,23 @@ public struct WatchView: View {
         return "\(current)/\(total)"
     }
 
+    private var watchingCountText: Text {
+        let count = viewModel.room?.memberIds.count ?? 0
+        return Text("\(count) watching")
+    }
+
     private var membersBar: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(TandemL10n.format(
-                    "{{count}} watching",
-                    ["count": "\(viewModel.room?.memberIds.count ?? 0)"]
-                ))
+                watchingCountText
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(TandemColors.secondaryLabel)
                 Spacer()
-                Text(viewModel.syncLabel)
+                Text(
+                    viewModel.isHost
+                        ? LocalizedStringKey("You are the host — you control playback")
+                        : LocalizedStringKey("Following the host")
+                )
                     .font(.system(size: 12))
                     .foregroundStyle(TandemColors.secondaryLabel)
                     .lineLimit(1)
@@ -1538,15 +1551,19 @@ private struct SwitchMovieSheet: View {
                     ProgressView("Loading library…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if viewModel.filteredLibraryMovies.isEmpty {
-                    ContentUnavailableView(
-                        viewModel.switchQuery.isEmpty ? "No movies" : "No matching movies",
-                        systemImage: "film",
-                        description: Text(
-                            viewModel.switchQuery.isEmpty
-                                ? "Make sure your object storage bucket contains mp4/m4v/mkv files"
-                                : "Try different keywords"
+                    if viewModel.switchQuery.isEmpty {
+                        ContentUnavailableView(
+                            "No movies",
+                            systemImage: "film",
+                            description: Text("Make sure your object storage bucket contains mp4/m4v/mkv files")
                         )
-                    )
+                    } else {
+                        ContentUnavailableView(
+                            "No matching movies",
+                            systemImage: "film",
+                            description: Text("Try different keywords")
+                        )
+                    }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
@@ -1634,7 +1651,7 @@ private struct SwitchMovieRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(movie.title)
-        .accessibilityValue(isPlaying ? "Playing" : (movie.year ?? ""))
+        .accessibilityValue(isPlaying ? TandemL10n.string("Playing") : (movie.year ?? ""))
     }
 
     private var subtitle: String {
@@ -1643,7 +1660,7 @@ private struct SwitchMovieRow: View {
             parts.append(year)
         }
         if isPlaying {
-            parts.append("Playing")
+            parts.append(TandemL10n.string("Playing"))
         }
         return parts.joined(separator: " · ")
     }
@@ -1672,7 +1689,10 @@ private struct InviteSheetView: View {
                         } label: {
                             inviteRow(
                                 title: "Copy Invite Link",
-                                trailing: .text(copied ? "Copied" : "Copy", emphasized: copied)
+                                trailing: .text(
+                                    copied ? LocalizedStringKey("Copied") : LocalizedStringKey("Copy"),
+                                    emphasized: copied
+                                )
                             )
                         }
                         .buttonStyle(.plain)
@@ -1719,10 +1739,10 @@ private struct InviteSheetView: View {
 
     private enum Trailing {
         case chevron
-        case text(String, emphasized: Bool)
+        case text(LocalizedStringKey, emphasized: Bool)
     }
 
-    private func inviteRow(title: String, trailing: Trailing) -> some View {
+    private func inviteRow(title: LocalizedStringKey, trailing: Trailing) -> some View {
         HStack {
             Text(title)
                 .font(.system(size: 17))

@@ -180,6 +180,7 @@ public struct ServiceConfigView: View {
     @ObservedObject var session: AppSession
     let fromLogin: Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @StateObject private var viewModel: ServiceConfigViewModel
 
     public init(session: AppSession, fromLogin: Bool) {
@@ -238,16 +239,28 @@ public struct ServiceConfigView: View {
                         )
                     ) {
                         ForEach(ObjectStorageProvider.allCases, id: \.self) { item in
-                            Text(item.displayName).tag(item)
+                            Text(LocalizedStringKey(item.displayName)).tag(item)
                         }
                     }
                     SecureField("AccessKey", text: $viewModel.accessKey)
                     SecureField("SecretKey", text: $viewModel.secretKey)
                     TextField("Bucket", text: $viewModel.bucket)
-                    TextField("Endpoint (\(viewModel.provider.endpointPlaceholder))", text: $viewModel.endpoint)
+                    TextField(
+                        TandemL10n.format(
+                            "Endpoint ({{example}})",
+                            ["example": viewModel.provider.endpointPlaceholder]
+                        ),
+                        text: $viewModel.endpoint
+                    )
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Region (optional, \(viewModel.provider.regionPlaceholder))", text: $viewModel.region)
+                    TextField(
+                        TandemL10n.format(
+                            "Region (optional, {{example}})",
+                            ["example": viewModel.provider.regionPlaceholder]
+                        ),
+                        text: $viewModel.region
+                    )
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     TextField("Custom domain (optional)", text: $viewModel.domain)
@@ -315,6 +328,7 @@ public struct ServiceConfigView: View {
             .sheet(isPresented: $viewModel.showExportSheet) {
                 if let shareURL = viewModel.exportShareURL {
                     ConfigExportShareView(shareURL: shareURL)
+                        .environment(\.locale, locale)
                 }
             }
             .sheet(isPresented: $viewModel.showImportPaste) {
@@ -323,6 +337,7 @@ public struct ServiceConfigView: View {
                     onCancel: { viewModel.showImportPaste = false },
                     onContinue: { viewModel.prepareImport(raw: viewModel.importRaw) }
                 )
+                .environment(\.locale, locale)
             }
             .sheet(isPresented: $viewModel.showImportConfirm) {
                 if let config = viewModel.pendingImportConfig {
@@ -337,6 +352,7 @@ public struct ServiceConfigView: View {
                             Task { await viewModel.confirmImport() }
                         }
                     )
+                    .environment(\.locale, locale)
                 }
             }
     }
@@ -356,8 +372,8 @@ public struct ServiceConfigView: View {
 }
 
 private struct ConfigTransferRow: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     let systemImage: String
     let tint: Color
     let action: () -> Void
@@ -463,9 +479,11 @@ private struct ConfigExportShareView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(TandemColors.secondaryLabel)
                             Spacer()
-                            Button(copied ? "Copied" : "Copy") {
+                            Button {
                                 UIPasteboard.general.string = shareURL
                                 copied = true
+                            } label: {
+                                Text(copied ? LocalizedStringKey("Copied") : LocalizedStringKey("Copy"))
                             }
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(TandemColors.systemBlue)
@@ -485,7 +503,7 @@ private struct ConfigExportShareView: View {
                         UIPasteboard.general.string = shareURL
                         copied = true
                     } label: {
-                        Text(copied ? "Link copied" : "Copy Link")
+                        Text(copied ? LocalizedStringKey("Link copied") : LocalizedStringKey("Copy Link"))
                     }
                     .buttonStyle(PrimaryButtonStyle())
 
@@ -536,11 +554,11 @@ private struct ConfigExportShareView: View {
 
     private func saveQRToPhotos() {
         guard let image = QRCodeImageRenderer.image(from: shareURL, dimension: 1024) else {
-            saveMessage = "Unable to generate QR code"
+            saveMessage = TandemL10n.string("Unable to generate QR code")
             return
         }
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-        saveMessage = "Saved to Photos"
+        saveMessage = TandemL10n.string("Saved to Photos")
     }
 }
 
@@ -663,7 +681,7 @@ private struct ConfigImportConfirmView: View {
                         ("SDKAppID", ConfigQRCodec.maskedSDKAppId(config.im.sdkAppId)),
                         ("SecretKey", ConfigQRCodec.maskSecret(config.im.secretKey)),
                     ])
-                    confirmSection(title: config.storage.provider.displayName, rows: [
+                    confirmSection(title: LocalizedStringKey(config.storage.provider.displayName), rows: [
                         ("AccessKey", ConfigQRCodec.maskedAccessKey(config.storage.accessKey)),
                         ("Bucket", config.storage.bucket),
                         ("Endpoint", ConfigQRCodec.truncate(config.storage.endpoint, max: 22)),
@@ -693,7 +711,7 @@ private struct ConfigImportConfirmView: View {
         .presentationDetents([.medium, .large])
     }
 
-    private func confirmSection(title: String, rows: [(String, String)]) -> some View {
+    private func confirmSection(title: LocalizedStringKey, rows: [(String, String)]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 13))
@@ -702,7 +720,7 @@ private struct ConfigImportConfirmView: View {
             VStack(spacing: 10) {
                 ForEach(rows, id: \.0) { row in
                     HStack {
-                        Text(row.0)
+                        Text(LocalizedStringKey(row.0))
                             .font(.system(size: 15))
                             .foregroundStyle(TandemColors.secondaryLabel)
                         Spacer()

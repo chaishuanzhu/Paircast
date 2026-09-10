@@ -7,6 +7,7 @@ import Domain
 struct SubtitlePanelView: View {
     @ObservedObject var viewModel: WatchViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
     @State private var showSearch = false
 
     var body: some View {
@@ -16,7 +17,7 @@ struct SubtitlePanelView: View {
                     sectionLabel("Current")
                     groupCard {
                         trackRow(
-                            title: "Off",
+                            title: TandemL10n.string("Off"),
                             selected: viewModel.subtitleState.source == .off
                                 || viewModel.subtitleState.trackId == "off"
                                 || viewModel.subtitleState.trackId == nil
@@ -118,6 +119,7 @@ struct SubtitlePanelView: View {
             }
             .sheet(isPresented: $showSearch) {
                 OnlineSubtitleSearchView(viewModel: viewModel)
+                    .environment(\.locale, locale)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
@@ -127,7 +129,7 @@ struct SubtitlePanelView: View {
         }
     }
 
-    private func sectionLabel(_ text: String) -> some View {
+    private func sectionLabel(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(TandemColors.secondaryLabel)
@@ -148,8 +150,8 @@ struct SubtitlePanelView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            rowContent(
-                title: title,
+            labeledRow(
+                title: Text(title),
                 subtitle: subtitle,
                 trailing: selected ? .check : (showsChevron ? .chevron : .none)
             )
@@ -164,10 +166,14 @@ struct SubtitlePanelView: View {
         case value(String)
     }
 
-    private func rowContent(title: String, subtitle: String? = nil, trailing: Trailing) -> some View {
+    private func rowContent(title: LocalizedStringKey, trailing: Trailing) -> some View {
+        labeledRow(title: Text(title), subtitle: nil, trailing: trailing)
+    }
+
+    private func labeledRow(title: Text, subtitle: String?, trailing: Trailing) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                title
                     .font(.system(size: 17))
                     .foregroundStyle(Color.primary)
                     .lineLimit(1)
@@ -256,7 +262,7 @@ struct SubtitleSyncView: View {
     }
 
     private func syncButton(
-        _ title: String,
+        _ title: LocalizedStringKey,
         primary: Bool = false,
         emphasized: Bool = true,
         action: @escaping () -> Void

@@ -10,14 +10,11 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    public var title: String {
+    public var localizedTitle: LocalizedStringKey {
         switch self {
-        case .system:
-            return String(localized: "Match System", table: "Localizable", bundle: .main, locale: TandemL10n.locale)
-        case .english:
-            return "English"
-        case .chinese:
-            return "简体中文"
+        case .system: "Match System"
+        case .english: "English"
+        case .chinese: "简体中文"
         }
     }
 

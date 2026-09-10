@@ -216,7 +216,7 @@ public struct MeSheetView: View {
                         } label: {
                             meRow(title: "Language") {
                                 HStack(spacing: 4) {
-                                    Text(language.language.title)
+                                    Text(language.language.localizedTitle)
                                         .foregroundStyle(TandemColors.secondaryLabel)
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 13, weight: .semibold))

@@ -52,9 +52,9 @@ public struct SecondaryButtonStyle: ButtonStyle {
 }
 
 public struct TandemWarningBanner: View {
-    public var text: String
+    public var text: LocalizedStringKey
 
-    public init(_ text: String) {
+    public init(_ text: LocalizedStringKey) {
         self.text = text
     }
 

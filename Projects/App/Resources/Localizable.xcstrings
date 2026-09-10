@@ -1,6 +1,23 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld watching": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld watching"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 人在看"
+          }
+        }
+      }
+    },
     "{{count}} watching": {
       "extractionState": "manual",
       "localizations": {
@@ -813,6 +830,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "加密链接已解析"
+          }
+        }
+      }
+    },
+    "Endpoint ({{example}})": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint ({{example}})"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint（{{example}}）"
           }
         }
       }
@@ -1650,6 +1684,23 @@
         }
       }
     },
+    "MinIO": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MinIO"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MinIO"
+          }
+        }
+      }
+    },
     "Messaging": {
       "extractionState": "manual",
       "localizations": {
@@ -1680,6 +1731,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "更多"
+          }
+        }
+      }
+    },
+    "Movie": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movie"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片"
           }
         }
       }
@@ -2002,7 +2070,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Path-Style URL"
+            "value": "路径风格 URL"
           }
         }
       }
@@ -2194,6 +2262,23 @@
         }
       }
     },
+    "Region (optional, {{example}})": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Region (optional, {{example}})"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Region（可选，{{example}}）"
+          }
+        }
+      }
+    },
     "Qiniu": {
       "extractionState": "manual",
       "localizations": {
@@ -2364,6 +2449,23 @@
         }
       }
     },
+    "Saved to Photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to Photos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存到相册"
+          }
+        }
+      }
+    },
     "Saved": {
       "extractionState": "manual",
       "localizations": {
@@ -2394,6 +2496,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "保存中…"
+          }
+        }
+      }
+    },
+    "Say something…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say something…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说点什么…"
           }
         }
       }
@@ -2445,6 +2564,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜索失败"
+          }
+        }
+      }
+    },
+    "Search titles": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search titles"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索片名"
           }
         }
       }
@@ -3010,6 +3146,23 @@
         }
       }
     },
+    "Title year": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title year"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片名 年份"
+          }
+        }
+      }
+    },
     "Theme": {
       "extractionState": "manual",
       "localizations": {
@@ -3091,6 +3244,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "房间已结束"
+          }
+        }
+      }
+    },
+    "Try different keywords": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try different keywords"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试试其他关键词"
           }
         }
       }

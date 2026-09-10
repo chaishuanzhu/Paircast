@@ -15,7 +15,7 @@ public struct LanguageSettingsView: View {
                         language.language = option
                     } label: {
                         HStack {
-                            Text(option.title)
+                            Text(option.localizedTitle)
                                 .font(.system(size: 17))
                                 .foregroundStyle(Color.primary)
                             Spacer()
