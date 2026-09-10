@@ -1,0 +1,81 @@
+# Build a signed App Store IPA on tag push and attach it to the GitHub Release.
+# Intentionally has NO pull_request trigger — fork PRs never run this on the self-hosted Mac.
+name: Release IPA
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-ipa-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa:
+    name: Build & archive IPA
+    # Hard gate: never run from forks / renamed mirrors
+    if: github.repository == 'chaishuanzhu/Paircast' && github.event_name == 'push'
+    runs-on: [self-hosted, macOS, ARM64, paircast]
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure vendor SDKs
+        run: |
+          ./Scripts/download-vlckit.sh
+          ./Scripts/download-imsdk.sh
+
+      - name: Generate Xcode project
+        run: |
+          # Avoid stale absolute paths from a previous machine/clone layout
+          rm -rf Tuist/.build
+          tuist install
+          tuist generate --no-open
+
+      - name: Build IPA
+        run: ./Scripts/build-ipa.sh
+
+      - name: Publish GitHub Release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          IPA=".asc/artifacts/Paircast.ipa"
+          test -f "$IPA"
+
+          ARCHIVE=".asc/artifacts/Paircast.xcarchive/Info.plist"
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleShortVersionString' "$ARCHIVE")"
+          BUILD="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleVersion' "$ARCHIVE")"
+          NOTES=$(cat <<EOF
+Paircast \`${TAG}\` — signed App Store IPA.
+
+- Marketing version: ${VERSION}
+- Build: ${BUILD}
+- Bundle ID: com.chaisz.tandem
+
+Built on self-hosted runner \`chaisz-macmini-paircast\`.
+EOF
+)
+
+          ASSET_NAME="Paircast-${TAG}-build${BUILD}.ipa"
+          cp "$IPA" "$ASSET_NAME"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET_NAME" --clobber
+            gh release edit "$TAG" --notes "$NOTES" || true
+          else
+            gh release create "$TAG" "$ASSET_NAME" \
+              --title "$TAG" \
+              --notes "$NOTES"
+          fi
+
+          echo "Published $ASSET_NAME to release $TAG"
