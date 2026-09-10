@@ -27,6 +27,8 @@ public final class ServiceConfigViewModel: ObservableObject {
     @Published public var showImportConfirm = false
     @Published public var importPreview = ""
     @Published public var pendingImportConfig: AppCloudConfig?
+    /// Bumped after import so SecureFields recreate and do not write stale empty values back.
+    @Published public var formEpoch = 0
 
     private let session: AppSession
 
@@ -126,19 +128,23 @@ public final class ServiceConfigViewModel: ObservableObject {
     public func confirmImport() async {
         guard let pendingImportConfig else { return }
         do {
-            let raw = try ConfigShareLink.shareURL(for: pendingImportConfig).absoluteString
             let harness = ConfigHarness(configGateway: session.configGateway)
-            let saved = try await harness.importConfigQR(raw)
-            session.config = saved
+            // Persist directly — avoid re-encrypt round-trip and SecureField clobbering via Save.
+            try await harness.saveCloudConfig(pendingImportConfig)
+            let saved = try await session.configGateway.load() ?? pendingImportConfig
             apply(saved)
-            statusMessage = TandemL10n.string("Configuration imported")
+            formEpoch += 1
             self.pendingImportConfig = nil
+            showImportConfirm = false
+            await session.applyImportedCloudConfig(saved)
+            statusMessage = TandemL10n.string("Configuration imported. Please sign in again")
         } catch let error as AppError {
             statusMessage = TandemL10n.format(error)
+            showImportConfirm = false
         } catch {
             statusMessage = TandemL10n.format(AppError.invalidConfigQR)
+            showImportConfirm = false
         }
-        showImportConfirm = false
     }
 
     public func consumePendingDeepLinkIfNeeded() {
@@ -291,6 +297,7 @@ public struct ServiceConfigView: View {
                     }
                 }
             }
+            .id(viewModel.formEpoch)
             .navigationTitle("Service Configuration")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

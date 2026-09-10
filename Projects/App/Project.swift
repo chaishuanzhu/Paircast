@@ -58,7 +58,7 @@ let project = Project(
                 "PROVISIONING_PROFILE_SPECIFIER": "Tandem AppStore",
                 "EXCLUDED_ARCHS[sdk=iphoneos*]": "armv7 armv7s",
                 "MARKETING_VERSION": "1.0.0",
-                "CURRENT_PROJECT_VERSION": "4",
+                "CURRENT_PROJECT_VERSION": "5",
             ])
         ),
         .target(

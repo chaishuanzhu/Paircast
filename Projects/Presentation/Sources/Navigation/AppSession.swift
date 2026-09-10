@@ -180,6 +180,19 @@ public final class AppSession: ObservableObject {
         route = .login
     }
 
+    /// After a successful config import: keep Keychain payload, drop IM session, return to login.
+    public func applyImportedCloudConfig(_ config: AppCloudConfig) async {
+        self.config = config
+        if currentUser != nil {
+            try? await authGateway.logout()
+            currentUser = nil
+        }
+        try? await configGateway.clearSessionUserId()
+        pendingInvite = nil
+        resetToLogin()
+        showToast(TandemL10n.string("Configuration imported. Please sign in again"))
+    }
+
     public func installIMSessionObservers() {
         NotificationCenter.default.addObserver(
             forName: .paircastIMKickedOffline,

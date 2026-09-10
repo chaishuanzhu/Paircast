@@ -16,7 +16,11 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
             guard let data = try read(service: configService, account: configAccount) else {
                 return nil
             }
-            return try JSONDecoder().decode(AppCloudConfigDTO.self, from: data).toDomain()
+            do {
+                return try JSONDecoder().decode(AppCloudConfigDTO.self, from: data).toDomain()
+            } catch {
+                throw AppError.unknown("Keychain config decode failed: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -24,6 +28,11 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
         try lock.withLock {
             let data = try JSONEncoder().encode(AppCloudConfigDTO(config))
             try write(data, service: configService, account: configAccount)
+            // Device Keychain can report success then fail to read; verify immediately.
+            guard let roundTrip = try read(service: configService, account: configAccount),
+                  roundTrip == data else {
+                throw AppError.unknown("Keychain write did not persist (verify failed)")
+            }
         }
     }
 
@@ -73,17 +82,28 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
     }
 
     private func write(_ data: Data, service: String, account: String) throws {
-        try delete(service: service, account: account)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+        ]
+        let update: [String: Any] = [
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw AppError.unknown("Keychain write failed: \(status)")
+        let updateStatus = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        if updateStatus == errSecSuccess { return }
+        if updateStatus != errSecItemNotFound {
+            // Fall through to delete+add for unexpected states (corrupt item, etc.)
+            try delete(service: service, account: account)
+        }
+
+        var add = query
+        add[kSecValueData as String] = data
+        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        let addStatus = SecItemAdd(add as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw AppError.unknown("Keychain write failed: \(addStatus)")
         }
     }
 
