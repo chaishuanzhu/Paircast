@@ -41,6 +41,13 @@ jobs:
           ./Scripts/download-vlckit.sh
           ./Scripts/download-imsdk.sh
 
+      - name: Prepare code signing
+        env:
+          # Optional: unlock + set key partition list for headless codesign.
+          # Set repo secret KEYCHAIN_PASSWORD to the macOS login keychain password.
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: ./Scripts/ci-prepare-signing.sh
+
       - name: Generate Xcode project
         run: |
           # Avoid stale absolute paths from a previous machine/clone layout
