@@ -20,8 +20,10 @@ Rooms are invite-only. Long-press a message to block the sender (hidden locally)
 
 ## Privacy & support
 
-- Privacy: https://blog.chaisz.com/Paircast/privacy/
-- Support: https://blog.chaisz.com/Paircast/support/
+- Privacy (en-US): https://blog.chaisz.com/Paircast/en-US/privacy/
+- Privacy (zh-Hans): https://blog.chaisz.com/Paircast/zh-Hans/privacy/
+- Support (en-US): https://blog.chaisz.com/Paircast/en-US/support/
+- Support (zh-Hans): https://blog.chaisz.com/Paircast/zh-Hans/support/
 
 ## Encryption
 

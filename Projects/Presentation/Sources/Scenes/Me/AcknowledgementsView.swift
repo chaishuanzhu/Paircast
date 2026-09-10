@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Third-party notices required for App Store (VLCKit is LGPL).
 public struct AcknowledgementsView: View {
+    @Environment(\.locale) private var locale
+
     public init() {}
 
     public var body: some View {
@@ -22,11 +24,26 @@ public struct AcknowledgementsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Privacy") {
-                Link("Privacy Policy", destination: URL(string: "https://blog.chaisz.com/Paircast/privacy/")!)
-                Link("Support & Reports", destination: URL(string: "https://blog.chaisz.com/Paircast/support/")!)
+                Link("Privacy Policy", destination: privacyURL)
+                Link("Support & Reports", destination: supportURL)
             }
         }
         .navigationTitle("Acknowledgements")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var docsLocalePath: String {
+        if locale.identifier.hasPrefix("zh") {
+            return "zh-Hans"
+        }
+        return "en-US"
+    }
+
+    private var privacyURL: URL {
+        URL(string: "https://blog.chaisz.com/Paircast/\(docsLocalePath)/privacy/")!
+    }
+
+    private var supportURL: URL {
+        URL(string: "https://blog.chaisz.com/Paircast/\(docsLocalePath)/support/")!
     }
 }

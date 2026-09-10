@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paircast Privacy Policy</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1.25rem; line-height: 1.55; color: #111; }
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.15rem; margin-top: 1.75rem; }
+    .lang { font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .lang a { margin-right: 0.75rem; }
+  </style>
+</head>
+<body>
+  <p class="lang"><a href="./">English</a><a href="../../zh-Hans/privacy/">简体中文</a></p>
+  <h1>Paircast Privacy Policy</h1>
+  <p>Effective date: 2026-08-24. Paircast is an invite-only private cloud sync player. It does not provide a public catalog and does not sell your data.</p>
+
+  <h2>Information we process</h2>
+  <ul>
+    <li><strong>Account ID and nickname</strong>: The IM user ID and nickname you enter are used to sign in to Tencent Cloud IM and to display your identity in rooms.</li>
+    <li><strong>Avatar</strong>: If you choose a photo from your library, it is compressed and uploaded to the object storage you configured. An object key is stored in your IM profile.</li>
+    <li><strong>Chat messages</strong>: Messages are sent only to invite-only rooms you join and are delivered through Tencent Cloud IM.</li>
+    <li><strong>Cloud credentials</strong>: Object-storage and IM secrets stay in the on-device Keychain so the app can access <b>your own</b> storage and messaging services. Shared configuration links are wrapped with AES-GCM instead of pasting secrets in plaintext.</li>
+    <li><strong>Optional third parties</strong>: If you enter OpenSubtitles or OMDb API keys, those queries go to the corresponding services. Douban and IMDb are not requested by default.</li>
+  </ul>
+
+  <h2>What we do not do</h2>
+  <ul>
+    <li>No advertising tracking and no App Tracking Transparency advertising identifier.</li>
+    <li>No public film catalog, and your media is not distributed to users who were not invited.</li>
+  </ul>
+
+  <h2>Third parties</h2>
+  <p>Tencent Cloud IM, your S3-compatible object storage, and any OpenSubtitles or OMDb services you configure yourself. Their processing is governed by their own terms.</p>
+
+  <h2>Deletion</h2>
+  <p>In the app, open Me → Delete Account to clear on-device configuration, session, nickname/avatar objects. Pre-provisioned IM accounts that must be removed from the console should be handled by the operator.</p>
+
+  <h2>Contact</h2>
+  <p>Questions and reports: <a href="../support/">Support</a> or <a href="https://github.com/chaishuanzhu/Paircast/issues/new">GitHub Issues</a>.</p>
+</body>
+</html>
