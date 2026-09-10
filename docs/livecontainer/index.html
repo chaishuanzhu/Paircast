@@ -15,7 +15,8 @@
     p { color: var(--muted); margin: 0 0 1rem; }
     code, a.btn { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     .url { display: block; word-break: break-all; padding: 0.85rem 1rem; border-radius: 10px; background: color-mix(in srgb, var(--fg) 6%, transparent); margin: 1rem 0 1.5rem; }
-    a.btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; padding: 0.7rem 1rem; border-radius: 10px; font-weight: 600; }
+    a.btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; padding: 0.7rem 1rem; border-radius: 10px; font-weight: 600; margin: 0 0.5rem 0.5rem 0; }
+    a.btn.secondary { background: color-mix(in srgb, var(--fg) 12%, transparent); color: var(--fg); }
     ol { padding-left: 1.2rem; color: var(--muted); }
   </style>
 </head>
@@ -24,11 +25,15 @@
     <h1>Paircast</h1>
     <p>LiveContainer / AltStore source — updates automatically when a new GitHub Release IPA is published.</p>
     <code class="url">https://blog.chaisz.com/Paircast/source.json</code>
-    <p><a class="btn" href="livecontainer://source?url=https%3A%2F%2Fblog.chaisz.com%2FPaircast%2Fsource.json">Add in LiveContainer</a></p>
+    <p>
+      <a class="btn" href="livecontainer://source?url=https%3A%2F%2Fblog.chaisz.com%2FPaircast%2Fsource.json">Add in LiveContainer</a>
+      <a class="btn secondary" href="./open.html">邀请链接中转 / 快捷指令</a>
+    </p>
     <ol>
       <li>Open LiveContainer → Sources → +</li>
       <li>Paste the URL above, or tap the button on this page from your iPhone</li>
       <li>Install / update <strong>Paircast</strong> from the source</li>
+      <li>For <code>paircast://</code> invite links, use the bridge shortcut or <a href="./open.html">open.html</a></li>
     </ol>
   </main>
 </body>

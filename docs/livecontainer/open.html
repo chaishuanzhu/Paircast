@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paircast → LiveContainer</title>
+  <style>
+    :root { color-scheme: light dark; --fg:#111; --muted:#666; --accent:#1a73e8; --bg:#f6f7f9; --card:#fff; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fg:#f2f2f2; --muted:#aaa; --bg:#121417; --card:#1c1f24; }
+    }
+    body { margin:0; font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--fg); background:var(--bg); }
+    main { max-width:36rem; margin:0 auto; padding:2.5rem 1.25rem 4rem; }
+    h1 { font-size:1.5rem; margin:0 0 .35rem; }
+    p, li { color:var(--muted); }
+    .card { background:var(--card); border-radius:14px; padding:1rem 1.1rem; margin:1rem 0 1.4rem; }
+    textarea { width:100%; min-height:5.5rem; box-sizing:border-box; border:1px solid color-mix(in srgb,var(--fg) 18%,transparent); border-radius:10px; padding:.75rem; font:inherit; background:transparent; color:var(--fg); }
+    .row { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:.8rem; }
+    button, a.btn { appearance:none; border:0; border-radius:10px; padding:.7rem 1rem; font:inherit; font-weight:600; text-decoration:none; display:inline-block; cursor:pointer; }
+    button.primary, a.btn.primary { background:var(--accent); color:#fff; }
+    button.ghost, a.btn.ghost { background:color-mix(in srgb,var(--fg) 8%,transparent); color:var(--fg); }
+    code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9em; word-break:break-all; }
+    .out { margin-top:.8rem; }
+    ol { padding-left:1.2rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>经 LiveContainer 打开邀请</h1>
+    <p>系统无法直接把 <code>paircast://</code> 交给容器内 App。把链接 Base64 后走 <code>livecontainer://open-url</code> 即可中转。</p>
+
+    <div class="card">
+      <strong>快捷指令（推荐）</strong>
+      <p style="margin:.4rem 0 0">在 iPhone 上下载并添加后：复制邀请链接 → 运行快捷指令；也可从分享菜单选用。</p>
+      <div class="row">
+        <a class="btn primary" href="./Paircast-via-LiveContainer.shortcut">下载快捷指令</a>
+        <a class="btn ghost" href="./">软件源说明</a>
+      </div>
+      <p style="margin:.8rem 0 0;font-size:.92rem">添加失败时：打开「快捷指令」App → 文件 App 里点该文件 → 「添加快捷指令」。首次运行需允许打开 LiveContainer。</p>
+    </div>
+
+    <div class="card">
+      <strong>网页中转</strong>
+      <p style="margin:.4rem 0 .6rem">把邀请链接贴到下面，点打开（需已安装 LiveContainer，且已装 Paircast）。</p>
+      <textarea id="url" placeholder="paircast://watch?roomId=…&amp;movieId=…&amp;hostUserId=…"></textarea>
+      <div class="row">
+        <button class="primary" type="button" id="open">打开 LiveContainer</button>
+        <button class="ghost" type="button" id="paste">从剪贴板粘贴</button>
+        <button class="ghost" type="button" id="copy">复制中转链接</button>
+      </div>
+      <div class="out"><code id="preview"></code></div>
+    </div>
+
+    <ol>
+      <li>快捷指令逻辑：输入 URL → Base64（无换行）→ 打开 <code>livecontainer://open-url?url=…</code></li>
+      <li>LiveContainer 收到后会把原始 <code>paircast://</code> 交给已安装的 Paircast</li>
+      <li>若弹出「运行 App」，选允许即可</li>
+    </ol>
+  </main>
+  <script>
+    const input = document.getElementById('url');
+    const preview = document.getElementById('preview');
+
+    function extract(text) {
+      const m = String(text || '').match(/paircast:\/\/[^\s<>"']+/i);
+      return m ? m[0] : String(text || '').trim();
+    }
+
+    function toLC(raw) {
+      const src = extract(raw);
+      if (!src) throw new Error('请粘贴 paircast:// 链接');
+      // paircast:// is ASCII; standard base64 is what LiveContainer expects
+      const b64 = btoa(src);
+      return 'livecontainer://open-url?url=' + b64;
+    }
+
+    function refresh() {
+      try {
+        preview.textContent = toLC(input.value);
+      } catch (e) {
+        preview.textContent = '';
+      }
+    }
+
+    document.getElementById('open').onclick = () => {
+      try {
+        const lc = toLC(input.value);
+        preview.textContent = lc;
+        location.href = lc;
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+
+    document.getElementById('copy').onclick = async () => {
+      try {
+        const lc = toLC(input.value);
+        preview.textContent = lc;
+        await navigator.clipboard.writeText(lc);
+        alert('已复制中转链接');
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+
+    document.getElementById('paste').onclick = async () => {
+      try {
+        input.value = await navigator.clipboard.readText();
+        refresh();
+      } catch (e) {
+        alert('无法读取剪贴板，请手动粘贴');
+      }
+    };
+
+    input.addEventListener('input', refresh);
+
+    // ?url=paircast://... auto-open
+    const params = new URLSearchParams(location.search);
+    const preset = params.get('url');
+    if (preset) {
+      input.value = preset;
+      refresh();
+      if (params.get('auto') === '1') {
+        try { location.href = toLC(preset); } catch (_) {}
+      }
+    }
+  </script>
+</body>
+</html>
