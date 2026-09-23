@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paircast 使用说明</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1.25rem 3rem; line-height: 1.55; color: #111; }
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.2rem; margin-top: 2rem; }
+    h3 { font-size: 1.05rem; margin-top: 1.35rem; }
+    .lang { font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .lang a { margin-right: 0.75rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0.75rem 0 1.25rem; }
+    th, td { border: 1px solid #ddd; padding: 0.45rem 0.55rem; text-align: left; vertical-align: top; }
+    th { background: #f6f6f6; }
+    code { font-size: 0.88em; background: #f3f3f3; padding: 0.1em 0.35em; border-radius: 4px; }
+    .note { background: #f7f9fc; border-left: 3px solid #3b82f6; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    .warn { background: #fff8f0; border-left: 3px solid #f59e0b; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    ol li, ul li { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <p class="lang"><a href="../../en-US/guide/">English</a><a href="./">简体中文</a></p>
+  <h1>Paircast 使用说明</h1>
+  <p>Paircast 是<strong>邀请制</strong>私人云同步播放工具：影片来自你自己的对象存储，账号由管理员在腾讯云 IM 中预置，应用内<strong>不提供注册</strong>。</p>
+
+  <div class="note">
+    最快上手：让管理员发给你一条 <code>paircast://config?…</code> 配置链接 → 在登录页打开「服务配置」粘贴导入 → 用分配的 User ID 登录。
+  </div>
+
+  <h2>1. 整体使用流程</h2>
+  <ol>
+    <li>完成<strong>服务配置</strong>（导入链接或手动填写）。</li>
+    <li>使用管理员分配的 <strong>User ID</strong> 登录（无需密码；UserSig 由本机根据 IM SecretKey 自动生成）。</li>
+    <li>在<strong>片库</strong>浏览 Bucket 中的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>。</li>
+    <li>点开影片创建/加入<strong>房间</strong>，同步播放，并可边看边聊。</li>
+    <li>通过邀请链接把好友拉进同一房间。</li>
+  </ol>
+
+  <h2>2. 服务配置从哪里填、值从哪里拿</h2>
+  <p>入口：登录页右上角 / 「我的」→ <strong>服务配置</strong>。</p>
+  <div class="warn">
+    「分享配置」生成的链接含 IM 与对象存储密钥，只发给可信好友。导入成功后请<strong>重新登录</strong>。
+  </div>
+
+  <h3>2.1 腾讯云 IM（必填）</h3>
+  <table>
+    <thead>
+      <tr><th>App 字段</th><th>从哪里获取</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>SDKAppID</code></td>
+        <td><a href="https://console.cloud.tencent.com/im">腾讯云 IM 控制台</a> → 应用列表 / 应用配置</td>
+        <td>数字 App ID</td>
+      </tr>
+      <tr>
+        <td><code>SecretKey</code></td>
+        <td>同一应用的密钥管理（用于签发 UserSig）</td>
+        <td>保存在本机钥匙串；登录时本地生成 UserSig，用户不手动填</td>
+      </tr>
+      <tr>
+        <td>登录用的 <code>User ID</code></td>
+        <td>IM 控制台 → 账号管理（或你的用户导入方式）</td>
+        <td>需管理员<strong>预先创建</strong>；App 内无注册入口</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>控制台文档可参考：<a href="https://cloud.tencent.com/document/product/269">腾讯云 IM 文档</a>。</p>
+
+  <h3>2.2 对象存储（必填）</h3>
+  <p>支持：七牛云（S3）、阿里云 OSS、腾讯云 COS、自建 MinIO。需填 AccessKey、SecretKey、Bucket、Endpoint；其余可选。</p>
+  <table>
+    <thead>
+      <tr><th>App 字段</th><th>从哪里获取</th><th>注意</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>提供商</td>
+        <td>按你实际使用的云选择</td>
+        <td>决定 Endpoint 校验规则</td>
+      </tr>
+      <tr>
+        <td><code>AccessKey</code> / <code>SecretKey</code></td>
+        <td>对应云厂商的密钥/访问密钥控制台</td>
+        <td>建议使用权限最小化的子账号密钥</td>
+      </tr>
+      <tr>
+        <td><code>Bucket</code></td>
+        <td>对象存储空间/桶名称</td>
+        <td>影片放在此桶内（可用 Prefix 限定目录）</td>
+      </tr>
+      <tr>
+        <td><code>Endpoint</code></td>
+        <td>该地域的 <strong>S3/OSS/COS API 域名</strong>（不要带 <code>https://</code> 和路径）</td>
+        <td><strong>不要</strong>把 CDN/自定义下载域名填到这里</td>
+      </tr>
+      <tr>
+        <td><code>Region</code>（可选）</td>
+        <td>控制台显示的地域 ID</td>
+        <td>常可留空，App 会从 Endpoint 推断</td>
+      </tr>
+      <tr>
+        <td>自定义域名（可选）</td>
+        <td>绑定到 Bucket 的 HTTPS 域名</td>
+        <td>主要用于头像等下载；须已在云厂商开通证书</td>
+      </tr>
+      <tr>
+        <td><code>Prefix</code>（可选）</td>
+        <td>桶内目录前缀，如 <code>movies/</code></td>
+        <td>只列出该前缀下的影片</td>
+      </tr>
+      <tr>
+        <td>HTTPS / 路径风格 URL</td>
+        <td>—</td>
+        <td>公有云一般开 HTTPS；MinIO 常关 HTTPS、开 Path-Style</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>各厂商 Endpoint 示例</h4>
+  <table>
+    <thead>
+      <tr><th>提供商</th><th>控制台入口（示例）</th><th>Endpoint 示例</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>七牛云</td>
+        <td><a href="https://portal.qiniu.com/kodo">对象存储 Kodo</a>（使用 S3 兼容域名）</td>
+        <td><code>s3.cn-south-1.qiniucs.com</code></td>
+      </tr>
+      <tr>
+        <td>阿里云 OSS</td>
+        <td><a href="https://oss.console.aliyun.com/">OSS 控制台</a> → Bucket 概览中的外网 Endpoint</td>
+        <td><code>oss-cn-hangzhou.aliyuncs.com</code></td>
+      </tr>
+      <tr>
+        <td>腾讯云 COS</td>
+        <td><a href="https://console.cloud.tencent.com/cos">COS 控制台</a> → 桶配置中的访问域名（地域域名）</td>
+        <td><code>cos.ap-guangzhou.myqcloud.com</code></td>
+      </tr>
+      <tr>
+        <td>MinIO</td>
+        <td>自建服务地址</td>
+        <td><code>192.168.1.10:9000</code>（主机:端口）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 扩展（可选）</h3>
+  <table>
+    <thead>
+      <tr><th>App 字段</th><th>从哪里获取</th><th>用途</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>OpenSubtitles API Key</td>
+        <td><a href="https://www.opensubtitles.com/en/consumers">OpenSubtitles Consumers</a> 申请</td>
+        <td>在线检索/下载字幕</td>
+      </tr>
+      <tr>
+        <td>OMDb API Key</td>
+        <td><a href="http://www.omdbapi.com/apikey.aspx">OMDb API Key</a></td>
+        <td>按文件名补全海报等信息（不抓取豆瓣/IMDb）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. 导入 / 分享配置</h2>
+  <ol>
+    <li><strong>导入</strong>：服务配置 → 粘贴导入 → 确认覆盖 → 按提示重新登录。</li>
+    <li>也可直接打开管理员发来的 <code>paircast://config?args=…</code> 深链。</li>
+    <li><strong>分享</strong>：配置完整后点「分享配置」，生成加密链接（含密钥，勿公开张贴）。</li>
+  </ol>
+
+  <h2>4. 登录与片库</h2>
+  <ul>
+    <li>仅输入管理员分配的 <strong>User ID</strong>，点登录。</li>
+    <li>若提示未完成配置，先回服务配置检查 IM + 对象存储是否齐全。</li>
+    <li>片库为空时：确认 Bucket（及 Prefix）下确有 <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code>，且密钥有列举/下载权限。</li>
+  </ul>
+
+  <h2>5. 同步观看与邀请</h2>
+  <ol>
+    <li>在片库点选影片 → 进入房间（房主可控制播放同步）。</li>
+    <li><strong>邀请好友</strong>：房间内分享系统面板或复制邀请链接<br /><code>paircast://watch?roomId=…&amp;movieId=…&amp;hostUserId=…</code></li>
+    <li>好友需先完成同一套服务配置并登录对应 User ID，再打开邀请链接。</li>
+    <li>房间内可文字聊天；长按消息可<strong>屏蔽</strong>（本机）或<strong>举报</strong>。</li>
+  </ol>
+
+  <h2>6. 「我的」常用功能</h2>
+  <ul>
+    <li>头像 / 昵称、主题、语言</li>
+    <li>服务配置、致谢与隐私/支持链接</li>
+    <li><strong>退出登录</strong>：保留本机云配置</li>
+    <li><strong>删除账号</strong>：清除本机配置、会话、头像等；控制台里的 IM 账号需管理员另行停用</li>
+  </ul>
+
+  <h2>7. 常见问题</h2>
+  <ul>
+    <li><strong>配置链接无效</strong>：确认完整复制；导入失败不会覆盖已有配置。</li>
+    <li><strong>导入后仍像旧配置</strong>：按提示重新登录；导入后不要立刻用空的密钥栏再点保存。</li>
+    <li><strong>Endpoint 报错</strong>：必须是 API 地域域名（见上表），自定义 CDN 域名填「自定义域名」栏。</li>
+    <li><strong>无法登录</strong>：User ID 是否已在 IM 控制台创建；SDKAppID/SecretKey 是否属于同一应用。</li>
+  </ul>
+
+  <h2>8. 更多</h2>
+  <ul>
+    <li><a href="../support/">支持页</a> · <a href="../privacy/">隐私政策</a></li>
+    <li>问题与故障：<a href="https://github.com/chaishuanzhu/Paircast/issues/new">GitHub Issues</a></li>
+  </ul>
+</body>
+</html>

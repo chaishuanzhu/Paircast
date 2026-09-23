@@ -426,6 +426,40 @@
         }
       }
     },
+    "Configuration Guide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration Guide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置说明"
+          }
+        }
+      }
+    },
+    "Where to get SDKAppID, SecretKey, Endpoint, and how to use Paircast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where to get SDKAppID, SecretKey, Endpoint, and how to use Paircast"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各字段从哪里获取、如何使用 Paircast"
+          }
+        }
+      }
+    },
     "Configuration is too large to share or import": {
       "extractionState": "manual",
       "localizations": {

@@ -208,6 +208,14 @@ public struct ServiceConfigView: View {
     private var formContent: some View {
             Form {
                 Section {
+                    Link(destination: configurationGuideURL) {
+                        Label("Configuration Guide", systemImage: "book.fill")
+                    }
+                } footer: {
+                    Text("Where to get SDKAppID, SecretKey, Endpoint, and how to use Paircast")
+                }
+
+                Section {
                     ConfigTransferRow(
                         title: "Paste to Import",
                         subtitle: "Paste a paircast://config?args=… link",
@@ -362,6 +370,17 @@ public struct ServiceConfigView: View {
                     .environment(\.locale, locale)
                 }
             }
+    }
+
+    private var docsLocalePath: String {
+        if locale.identifier.hasPrefix("zh") {
+            return "zh-Hans"
+        }
+        return "en-US"
+    }
+
+    private var configurationGuideURL: URL {
+        URL(string: "https://blog.chaisz.com/Paircast/\(docsLocalePath)/guide/")!
     }
 
     private func storageFooter(for provider: ObjectStorageProvider) -> String {

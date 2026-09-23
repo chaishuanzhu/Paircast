@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paircast User Guide</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1.25rem 3rem; line-height: 1.55; color: #111; }
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.2rem; margin-top: 2rem; }
+    h3 { font-size: 1.05rem; margin-top: 1.35rem; }
+    .lang { font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .lang a { margin-right: 0.75rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0.75rem 0 1.25rem; }
+    th, td { border: 1px solid #ddd; padding: 0.45rem 0.55rem; text-align: left; vertical-align: top; }
+    th { background: #f6f6f6; }
+    code { font-size: 0.88em; background: #f3f3f3; padding: 0.1em 0.35em; border-radius: 4px; }
+    .note { background: #f7f9fc; border-left: 3px solid #3b82f6; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    .warn { background: #fff8f0; border-left: 3px solid #f59e0b; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    ol li, ul li { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <p class="lang"><a href="./">English</a><a href="../../zh-Hans/guide/">简体中文</a></p>
+  <h1>Paircast User Guide</h1>
+  <p>Paircast is an <strong>invite-only</strong> private cloud sync player. Videos come from <strong>your own</strong> object storage. Accounts are provisioned in Tencent Cloud IM by an admin — there is <strong>no in-app sign-up</strong>.</p>
+
+  <div class="note">
+    Fast path: get a <code>paircast://config?…</code> link from your admin → Login → Service Configuration → Paste to Import → sign in with your assigned User ID.
+  </div>
+
+  <h2>1. Typical flow</h2>
+  <ol>
+    <li>Finish <strong>Service Configuration</strong> (import a link or fill fields manually).</li>
+    <li>Sign in with an admin-assigned <strong>User ID</strong> (no password; UserSig is generated on-device from the IM SecretKey).</li>
+    <li>Browse <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files in your bucket on the <strong>Library</strong> screen.</li>
+    <li>Open a title to create/join a <strong>room</strong> for synced playback and chat.</li>
+    <li>Share an invite link so friends can join the same room.</li>
+  </ol>
+
+  <h2>2. Where each configuration value comes from</h2>
+  <p>Open <strong>Service Configuration</strong> from the login screen or <strong>Me</strong>.</p>
+  <div class="warn">
+    Shared config links contain IM and object-storage secrets. Share only with trusted friends. After a successful import, <strong>sign in again</strong>.
+  </div>
+
+  <h3>2.1 Tencent Cloud IM (required)</h3>
+  <table>
+    <thead>
+      <tr><th>Field in App</th><th>Where to get it</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>SDKAppID</code></td>
+        <td><a href="https://console.cloud.tencent.com/im">Tencent Cloud IM console</a> → your app</td>
+        <td>Numeric application ID</td>
+      </tr>
+      <tr>
+        <td><code>SecretKey</code></td>
+        <td>Same app → key management (UserSig signing key)</td>
+        <td>Stored in Keychain; UserSig is generated locally — users never paste a UserSig</td>
+      </tr>
+      <tr>
+        <td>Login <code>User ID</code></td>
+        <td>IM console → account management (or your import tooling)</td>
+        <td>Must be <strong>created by an admin</strong> first</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Docs: <a href="https://www.tencentcloud.com/document/product/1047">Tencent Cloud IM</a>.</p>
+
+  <h3>2.2 Object storage (required)</h3>
+  <p>Providers: Qiniu (S3), Alibaba Cloud OSS, Tencent Cloud COS, MinIO. Required: AccessKey, SecretKey, Bucket, Endpoint.</p>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Where to get it</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Provider</td>
+        <td>Match your cloud</td>
+        <td>Controls Endpoint validation</td>
+      </tr>
+      <tr>
+        <td><code>AccessKey</code> / <code>SecretKey</code></td>
+        <td>Cloud IAM / key console</td>
+        <td>Prefer least-privilege keys</td>
+      </tr>
+      <tr>
+        <td><code>Bucket</code></td>
+        <td>Bucket / space name</td>
+        <td>Videos live here (optional Prefix)</td>
+      </tr>
+      <tr>
+        <td><code>Endpoint</code></td>
+        <td>Regional <strong>API</strong> host (no <code>https://</code>, no path)</td>
+        <td><strong>Do not</strong> put a CDN / custom download domain here</td>
+      </tr>
+      <tr>
+        <td><code>Region</code> (optional)</td>
+        <td>Region id from the console</td>
+        <td>Often blank — inferred from Endpoint</td>
+      </tr>
+      <tr>
+        <td>Custom domain (optional)</td>
+        <td>HTTPS domain bound to the bucket</td>
+        <td>Mostly for avatar downloads; enable HTTPS cert in the cloud console</td>
+      </tr>
+      <tr>
+        <td><code>Prefix</code> (optional)</td>
+        <td>e.g. <code>movies/</code></td>
+        <td>Limits library listing</td>
+      </tr>
+      <tr>
+        <td>HTTPS / Path-Style URL</td>
+        <td>—</td>
+        <td>Public clouds: HTTPS on; MinIO often HTTPS off + Path-Style on</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4>Endpoint examples</h4>
+  <table>
+    <thead>
+      <tr><th>Provider</th><th>Console</th><th>Example Endpoint</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Qiniu</td>
+        <td><a href="https://portal.qiniu.com/kodo">Kodo</a> (S3-compatible host)</td>
+        <td><code>s3.cn-south-1.qiniucs.com</code></td>
+      </tr>
+      <tr>
+        <td>Alibaba Cloud OSS</td>
+        <td><a href="https://oss.console.aliyun.com/">OSS console</a> → public endpoint</td>
+        <td><code>oss-cn-hangzhou.aliyuncs.com</code></td>
+      </tr>
+      <tr>
+        <td>Tencent Cloud COS</td>
+        <td><a href="https://console.cloud.tencent.com/cos">COS console</a> → regional domain</td>
+        <td><code>cos.ap-guangzhou.myqcloud.com</code></td>
+      </tr>
+      <tr>
+        <td>MinIO</td>
+        <td>Your server</td>
+        <td><code>192.168.1.10:9000</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 Extensions (optional)</h3>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Where to get it</th><th>Used for</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>OpenSubtitles API Key</td>
+        <td><a href="https://www.opensubtitles.com/en/consumers">OpenSubtitles Consumers</a></td>
+        <td>Online subtitle search/download</td>
+      </tr>
+      <tr>
+        <td>OMDb API Key</td>
+        <td><a href="http://www.omdbapi.com/apikey.aspx">OMDb API Key</a></td>
+        <td>Optional posters from filenames (does not scrape Douban/IMDb)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Import / share configuration</h2>
+  <ol>
+    <li><strong>Import:</strong> Service Configuration → Paste to Import → confirm overwrite → sign in again.</li>
+    <li>Or open a <code>paircast://config?args=…</code> deep link.</li>
+    <li><strong>Share:</strong> Share Configuration creates an encrypted link (contains secrets).</li>
+  </ol>
+
+  <h2>4. Login and library</h2>
+  <ul>
+    <li>Enter only the assigned <strong>User ID</strong>.</li>
+    <li>If config is incomplete, finish IM + storage first.</li>
+    <li>Empty library: confirm the bucket (and prefix) has <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code> and the key can list/get objects.</li>
+  </ul>
+
+  <h2>5. Watch together and invites</h2>
+  <ol>
+    <li>Tap a title → room (host can drive sync).</li>
+    <li><strong>Invite:</strong> system share or copy<br /><code>paircast://watch?roomId=…&amp;movieId=…&amp;hostUserId=…</code></li>
+    <li>Friends need the same cloud config and a valid User ID before opening the invite.</li>
+    <li>Long-press a chat message to <strong>Block</strong> (local) or <strong>Report</strong>.</li>
+  </ol>
+
+  <h2>6. Me</h2>
+  <ul>
+    <li>Avatar, nickname, theme, language</li>
+    <li>Service Configuration, Acknowledgements, privacy/support links</li>
+    <li><strong>Sign out</strong> keeps local cloud config</li>
+    <li><strong>Delete Account</strong> clears on-device config/session/avatar; console IM users must be disabled by an admin</li>
+  </ul>
+
+  <h2>7. Troubleshooting</h2>
+  <ul>
+    <li><strong>Invalid config link:</strong> copy the full URL; failed imports do not overwrite existing Keychain config.</li>
+    <li><strong>Import looks OK but nothing changed:</strong> sign in again; do not Save empty SecureFields right after import.</li>
+    <li><strong>Endpoint errors:</strong> use the API regional host (table above), not a CDN domain.</li>
+    <li><strong>Login fails:</strong> User ID must exist in the same IM app as SDKAppID/SecretKey.</li>
+  </ul>
+
+  <h2>8. More</h2>
+  <ul>
+    <li><a href="../support/">Support</a> · <a href="../privacy/">Privacy</a></li>
+    <li>Issues: <a href="https://github.com/chaishuanzhu/Paircast/issues/new">GitHub Issues</a></li>
+  </ul>
+</body>
+</html>
