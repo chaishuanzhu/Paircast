@@ -28,14 +28,17 @@ platform :ios do
   APP_IDENTIFIER = "com.chaisz.tandem"
   TEAM_ID = "8PHCHYD8X3"
   PROFILE_NAME = "Tandem AppStore"
-  PROJECT_PATH = "Projects/App/Paircast.xcodeproj"
-  WORKSPACE_PATH = "Paircast.xcworkspace"
+
+  # Always resolve against the repo root (parent of ./fastlane), not Dir.pwd.
+  def project_root
+    File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+  end
 
   desc "Unlock iOSDevKeychain-db for headless codesign"
   private_lane :unlock_ios_dev_keychain do
     password = ENV["KEYCHAIN_PASSWORD"].to_s
     UI.user_error!(
-      "KEYCHAIN_PASSWORD is required — password for ~/Library/Keychains/#{KEYCHAIN_NAME}"
+      "KEYCHAIN_PASSWORD is required - password for ~/Library/Keychains/#{KEYCHAIN_NAME}"
     ) if password.strip.empty?
 
     keychain_path = File.expand_path("~/Library/Keychains/#{KEYCHAIN_NAME}")
@@ -68,18 +71,32 @@ platform :ios do
   lane :archive_appstore do
     unlock_ios_dev_keychain
 
-    UI.user_error!("Missing #{WORKSPACE_PATH} — run: tuist install && tuist generate --no-open") unless Dir.exist?(WORKSPACE_PATH)
-    UI.user_error!("Missing #{PROJECT_PATH}") unless Dir.exist?(PROJECT_PATH)
+    root = project_root
+    Dir.chdir(root)
 
-    artifacts = File.expand_path(".asc/artifacts")
-    FileUtils.mkdir_p(artifacts)
+    workspace_path = File.join(root, "Paircast.xcworkspace")
+    project_path = File.join(root, "Projects/App/Paircast.xcodeproj")
+    export_options = File.join(root, ".github/ci/ExportOptions.plist")
+    artifacts = File.join(root, ".asc", "artifacts")
     archive_path = File.join(artifacts, "Paircast.xcarchive")
-    export_options = File.expand_path(".github/ci/ExportOptions.plist")
-    UI.user_error!("Missing #{export_options}") unless File.exist?(export_options)
+
+    unless Dir.exist?(workspace_path)
+      UI.user_error!(
+        "Missing #{workspace_path} (cwd=#{Dir.pwd}). Run: tuist install && tuist generate --no-open"
+      )
+    end
+    unless Dir.exist?(project_path)
+      UI.user_error!("Missing #{project_path}")
+    end
+    unless File.exist?(export_options)
+      UI.user_error!("Missing #{export_options}")
+    end
+
+    FileUtils.mkdir_p(artifacts)
 
     update_code_signing_settings(
       use_automatic_signing: false,
-      path: PROJECT_PATH,
+      path: project_path,
       code_sign_identity: "Apple Distribution",
       bundle_identifier: APP_IDENTIFIER,
       profile_name: PROFILE_NAME,
@@ -89,7 +106,7 @@ platform :ios do
     puts("Create an archive for App Store submission")
     gym(
       scheme: "Paircast",
-      workspace: WORKSPACE_PATH,
+      workspace: workspace_path,
       configuration: "Release",
       clean: true,
       destination: "generic/platform=iOS",
@@ -107,7 +124,7 @@ platform :ios do
     # Tuist regenerates the project next CI run; reset like Moments for local safety.
     update_code_signing_settings(
       use_automatic_signing: true,
-      path: PROJECT_PATH
+      path: project_path
     )
 
     puts("If you run this lane on your local machine, should not commit the changes for your project file to Git")
@@ -118,5 +135,4 @@ platform :ios do
     build = get_ipa_info_plist_value(ipa: ipa, key: "CFBundleVersion")
     UI.success("Done: #{ipa} (version #{version} build #{build})")
   end
-
 end
