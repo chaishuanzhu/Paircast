@@ -42,12 +42,10 @@ jobs:
           ./Scripts/download-vlckit.sh
           ./Scripts/download-imsdk.sh
 
-      - name: Prepare code signing
-        env:
-          # Optional: unlock + set key partition list for headless codesign.
-          # Set repo secret KEYCHAIN_PASSWORD to the macOS login keychain password.
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: ./Scripts/ci-prepare-signing.sh
+      - name: Install Ruby gems
+        run: |
+          bundle config set --local path 'vendor/bundle'
+          bundle install --jobs 4 --retry 3
 
       - name: Generate Xcode project
         run: |
@@ -56,8 +54,15 @@ jobs:
           tuist install
           tuist generate --no-open
 
-      - name: Build IPA
-        run: ./Scripts/build-ipa.sh
+      - name: Archive App Store IPA (Fastlane)
+        env:
+          # Password for ~/Library/Keychains/iOSDevKeychain-db (not login.keychain).
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          # Required by fastlane on many CI shells:
+          # https://docs.fastlane.tools/best-practices/continuous-integration/
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+        run: bundle exec fastlane archive_appstore
 
       - name: Publish GitHub Release asset
         env:

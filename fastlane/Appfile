@@ -1,0 +1,4 @@
+# frozen_string_literal: true
+
+app_identifier("com.chaisz.tandem")
+team_id("8PHCHYD8X3")
