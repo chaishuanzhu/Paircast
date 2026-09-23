@@ -107,6 +107,20 @@ public final class InMemoryChatGateway: ChatGateway, @unchecked Sendable {
         return message
     }
 
+    public func sendSticker(roomId: String, sticker: StickerRef, sender: User) async throws -> ChatMessage {
+        let message = ChatMessage(
+            id: UUID().uuidString,
+            roomId: roomId,
+            senderId: sender.id,
+            senderNickname: sender.nickname,
+            text: ChatStickerCodec.fallbackText,
+            kind: .sticker,
+            sticker: sticker
+        )
+        append(message)
+        return message
+    }
+
     public func messages(roomId: String) -> AsyncStream<ChatMessage> {
         AsyncStream { continuation in
             let token = UUID()

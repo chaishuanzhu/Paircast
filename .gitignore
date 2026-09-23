@@ -13,6 +13,7 @@ graph.png
 .build/
 .swiftpm/
 docs/.DS_Store
+stickers-dist/
 Vendor/VLCKitSPM/VLCKit-all.xcframework/
 Vendor/VLCKitSPM/VLCKit-all.xcframework.zip
 Vendor/ImSDKSPM/ImSDK_Plus.xcframework/

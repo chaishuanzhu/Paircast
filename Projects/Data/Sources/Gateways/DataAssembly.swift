@@ -54,4 +54,8 @@ public enum DataAssembly {
     public static func makeSharedSubtitleStorage() -> SharedSubtitleStorageGateway {
         OSSSharedSubtitleStorage()
     }
+
+    public static func makeStickerCatalog() -> StickerCatalogGateway {
+        StickerCatalogStore()
+    }
 }

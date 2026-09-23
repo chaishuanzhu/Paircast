@@ -182,7 +182,8 @@ final class AppRouteDeepLinkTests: XCTestCase {
             chatGateway: FakeChat(),
             syncGateway: FakeSync(),
             subtitleGateway: FakeSubtitle(),
-            sharedSubtitleStorage: FakeSharedSubtitle()
+            sharedSubtitleStorage: FakeSharedSubtitle(),
+            stickerCatalog: FakeStickers()
         )
     }
 }
@@ -240,9 +241,30 @@ private final class FakeChat: ChatGateway, @unchecked Sendable {
     func send(roomId: String, text: String, sender: User) async throws -> ChatMessage {
         ChatMessage(id: "1", roomId: roomId, senderNickname: sender.nickname, text: text)
     }
+    func sendSticker(roomId: String, sticker: StickerRef, sender: User) async throws -> ChatMessage {
+        ChatMessage(
+            id: "1",
+            roomId: roomId,
+            senderNickname: sender.nickname,
+            text: ChatStickerCodec.fallbackText,
+            kind: .sticker,
+            sticker: sticker
+        )
+    }
     func messages(roomId: String) -> AsyncStream<ChatMessage> { AsyncStream { $0.finish() } }
     func postSystemMessage(roomId: String, text: String) async throws -> ChatMessage {
         ChatMessage(id: "1", roomId: roomId, senderNickname: "System", text: text, kind: .system)
+    }
+}
+private final class FakeStickers: StickerCatalogGateway, @unchecked Sendable {
+    func loadCatalog(config: AppCloudConfig) async throws -> [StickerPackSummary] { [] }
+    func loadPack(packId: String, config: AppCloudConfig) async throws -> StickerPack {
+        StickerPack(packId: packId, name: packId, version: 1)
+    }
+    func imageData(packId: String, fileName: String, config: AppCloudConfig) async throws -> Data { Data() }
+    func imageData(for ref: StickerRef, config: AppCloudConfig) async throws -> Data { Data() }
+    func imageURL(for ref: StickerRef, config: AppCloudConfig) async throws -> URL {
+        URL(string: "https://example.com/\(ref.bindKey).gif")!
     }
 }
 private final class FakeSync: PlaybackSyncGateway, @unchecked Sendable {

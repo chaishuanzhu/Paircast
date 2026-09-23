@@ -20,6 +20,8 @@ let project = Project(
                 "CFBundleShortVersionString": "$(MARKETING_VERSION)",
                 "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
                 "UILaunchScreen": [:],
+                // Explicit arm64 — Tuist's default armv7 blocks modern review devices.
+                "UIRequiredDeviceCapabilities": ["arm64"],
                 "CFBundleDisplayName": "Paircast",
                 "CFBundleURLTypes": [
                     [
@@ -58,7 +60,7 @@ let project = Project(
                 "PROVISIONING_PROFILE_SPECIFIER": "Tandem AppStore",
                 "EXCLUDED_ARCHS[sdk=iphoneos*]": "armv7 armv7s",
                 "MARKETING_VERSION": "1.0.0",
-                "CURRENT_PROJECT_VERSION": "5",
+                "CURRENT_PROJECT_VERSION": "6",
             ])
         ),
         .target(

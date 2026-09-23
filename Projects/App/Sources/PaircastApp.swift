@@ -16,7 +16,8 @@ struct PaircastApp: App {
         chatGateway: DataAssembly.makeChatGateway(),
         syncGateway: DataAssembly.makeSyncGateway(),
         subtitleGateway: DataAssembly.makeSubtitleGateway(),
-        sharedSubtitleStorage: DataAssembly.makeSharedSubtitleStorage()
+        sharedSubtitleStorage: DataAssembly.makeSharedSubtitleStorage(),
+        stickerCatalog: DataAssembly.makeStickerCatalog()
     )
     @StateObject private var theme = ThemeStore()
     @StateObject private var language = LanguageStore()

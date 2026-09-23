@@ -272,6 +272,44 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
         return message
     }
 
+    public func sendSticker(
+        roomId: String,
+        sticker: StickerRef,
+        senderId: String? = nil,
+        senderNickname: String? = nil
+    ) async throws -> ChatMessage {
+        let payload = try ChatStickerCodec.encode(sticker)
+        let gid = Self.groupID(forRoomId: roomId)
+        let messageId: String = try await withCheckedThrowingContinuation { cont in
+            let box = MessageIDBox()
+            box.id = manager.sendGroupTextMessage(
+                text: payload,
+                to: gid,
+                priority: .PRIORITY_NORMAL,
+                succ: {
+                    cont.resume(returning: box.id.isEmpty ? UUID().uuidString : box.id)
+                },
+                fail: { code, desc in
+                    cont.resume(throwing: Self.mapError(code: code, desc: desc))
+                }
+            ) ?? ""
+        }
+        let message = ChatMessage(
+            id: messageId,
+            roomId: roomId.lowercased(),
+            senderId: senderId ?? currentUserId,
+            senderNickname: senderNickname ?? currentUserId ?? "Me",
+            text: ChatStickerCodec.fallbackText,
+            kind: .sticker,
+            sticker: sticker
+        )
+        let conts = lock.withLock {
+            textContinuations[roomId.lowercased()]?.values.map { $0 } ?? []
+        }
+        conts.forEach { $0.yield(message) }
+        return message
+    }
+
     public func sendSystemText(roomId: String, text: String) async throws -> ChatMessage {
         try await sendText(roomId: roomId, text: text, asSystem: true)
     }
@@ -371,17 +409,32 @@ public final class TencentIMClient: NSObject, @unchecked Sendable {
     ) {
         guard let groupID, let text, !text.isEmpty else { return }
         let roomId = Self.roomId(fromGroupID: groupID)
-        let isSystem = text.hasPrefix(Self.systemPrefix)
-        let body = isSystem ? String(text.dropFirst(Self.systemPrefix.count)) : text
         let nick = sender?.nickName?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let message = ChatMessage(
-            id: msgID,
-            roomId: roomId,
-            senderId: sender?.userID,
-            senderNickname: isSystem ? "System" : (nick?.isEmpty == false ? nick! : (sender?.userID ?? "Unknown")),
-            text: body,
-            kind: isSystem ? .system : .user
-        )
+        let displayNick = nick?.isEmpty == false ? nick! : (sender?.userID ?? "Unknown")
+
+        let message: ChatMessage
+        if let sticker = ChatStickerCodec.decode(text) {
+            message = ChatMessage(
+                id: msgID,
+                roomId: roomId,
+                senderId: sender?.userID,
+                senderNickname: displayNick,
+                text: ChatStickerCodec.fallbackText,
+                kind: .sticker,
+                sticker: sticker
+            )
+        } else {
+            let isSystem = text.hasPrefix(Self.systemPrefix)
+            let body = isSystem ? String(text.dropFirst(Self.systemPrefix.count)) : text
+            message = ChatMessage(
+                id: msgID,
+                roomId: roomId,
+                senderId: sender?.userID,
+                senderNickname: isSystem ? "System" : displayNick,
+                text: body,
+                kind: isSystem ? .system : .user
+            )
+        }
         let conts = lock.withLock {
             textContinuations[roomId]?.values.map { $0 } ?? []
         }

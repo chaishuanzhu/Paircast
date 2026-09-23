@@ -148,6 +148,18 @@
     </tbody>
   </table>
 
+  <h3>2.2.1 聊天贴纸（可选）</h3>
+  <p>房间聊天的贴纸包从<strong>同一对象存储</strong>读取，目录约定：</p>
+  <ul>
+    <li><code>{Prefix?}stickers/catalog.json</code> — 包索引</li>
+    <li><code>{Prefix?}stickers/{pack_id}/pack.json</code> — 包清单</li>
+    <li><code>{Prefix?}stickers/{pack_id}/…</code> — 贴纸图片（png / gif 等）</li>
+  </ul>
+  <p>管理员把贴纸包上传到 Bucket 的 <code>stickers/</code> 后，成员即可在聊天输入栏的表情面板中使用。普通 Unicode 表情使用 Twemoji 图集展示。</p>
+  <p>仓库提供转换脚本：把本地表情包目录整理为上述结构后上传：</p>
+  <pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
+# 将 stickers-dist/ 内容上传到 Bucket 的 stickers/ 前缀</code></pre>
+
   <h3>2.3 扩展（可选）</h3>
   <table>
     <thead>

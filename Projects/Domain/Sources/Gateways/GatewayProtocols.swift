@@ -72,8 +72,19 @@ public protocol RoomGateway: AnyObject, Sendable {
 
 public protocol ChatGateway: AnyObject, Sendable {
     func send(roomId: String, text: String, sender: User) async throws -> ChatMessage
+    func sendSticker(roomId: String, sticker: StickerRef, sender: User) async throws -> ChatMessage
     func messages(roomId: String) -> AsyncStream<ChatMessage>
     func postSystemMessage(roomId: String, text: String) async throws -> ChatMessage
+}
+
+/// Loads sticker packs from the user's object storage `stickers/` folder.
+public protocol StickerCatalogGateway: Sendable {
+    func loadCatalog(config: AppCloudConfig) async throws -> [StickerPackSummary]
+    func loadPack(packId: String, config: AppCloudConfig) async throws -> StickerPack
+    func imageData(packId: String, fileName: String, config: AppCloudConfig) async throws -> Data
+    func imageData(for ref: StickerRef, config: AppCloudConfig) async throws -> Data
+    /// SigV4 presigned GET URL for a sticker asset (stable `cacheKey` = `ref.bindKey`).
+    func imageURL(for ref: StickerRef, config: AppCloudConfig) async throws -> URL
 }
 
 public protocol PlaybackSyncGateway: AnyObject, Sendable {

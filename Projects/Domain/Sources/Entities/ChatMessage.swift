@@ -7,6 +7,7 @@ public struct ChatMessage: Equatable, Sendable, Identifiable {
     public var senderNickname: String
     public var text: String
     public var kind: ChatMessageKind
+    public var sticker: StickerRef?
     public var createdAt: Date
 
     public init(
@@ -16,6 +17,7 @@ public struct ChatMessage: Equatable, Sendable, Identifiable {
         senderNickname: String,
         text: String,
         kind: ChatMessageKind = .user,
+        sticker: StickerRef? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -24,6 +26,7 @@ public struct ChatMessage: Equatable, Sendable, Identifiable {
         self.senderNickname = senderNickname
         self.text = text
         self.kind = kind
+        self.sticker = sticker
         self.createdAt = createdAt
     }
 }
@@ -31,4 +34,5 @@ public struct ChatMessage: Equatable, Sendable, Identifiable {
 public enum ChatMessageKind: String, Equatable, Sendable {
     case user
     case system
+    case sticker
 }

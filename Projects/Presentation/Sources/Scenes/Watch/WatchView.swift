@@ -530,6 +530,11 @@ public final class WatchViewModel: ObservableObject {
         _ = try? await session.chatGateway.send(roomId: room.id, text: text, sender: user)
     }
 
+    public func sendSticker(_ sticker: StickerRef) async {
+        guard let room, let user = session.currentUser else { return }
+        _ = try? await session.chatGateway.sendSticker(roomId: room.id, sticker: sticker, sender: user)
+    }
+
     public func canModerate(_ message: ChatMessage) -> Bool {
         guard message.kind != .system else { return false }
         guard let senderId = message.senderId, let me = session.currentUser?.id else { return false }
@@ -920,6 +925,7 @@ public struct WatchView: View {
     @State private var isFullscreen = false
     @State private var scrubProgress: CGFloat?
     @State private var chromeHideTask: Task<Void, Never>?
+    @State private var showEmojiPanel = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.openURL) private var openURL
     @Environment(\.locale) private var locale
@@ -947,7 +953,24 @@ public struct WatchView: View {
                 if !isFullscreen {
                     membersBar
                     chatList
-                    chatInput
+                        .layoutPriority(0)
+                        .simultaneousGesture(
+                            TapGesture().onEnded { dismissKeyboardAndEmojiPanel() }
+                        )
+                    VStack(spacing: 0) {
+                        chatInput
+                        if showEmojiPanel {
+                            ChatEmojiStickerPanel(
+                                draft: $viewModel.draft,
+                                catalog: session.stickerCatalog,
+                                config: session.config,
+                                onSendSticker: { ref in
+                                    Task { await viewModel.sendSticker(ref) }
+                                }
+                            )
+                        }
+                    }
+                    .layoutPriority(1)
                 }
             }
         }
@@ -1438,6 +1461,9 @@ public struct WatchView: View {
                     .foregroundStyle(TandemColors.tertiaryLabel)
                     .frame(maxWidth: .infinity)
                     .padding(.bottom, 8)
+                // Expand hit area so empty chat region also dismisses keyboard.
+                Color.clear
+                    .frame(maxWidth: .infinity, minHeight: 120)
             }
             .onChange(of: viewModel.messages.count) { _, _ in
                 if let last = viewModel.messages.last {
@@ -1449,6 +1475,21 @@ public struct WatchView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TandemColors.groupedBackground)
+        .contentShape(Rectangle())
+    }
+
+    private func dismissKeyboardAndEmojiPanel() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+        if showEmojiPanel {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showEmojiPanel = false
+            }
+        }
     }
 
     @ViewBuilder
@@ -1471,9 +1512,20 @@ public struct WatchView: View {
                             .font(.system(size: 12))
                             .foregroundStyle(TandemColors.secondaryLabel)
                     }
-                    Text(message.text)
-                        .font(.system(size: 15))
-                        .foregroundStyle(isMe ? Color.white : Color.primary)
+                    if message.kind == .sticker, let sticker = message.sticker {
+                        StickerImageView(
+                            ref: sticker,
+                            catalog: session.stickerCatalog,
+                            config: session.config,
+                            side: 120
+                        )
+                    } else {
+                        TwemojiText(
+                            message.text,
+                            font: .system(size: 15),
+                            foreground: isMe ? Color.white : Color.primary,
+                            emojiSize: 18
+                        )
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(isMe ? TandemColors.systemBlue : TandemColors.secondaryGrouped)
@@ -1485,6 +1537,7 @@ public struct WatchView: View {
                             style: .continuous
                         ))
                         .shadow(color: isMe ? .clear : Color.primary.opacity(0.06), radius: 1, y: 1)
+                    }
                 }
                 if isMe {
                     TandemAvatarView(userId: message.senderNickname.isEmpty ? (message.senderId ?? "?") : message.senderNickname, size: 32)
@@ -1507,30 +1560,54 @@ public struct WatchView: View {
     }
 
     private var chatInput: some View {
-        HStack(spacing: 8) {
-            TextField("Say something…", text: $viewModel.draft)
-                .font(.system(size: 15))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showEmojiPanel.toggle()
+                    }
+                } label: {
+                    Image(systemName: showEmojiPanel ? "keyboard" : "face.smiling")
+                        .font(.system(size: 22))
+                        .foregroundStyle(TandemColors.systemBlue)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+
+                TwemojiComposerField(
+                    text: $viewModel.draft,
+                    placeholder: String(localized: "Say something…"),
+                    isEmojiPanelOpen: showEmojiPanel,
+                    onBeganEditing: {
+                        if showEmojiPanel {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showEmojiPanel = false
+                            }
+                        }
+                    }
+                )
+                .frame(minHeight: 40)
                 .background(TandemColors.groupedBackground)
                 .clipShape(Capsule())
-            Button {
-                Task { await viewModel.sendChat() }
-            } label: {
-                Text("Send")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(TandemColors.systemBlue)
-                    .clipShape(Capsule())
+
+                Button {
+                    Task { await viewModel.sendChat() }
+                } label: {
+                    Text("Send")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(TandemColors.systemBlue)
+                        .clipShape(Capsule())
+                }
+                .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
             }
-            .disabled(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .opacity(viewModel.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
         .background(TandemColors.secondaryGrouped)
         .overlay(alignment: .top) {
             Rectangle()

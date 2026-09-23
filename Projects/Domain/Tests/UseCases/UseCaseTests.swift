@@ -256,6 +256,17 @@ private final class FakeChatGateway: ChatGateway, @unchecked Sendable {
     func send(roomId: String, text: String, sender: User) async throws -> ChatMessage {
         ChatMessage(id: UUID().uuidString, roomId: roomId, senderId: sender.id, senderNickname: sender.nickname, text: text)
     }
+    func sendSticker(roomId: String, sticker: StickerRef, sender: User) async throws -> ChatMessage {
+        ChatMessage(
+            id: UUID().uuidString,
+            roomId: roomId,
+            senderId: sender.id,
+            senderNickname: sender.nickname,
+            text: ChatStickerCodec.fallbackText,
+            kind: .sticker,
+            sticker: sticker
+        )
+    }
     func messages(roomId: String) -> AsyncStream<ChatMessage> {
         AsyncStream { $0.finish() }
     }
