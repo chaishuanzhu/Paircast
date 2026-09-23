@@ -971,6 +971,8 @@ public struct WatchView: View {
                         }
                     }
                     .layoutPriority(1)
+                    // Fill the home-indicator strip so the accessory doesn't leave a blank band.
+                    .background(TandemColors.secondaryGrouped.ignoresSafeArea(edges: .bottom))
                 }
             }
         }

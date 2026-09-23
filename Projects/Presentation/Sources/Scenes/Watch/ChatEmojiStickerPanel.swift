@@ -8,6 +8,10 @@ struct ChatEmojiStickerPanel: View {
         case stickers
     }
 
+    private static let recentPageId = "__recent__"
+    /// Only mount sticker grids for the current page ± this radius.
+    private static let activePageRadius = 1
+
     @Binding var draft: String
     let catalog: StickerCatalogGateway
     let config: AppCloudConfig?
@@ -15,8 +19,8 @@ struct ChatEmojiStickerPanel: View {
 
     @State private var tab: Tab = .emoji
     @State private var summaries: [StickerPackSummary] = []
-    @State private var selectedPackId: String?
-    @State private var pack: StickerPack?
+    @State private var selectedPackId: String = Self.recentPageId
+    @State private var packsById: [String: StickerPack] = [:]
     @State private var recent: [StickerRef] = []
     @State private var loading = false
     @State private var loadFailed = false
@@ -53,15 +57,33 @@ struct ChatEmojiStickerPanel: View {
             recent = loadRecent()
         }
         .onChange(of: tab) { _, new in
-            if new == .stickers, pack == nil, let first = summaries.first {
-                Task { await selectPack(first.packId) }
+            if new == .stickers {
+                if packsById.isEmpty, let first = summaries.first {
+                    Task { await selectPack(first.packId) }
+                }
+            } else {
+                // Drop decoded sticker bitmaps when leaving the stickers tab.
+                StickerKingfisher.clearMemory()
+                trimPackCache(around: selectedPackId)
             }
+        }
+        .onDisappear {
+            StickerKingfisher.clearMemory()
         }
     }
 
     private var configFingerprint: String {
         guard let s = config?.storage else { return "" }
         return [s.bucket, s.endpoint, s.prefix ?? ""].joined(separator: "|")
+    }
+
+    /// Pages: Recent + each catalog pack (swipe horizontally).
+    private var packPageIds: [String] {
+        [Self.recentPageId] + summaries.map(\.packId)
+    }
+
+    private var selectedPageIndex: Int {
+        packPageIds.firstIndex(of: selectedPackId) ?? 0
     }
 
     private var emojiGrid: some View {
@@ -99,7 +121,7 @@ struct ChatEmojiStickerPanel: View {
             VStack(spacing: 0) {
                 packBar
                     .padding(.bottom, 4)
-                stickerGrid
+                stickerPager
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -107,39 +129,40 @@ struct ChatEmojiStickerPanel: View {
     }
 
     private var packBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                packChip(id: "__recent__", title: "Recent")
-                ForEach(summaries) { summary in
-                    packChip(id: summary.packId, title: summary.name)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    packChip(id: Self.recentPageId, title: "Recent")
+                    ForEach(summaries) { summary in
+                        packChip(id: summary.packId, title: summary.name)
+                    }
+                }
+                .padding(.horizontal, 8)
+            }
+            .frame(height: 28)
+            .onChange(of: selectedPackId) { _, id in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(id, anchor: .center)
                 }
             }
-            .padding(.horizontal, 8)
         }
-        .frame(height: 28)
     }
 
     private func packChip(id: String, title: String) -> some View {
         Button {
-            Task {
-                if id == "__recent__" {
-                    selectedPackId = "__recent__"
-                    pack = nil
-                } else {
-                    await selectPack(id)
-                }
-            }
+            Task { await selectPack(id) }
         } label: {
             Text(shortTitle(title))
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(isSelected(id) ? Color.white : Color.primary)
+                .foregroundStyle(selectedPackId == id ? Color.white : Color.primary)
                 .lineLimit(1)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(isSelected(id) ? TandemColors.systemBlue : TandemColors.groupedBackground)
+                .background(selectedPackId == id ? TandemColors.systemBlue : TandemColors.groupedBackground)
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .id(id)
     }
 
     private func shortTitle(_ title: String) -> String {
@@ -147,24 +170,59 @@ struct ChatEmojiStickerPanel: View {
         return String(title.prefix(10)) + "…"
     }
 
-    private func isSelected(_ id: String) -> Bool {
-        if id == "__recent__" {
-            return selectedPackId == "__recent__"
+    private var stickerPager: some View {
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 0) {
+                    ForEach(packPageIds, id: \.self) { pageId in
+                        Group {
+                            if isPageActive(pageId) {
+                                stickerPage(pageId: pageId)
+                            } else {
+                                // Keep page size for paging, but destroy image views off-screen.
+                                Color.clear
+                            }
+                        }
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .id(pageId)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: Binding(
+                get: { Optional(selectedPackId) },
+                set: { newValue in
+                    guard let newValue, newValue != selectedPackId else { return }
+                    selectedPackId = newValue
+                }
+            ))
         }
-        return selectedPackId == id
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: selectedPackId) { _, id in
+            Task {
+                await ensurePackLoaded(id)
+                // Prefetch immediate neighbors' manifests only.
+                await prefetchNeighborManifests(around: id)
+                trimPackCache(around: id)
+            }
+        }
     }
 
-    private var stickerGrid: some View {
-        let items: [StickerRef] = {
-            if selectedPackId == "__recent__" {
-                return recent
-            }
-            return pack?.stickers.map { $0.asRef() } ?? []
-        }()
+    private func isPageActive(_ pageId: String) -> Bool {
+        guard let idx = packPageIds.firstIndex(of: pageId) else { return false }
+        return abs(idx - selectedPageIndex) <= Self.activePageRadius
+    }
 
+    private func stickerPage(pageId: String) -> some View {
+        let items = items(for: pageId)
         return Group {
-            if items.isEmpty {
-                emptyState(selectedPackId == "__recent__" ? "No recent stickers" : "No stickers in this pack")
+            if pageId != Self.recentPageId, packsById[pageId] == nil {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .task { await ensurePackLoaded(pageId) }
+            } else if items.isEmpty {
+                emptyState(pageId == Self.recentPageId ? "No recent stickers" : "No stickers in this pack")
             } else {
                 ScrollView {
                     LazyVGrid(
@@ -180,7 +238,9 @@ struct ChatEmojiStickerPanel: View {
                                     ref: ref,
                                     catalog: catalog,
                                     config: config,
-                                    side: nil
+                                    side: nil,
+                                    playback: .thumbnail,
+                                    thumbnailPointSide: 72
                                 )
                                 .aspectRatio(1, contentMode: .fit)
                                 .frame(maxWidth: .infinity)
@@ -191,8 +251,18 @@ struct ChatEmojiStickerPanel: View {
                     .padding(.horizontal, 4)
                     .padding(.bottom, 4)
                 }
+                .scrollIndicators(.hidden)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(TandemColors.secondaryGrouped)
+    }
+
+    private func items(for pageId: String) -> [StickerRef] {
+        if pageId == Self.recentPageId {
+            return recent
+        }
+        return packsById[pageId]?.stickers.map { $0.asRef() } ?? []
     }
 
     private func emptyState(_ message: String) -> some View {
@@ -207,6 +277,7 @@ struct ChatEmojiStickerPanel: View {
     private func reloadCatalog() async {
         guard let config, config.storage.isComplete else {
             summaries = []
+            packsById = [:]
             loadFailed = false
             return
         }
@@ -215,23 +286,57 @@ struct ChatEmojiStickerPanel: View {
         defer { loading = false }
         do {
             summaries = try await catalog.loadCatalog(config: config)
+            packsById = [:]
             if let first = summaries.first {
                 await selectPack(first.packId)
+            } else {
+                selectedPackId = Self.recentPageId
             }
         } catch {
             summaries = []
+            packsById = [:]
             loadFailed = true
         }
     }
 
     private func selectPack(_ packId: String) async {
         selectedPackId = packId
+        await ensurePackLoaded(packId)
+        await prefetchNeighborManifests(around: packId)
+        trimPackCache(around: packId)
+    }
+
+    private func ensurePackLoaded(_ packId: String) async {
+        guard packId != Self.recentPageId else { return }
+        if packsById[packId] != nil { return }
         guard let config else { return }
         do {
-            pack = try await catalog.loadPack(packId: packId, config: config)
+            let pack = try await catalog.loadPack(packId: packId, config: config)
+            packsById[packId] = pack
         } catch {
-            pack = nil
+            // Leave empty; page shows empty/failed state.
         }
+    }
+
+    private func prefetchNeighborManifests(around packId: String) async {
+        guard let idx = packPageIds.firstIndex(of: packId) else { return }
+        for offset in [-1, 1] {
+            let neighbor = idx + offset
+            guard packPageIds.indices.contains(neighbor) else { continue }
+            await ensurePackLoaded(packPageIds[neighbor])
+        }
+    }
+
+    /// Drop pack manifests that are far from the current page (views already unmounted).
+    private func trimPackCache(around packId: String) {
+        guard let idx = packPageIds.firstIndex(of: packId) else { return }
+        let keepRadius = Self.activePageRadius + 1
+        let keep = Set(
+            packPageIds.indices
+                .filter { abs($0 - idx) <= keepRadius }
+                .map { packPageIds[$0] }
+        )
+        packsById = packsById.filter { keep.contains($0.key) }
     }
 
     private func recordRecent(_ ref: StickerRef) {
