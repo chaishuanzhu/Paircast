@@ -13,7 +13,17 @@ graph.png
 .build/
 .swiftpm/
 docs/.DS_Store
+stickers-dist/
 Vendor/VLCKitSPM/VLCKit-all.xcframework/
 Vendor/VLCKitSPM/VLCKit-all.xcframework.zip
 Vendor/ImSDKSPM/ImSDK_Plus.xcframework/
 Vendor/ImSDKSPM/ImSDK_Plus.xcframework.zip
+
+# Fastlane / Ruby
+vendor/bundle/
+.bundle/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/README.md
+fastlane/test_output/
+.asc/artifacts/

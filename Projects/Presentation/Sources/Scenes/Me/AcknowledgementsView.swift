@@ -23,6 +23,18 @@ public struct AcknowledgementsView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+            Section("Emoji") {
+                Text("Chat emoji art uses Twemoji graphics by Twitter, Inc and contributors, licensed under CC-BY 4.0.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Link("Twemoji on GitHub", destination: URL(string: "https://github.com/twitter/twemoji")!)
+            }
+            Section("Images") {
+                Text("Sticker images are loaded and cached with Kingfisher (MIT).")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Link("Kingfisher on GitHub", destination: URL(string: "https://github.com/onevcat/Kingfisher")!)
+            }
             Section("Privacy") {
                 Link("Privacy Policy", destination: privacyURL)
                 Link("Support & Reports", destination: supportURL)

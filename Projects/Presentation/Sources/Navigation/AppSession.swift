@@ -20,6 +20,7 @@ public final class AppSession: ObservableObject {
     public let syncGateway: PlaybackSyncGateway
     public let subtitleGateway: SubtitleGateway
     public let sharedSubtitleStorage: SharedSubtitleStorageGateway
+    public let stickerCatalog: StickerCatalogGateway
 
     /// Deep-link invite kept until the user finishes login.
     private(set) var pendingInvite: RoomInvite?
@@ -36,7 +37,8 @@ public final class AppSession: ObservableObject {
         chatGateway: ChatGateway,
         syncGateway: PlaybackSyncGateway,
         subtitleGateway: SubtitleGateway,
-        sharedSubtitleStorage: SharedSubtitleStorageGateway
+        sharedSubtitleStorage: SharedSubtitleStorageGateway,
+        stickerCatalog: StickerCatalogGateway
     ) {
         self.configGateway = configGateway
         self.authGateway = authGateway
@@ -48,6 +50,7 @@ public final class AppSession: ObservableObject {
         self.syncGateway = syncGateway
         self.subtitleGateway = subtitleGateway
         self.sharedSubtitleStorage = sharedSubtitleStorage
+        self.stickerCatalog = stickerCatalog
         self.route = .splash
         installIMSessionObservers()
     }

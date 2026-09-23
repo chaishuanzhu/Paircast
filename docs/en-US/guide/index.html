@@ -148,6 +148,18 @@
     </tbody>
   </table>
 
+  <h3>2.2.1 Chat stickers (optional)</h3>
+  <p>In-room sticker packs are loaded from the <strong>same object storage</strong>:</p>
+  <ul>
+    <li><code>{Prefix?}stickers/catalog.json</code> — pack index</li>
+    <li><code>{Prefix?}stickers/{pack_id}/pack.json</code> — pack manifest</li>
+    <li><code>{Prefix?}stickers/{pack_id}/…</code> — sticker images (png / gif, etc.)</li>
+  </ul>
+  <p>After an admin uploads packs under <code>stickers/</code>, members can open the emoji panel in chat. Unicode emoji are rendered with Twemoji.</p>
+  <p>Use the repo script to convert a local sticker dump into this layout, then upload:</p>
+  <pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
+# Upload stickers-dist/ contents to your bucket under stickers/</code></pre>
+
   <h3>2.3 Extensions (optional)</h3>
   <table>
     <thead>

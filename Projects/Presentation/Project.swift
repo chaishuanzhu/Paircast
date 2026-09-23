@@ -17,6 +17,7 @@ let project = Project(
             dependencies: [
                 .project(target: "Domain", path: "../Domain"),
                 .external(name: "VLCKitSPM"),
+                .external(name: "Kingfisher"),
             ]
         ),
         .target(

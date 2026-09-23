@@ -18,6 +18,15 @@ public final class TencentIMChatGateway: ChatGateway, @unchecked Sendable {
         )
     }
 
+    public func sendSticker(roomId: String, sticker: StickerRef, sender: User) async throws -> ChatMessage {
+        try await client.sendSticker(
+            roomId: roomId,
+            sticker: sticker,
+            senderId: sender.id,
+            senderNickname: sender.nickname
+        )
+    }
+
     public func messages(roomId: String) -> AsyncStream<ChatMessage> {
         client.textMessages(roomId: roomId)
     }
