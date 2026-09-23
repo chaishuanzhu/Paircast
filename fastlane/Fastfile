@@ -34,6 +34,27 @@ platform :ios do
     File.expand_path("..", FastlaneCore::FastlaneFolder.path)
   end
 
+  def login_keychain_path
+    File.expand_path("~/Library/Keychains/login.keychain-db")
+  end
+
+  def ios_dev_keychain_path
+    File.expand_path("~/Library/Keychains/#{KEYCHAIN_NAME}")
+  end
+
+  # Keep login first so gh / SSH / other app tokens stay discoverable.
+  # Never use add_to_search_list: :replace — that drops login.keychain.
+  private_lane :restore_user_keychains do
+    login = login_keychain_path
+    ios_dev = ios_dev_keychain_path
+    search = [login]
+    search << ios_dev if File.exist?(ios_dev)
+
+    sh("security", "list-keychains", "-d", "user", "-s", *search)
+    sh("security", "default-keychain", "-d", "user", "-s", login) if File.exist?(login)
+    UI.message("Restored keychain search list: #{search.join(', ')}")
+  end
+
   desc "Unlock iOSDevKeychain-db for headless codesign"
   private_lane :unlock_ios_dev_keychain do
     password = ENV["KEYCHAIN_PASSWORD"].to_s
@@ -41,16 +62,18 @@ platform :ios do
       "KEYCHAIN_PASSWORD is required - password for ~/Library/Keychains/#{KEYCHAIN_NAME}"
     ) if password.strip.empty?
 
-    keychain_path = File.expand_path("~/Library/Keychains/#{KEYCHAIN_NAME}")
+    keychain_path = ios_dev_keychain_path
     UI.user_error!("Missing keychain: #{keychain_path}") unless File.exist?(keychain_path)
 
-    # Same pattern as Moments archive_* lanes: unlock then archive.
+    # Add alongside login; do not replace the search list or steal default.
     unlock_keychain(
       path: KEYCHAIN_NAME,
       password: password,
-      set_default: true,
-      add_to_search_list: :replace
+      set_default: false,
+      add_to_search_list: true
     )
+
+    restore_user_keychains
 
     # Permanent keychains need partition ACL for non-interactive codesign
     # (create_keychain does this automatically; unlock_keychain does not).
@@ -69,70 +92,75 @@ platform :ios do
 
   desc "Creates an archive of the Production app with App Store distribution"
   lane :archive_appstore do
-    unlock_ios_dev_keychain
+    begin
+      unlock_ios_dev_keychain
 
-    root = project_root
-    Dir.chdir(root)
+      root = project_root
+      Dir.chdir(root)
 
-    workspace_path = File.join(root, "Paircast.xcworkspace")
-    project_path = File.join(root, "Projects/App/Paircast.xcodeproj")
-    export_options = File.join(root, ".github/ci/ExportOptions.plist")
-    artifacts = File.join(root, ".asc", "artifacts")
-    archive_path = File.join(artifacts, "Paircast.xcarchive")
+      workspace_path = File.join(root, "Paircast.xcworkspace")
+      project_path = File.join(root, "Projects/App/Paircast.xcodeproj")
+      export_options = File.join(root, ".github/ci/ExportOptions.plist")
+      artifacts = File.join(root, ".asc", "artifacts")
+      archive_path = File.join(artifacts, "Paircast.xcarchive")
 
-    unless Dir.exist?(workspace_path)
-      UI.user_error!(
-        "Missing #{workspace_path} (cwd=#{Dir.pwd}). Run: tuist install && tuist generate --no-open"
+      unless Dir.exist?(workspace_path)
+        UI.user_error!(
+          "Missing #{workspace_path} (cwd=#{Dir.pwd}). Run: tuist install && tuist generate --no-open"
+        )
+      end
+      unless Dir.exist?(project_path)
+        UI.user_error!("Missing #{project_path}")
+      end
+      unless File.exist?(export_options)
+        UI.user_error!("Missing #{export_options}")
+      end
+
+      FileUtils.mkdir_p(artifacts)
+
+      update_code_signing_settings(
+        use_automatic_signing: false,
+        path: project_path,
+        code_sign_identity: "Apple Distribution",
+        bundle_identifier: APP_IDENTIFIER,
+        profile_name: PROFILE_NAME,
+        team_id: TEAM_ID
       )
+
+      puts("Create an archive for App Store submission")
+      gym(
+        scheme: "Paircast",
+        workspace: workspace_path,
+        configuration: "Release",
+        clean: true,
+        destination: "generic/platform=iOS",
+        export_method: "app-store",
+        export_options: export_options,
+        output_directory: artifacts,
+        output_name: "Paircast",
+        archive_path: archive_path,
+        include_bitcode: false,
+        include_symbols: true,
+        skip_profile_detection: true,
+        xcargs: "-allowProvisioningUpdates"
+      )
+
+      # Tuist regenerates the project next CI run; reset like Moments for local safety.
+      update_code_signing_settings(
+        use_automatic_signing: true,
+        path: project_path
+      )
+
+      puts("If you run this lane on your local machine, should not commit the changes for your project file to Git")
+
+      ipa = File.join(artifacts, "Paircast.ipa")
+      UI.user_error!("IPA not produced at #{ipa}") unless File.exist?(ipa)
+      version = get_ipa_info_plist_value(ipa: ipa, key: "CFBundleShortVersionString")
+      build = get_ipa_info_plist_value(ipa: ipa, key: "CFBundleVersion")
+      UI.success("Done: #{ipa} (version #{version} build #{build})")
+    ensure
+      # Always put login.keychain back first so gh / other tools keep working.
+      restore_user_keychains
     end
-    unless Dir.exist?(project_path)
-      UI.user_error!("Missing #{project_path}")
-    end
-    unless File.exist?(export_options)
-      UI.user_error!("Missing #{export_options}")
-    end
-
-    FileUtils.mkdir_p(artifacts)
-
-    update_code_signing_settings(
-      use_automatic_signing: false,
-      path: project_path,
-      code_sign_identity: "Apple Distribution",
-      bundle_identifier: APP_IDENTIFIER,
-      profile_name: PROFILE_NAME,
-      team_id: TEAM_ID
-    )
-
-    puts("Create an archive for App Store submission")
-    gym(
-      scheme: "Paircast",
-      workspace: workspace_path,
-      configuration: "Release",
-      clean: true,
-      destination: "generic/platform=iOS",
-      export_method: "app-store",
-      export_options: export_options,
-      output_directory: artifacts,
-      output_name: "Paircast",
-      archive_path: archive_path,
-      include_bitcode: false,
-      include_symbols: true,
-      skip_profile_detection: true,
-      xcargs: "-allowProvisioningUpdates"
-    )
-
-    # Tuist regenerates the project next CI run; reset like Moments for local safety.
-    update_code_signing_settings(
-      use_automatic_signing: true,
-      path: project_path
-    )
-
-    puts("If you run this lane on your local machine, should not commit the changes for your project file to Git")
-
-    ipa = File.join(artifacts, "Paircast.ipa")
-    UI.user_error!("IPA not produced at #{ipa}") unless File.exist?(ipa)
-    version = get_ipa_info_plist_value(ipa: ipa, key: "CFBundleShortVersionString")
-    build = get_ipa_info_plist_value(ipa: ipa, key: "CFBundleVersion")
-    UI.success("Done: #{ipa} (version #{version} build #{build})")
   end
 end
