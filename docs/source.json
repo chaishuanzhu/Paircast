@@ -15,12 +15,20 @@
       "localizedDescription": "Invite-only private cloud sync player for watching together with friends. Videos come from your own S3-compatible bucket.",
       "iconURL": "https://paircast.chaisz.com/icon.png",
       "tintColor": "#1A73E8",
-      "version": "1.1.0",
-      "versionDate": "2026-09-23",
-      "versionDescription": "Paircast `v1.1.0` — signed App Store IPA.",
-      "downloadURL": "https://github.com/chaishuanzhu/Paircast/releases/download/v1.1.0/Paircast-v1.1.0-build7.ipa",
-      "size": 121827611,
+      "version": "1.1.1",
+      "versionDate": "2026-09-24",
+      "versionDescription": "Paircast `v1.1.1` — signed App Store IPA.",
+      "downloadURL": "https://github.com/chaishuanzhu/Paircast/releases/download/v1.1.1/Paircast-v1.1.1-build8.ipa",
+      "size": 121861737,
       "versions": [
+        {
+          "version": "1.1.1",
+          "date": "2026-09-24",
+          "localizedDescription": "Paircast `v1.1.1` — signed App Store IPA.",
+          "downloadURL": "https://github.com/chaishuanzhu/Paircast/releases/download/v1.1.1/Paircast-v1.1.1-build8.ipa",
+          "size": 121861737,
+          "buildVersion": "8"
+        },
         {
           "version": "1.1.0",
           "date": "2026-09-23",
@@ -38,7 +46,7 @@
           "buildVersion": "4"
         }
       ],
-      "buildVersion": "7"
+      "buildVersion": "8"
     }
   ]
 }
