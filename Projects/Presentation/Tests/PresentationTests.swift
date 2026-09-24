@@ -125,10 +125,12 @@ private struct InviteHarness: InviteToRoomUseCase {}
 final class AppRouteDeepLinkTests: XCTestCase {
     override func setUp() async throws {
         AppSession.minimumSplashDuration = .milliseconds(0)
+        TandemL10n.locale = Locale(identifier: "en")
     }
 
     override func tearDown() async throws {
         AppSession.minimumSplashDuration = .milliseconds(1_400)
+        TandemL10n.locale = AppLanguage.system.resolvedLocale
     }
 
     func test_watchDeepLinkRequiresLoginAndKeepsPendingInvite() async {

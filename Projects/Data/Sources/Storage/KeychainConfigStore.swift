@@ -19,7 +19,7 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
             do {
                 return try JSONDecoder().decode(AppCloudConfigDTO.self, from: data).toDomain()
             } catch {
-                throw AppError.unknown("Keychain config decode failed: \(error.localizedDescription)")
+                throw AppError.unknown("Unable to load configuration")
             }
         }
     }
@@ -31,7 +31,7 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
             // Device Keychain can report success then fail to read; verify immediately.
             guard let roundTrip = try read(service: configService, account: configAccount),
                   roundTrip == data else {
-                throw AppError.unknown("Keychain write did not persist (verify failed)")
+                throw AppError.unknown("Unable to save configuration")
             }
         }
     }
@@ -76,7 +76,7 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = item as? Data else {
-            throw AppError.unknown("Keychain read failed: \(status)")
+            throw AppError.unknown("Unable to access secure storage")
         }
         return data
     }
@@ -103,7 +103,7 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
         add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         let addStatus = SecItemAdd(add as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
-            throw AppError.unknown("Keychain write failed: \(addStatus)")
+            throw AppError.unknown("Unable to access secure storage")
         }
     }
 
@@ -115,7 +115,7 @@ public final class KeychainConfigStore: ConfigGateway, @unchecked Sendable {
         ]
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw AppError.unknown("Keychain delete failed: \(status)")
+            throw AppError.unknown("Unable to access secure storage")
         }
     }
 }

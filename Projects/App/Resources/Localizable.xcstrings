@@ -35,6 +35,125 @@
         }
       }
     },
+    "{{name}}, host, playback {{progress}}%": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{name}}, host, playback {{progress}}%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{name}}，房主，播放进度 {{progress}}%"
+          }
+        }
+      }
+    },
+    "{{name}}, playback {{progress}}%": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{name}}, playback {{progress}}%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{name}}，播放进度 {{progress}}%"
+          }
+        }
+      }
+    },
+    "AccessKey": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AccessKey"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "访问密钥"
+          }
+        }
+      }
+    },
+    "Bucket": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bucket"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存储桶"
+          }
+        }
+      }
+    },
+    "Endpoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端点"
+          }
+        }
+      }
+    },
+    "SDKAppID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SDKAppID"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SDKAppID"
+          }
+        }
+      }
+    },
+    "SecretKey": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SecretKey"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密钥"
+          }
+        }
+      }
+    },
     "Account not found or not provisioned. Contact an admin": {
       "extractionState": "manual",
       "localizations": {
@@ -1395,6 +1514,23 @@
         }
       }
     },
+    "Host switched the movie to “{{title}}”": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Host switched the movie to “{{title}}”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房主已切换到《{{title}}》"
+          }
+        }
+      }
+    },
     "HTTPS": {
       "extractionState": "manual",
       "localizations": {
@@ -1612,6 +1748,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "邀请好友"
+          }
+        }
+      }
+    },
+    "{{inviter}} invites you to watch {{title}}. Come join!": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{inviter}} invites you to watch {{title}}. Come join!"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{{inviter}}邀请你看{{title}}，快来加入吧！"
           }
         }
       }
@@ -3503,6 +3656,23 @@
         }
       }
     },
+    "Unable to access secure storage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to access secure storage"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法访问安全存储"
+          }
+        }
+      }
+    },
     "Unable to generate QR code": {
       "extractionState": "manual",
       "localizations": {
@@ -3516,6 +3686,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法生成二维码"
+          }
+        }
+      }
+    },
+    "Unable to load configuration": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to load configuration"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载配置"
+          }
+        }
+      }
+    },
+    "Unable to save configuration": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to save configuration"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存配置"
           }
         }
       }

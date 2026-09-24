@@ -97,10 +97,10 @@ public final class AppSession: ObservableObject {
         route = next
         libraryPath = nextLibraryPath
         if case .login = next, pendingInvite != nil {
-            showToast("Sign in to join the room")
+            showToast(TandemL10n.string("Sign in to join the room"))
         }
         if pendingConfigImportRaw != nil {
-            showToast("Configuration link detected. Confirm to import")
+            showToast(TandemL10n.string("Configuration link detected. Confirm to import"))
         }
     }
 
@@ -124,7 +124,7 @@ public final class AppSession: ObservableObject {
             pendingConfigImportRaw = url.absoluteString
             if route != .splash {
                 openConfig(fromLogin: currentUser == nil)
-                showToast("Configuration link detected. Confirm to import")
+                showToast(TandemL10n.string("Configuration link detected. Confirm to import"))
             }
             return
         }
@@ -133,7 +133,7 @@ public final class AppSession: ObservableObject {
             pendingInvite = invite
             if route != .splash {
                 resetToLogin()
-                showToast("Sign in to join the room")
+                showToast(TandemL10n.string("Sign in to join the room"))
             }
         } else {
             pendingInvite = nil

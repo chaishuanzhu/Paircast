@@ -30,7 +30,6 @@ public struct RootView: View {
         }
         .environment(\.locale, language.effectiveLocale)
         // Do not `.id(locale)` here — it tears down presented sheets mid-language change.
-        .preferredColorScheme(theme.appearance.preferredColorScheme)
         .onAppear { ThemeWindowApplier.apply(theme.appearance) }
         .onChange(of: theme.appearance) { _, appearance in
             ThemeWindowApplier.apply(appearance)
@@ -38,7 +37,9 @@ public struct RootView: View {
         .animation(.easeInOut(duration: 0.35), value: session.route)
         .overlay(alignment: .bottom) {
             if let toast = session.toast {
-                Text(LocalizedStringKey(toast))
+                // Toast producers already resolve the selected in-app language.
+                // Treat the result as verbatim; dynamic values are not localization keys.
+                Text(verbatim: toast)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(.ultraThinMaterial)

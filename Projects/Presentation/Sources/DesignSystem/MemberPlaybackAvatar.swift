@@ -84,8 +84,14 @@ public struct MemberPlaybackAvatar: View {
     private var accessibilityText: String {
         let pct = Int((min(1, max(0, progress())) * 100).rounded())
         if isHost {
-            return "\(displayName), host, playback \(pct)%"
+            return TandemL10n.format(
+                "{{name}}, host, playback {{progress}}%",
+                ["name": displayName, "progress": String(pct)]
+            )
         }
-        return "\(displayName), playback \(pct)%"
+        return TandemL10n.format(
+            "{{name}}, playback {{progress}}%",
+            ["name": displayName, "progress": String(pct)]
+        )
     }
 }

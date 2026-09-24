@@ -319,7 +319,10 @@ public final class WatchViewModel: ObservableObject {
                 room.hostUserId = newHost
                 room.hostTransferSeq = signal.seq
                 self.room = room
-                session.showToast(TandemL10n.format("Host is now {{name}}", ["name": newHost]))
+                session.showToast(TandemL10n.format(
+                    "Host is now {{name}}",
+                    ["name": memberDisplayName(for: newHost)]
+                ))
                 startHeartbeatIfNeeded()
             }
             if signal.action == .movieChange, let movieId = signal.movieId {
@@ -873,7 +876,13 @@ public final class WatchViewModel: ObservableObject {
 
     public func inviteMessage() -> String {
         let inviter = session.currentUser?.nickname ?? session.currentUser?.id ?? ""
-        return "\(inviter)邀请你看\(movie?.title ?? "")，快来加入吧！"
+        return TandemL10n.format(
+            "{{inviter}} invites you to watch {{title}}. Come join!",
+            [
+                "inviter": inviter,
+                "title": movie?.title ?? "",
+            ]
+        )
     }
 
     public func leave() async {
@@ -1052,12 +1061,11 @@ public struct WatchView: View {
         .sheet(isPresented: $viewModel.showSwitchMovie) {
             SwitchMovieSheet(viewModel: viewModel)
                 .environment(\.locale, locale)
-                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .alert(
-            "Switch movie?",
+            "Switch movie",
             isPresented: $viewModel.showSwitchConfirm
         ) {
             Button("Cancel", role: .cancel) {
@@ -1079,21 +1087,18 @@ public struct WatchView: View {
         .sheet(isPresented: $viewModel.showSubtitlePanel) {
             SubtitlePanelView(viewModel: viewModel)
                 .environment(\.locale, locale)
-                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showSubtitleSync) {
             SubtitleSyncView(viewModel: viewModel)
                 .environment(\.locale, locale)
-                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.height(340)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showInvite) {
             InviteSheetView(url: viewModel.inviteURL(), message: viewModel.inviteMessage())
                 .environment(\.locale, locale)
-                .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
@@ -1452,7 +1457,10 @@ public struct WatchView: View {
 
     private var watchingCountText: Text {
         let count = viewModel.room?.memberIds.count ?? 0
-        return Text("\(count) watching")
+        return Text(verbatim: TandemL10n.format(
+            "{{count}} watching",
+            ["count": String(count)]
+        ))
     }
 
     private var membersBar: some View {
@@ -1586,10 +1594,34 @@ public struct WatchView: View {
         }
     }
 
+    private func localizedSystemMessage(_ text: String) -> String {
+        let transferPrefix = "Host transferred to "
+        if text.hasPrefix(transferPrefix) {
+            let userId = String(text.dropFirst(transferPrefix.count))
+            return TandemL10n.format(
+                "Host is now {{name}}",
+                ["name": viewModel.memberDisplayName(for: userId)]
+            )
+        }
+
+        let switchPrefix = "Host switched the movie to “"
+        if text.hasPrefix(switchPrefix), text.hasSuffix("”") {
+            let title = text
+                .dropFirst(switchPrefix.count)
+                .dropLast()
+            return TandemL10n.format(
+                "Host switched the movie to “{{title}}”",
+                ["title": String(title)]
+            )
+        }
+
+        return text
+    }
+
     @ViewBuilder
     private func chatRow(_ message: ChatMessage) -> some View {
         if message.kind == .system {
-            Text(message.text)
+            Text(verbatim: localizedSystemMessage(message.text))
                 .font(.system(size: 12))
                 .foregroundStyle(TandemColors.tertiaryLabel)
                 .frame(maxWidth: .infinity)
@@ -1668,7 +1700,7 @@ public struct WatchView: View {
 
                 TwemojiComposerField(
                     text: $viewModel.draft,
-                    placeholder: String(localized: "Say something…"),
+                    placeholder: TandemL10n.string("Say something…"),
                     isEmojiPanelOpen: showEmojiPanel,
                     focusRequest: composerFocusRequest,
                     onBeganEditing: {

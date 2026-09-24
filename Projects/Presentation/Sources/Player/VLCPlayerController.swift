@@ -378,7 +378,7 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
             switch mediaPlayer.state {
             case .error:
                 PaircastLog.playback.error("vlc state=error")
-                lastError = AppError.playbackFailed.userMessage
+                lastError = TandemL10n.format(AppError.playbackFailed)
                 isPrebuffering = false
                 mediaPlayer.audio?.isMuted = false
                 playRequested = false

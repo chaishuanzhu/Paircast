@@ -43,13 +43,20 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 public enum TandemL10n {
     nonisolated(unsafe) public static var locale: Locale = AppLanguage.system.resolvedLocale
 
-    /// Lookup in the app bundle String Catalog. Keys are the English source strings.
-    public static func string(_ key: String.LocalizationValue) -> String {
-        String(localized: key, table: "Localizable", bundle: .main, locale: locale)
-    }
+    private static let localizedBundles: [String: Bundle] = {
+        ["en", "zh-Hans"].reduce(into: [:]) { result, identifier in
+            guard let path = Bundle.main.path(forResource: identifier, ofType: "lproj"),
+                  let bundle = Bundle(path: path) else { return }
+            result[identifier] = bundle
+        }
+    }()
 
+    /// Lookup in the explicitly selected language bundle. `String(localized:locale:)`
+    /// only uses `locale` for formatting and does not switch the bundle localization.
     public static func string(_ key: String) -> String {
-        string(String.LocalizationValue(stringLiteral: key))
+        let identifier = locale.identifier.hasPrefix("zh") ? "zh-Hans" : "en"
+        let bundle = localizedBundles[identifier] ?? .main
+        return bundle.localizedString(forKey: key, value: key, table: "Localizable")
     }
 
     /// Localize a template key, then replace `{{name}}` placeholders.
@@ -58,7 +65,23 @@ public enum TandemL10n {
     }
 
     public static func format(_ error: AppError) -> String {
-        format(error.localizationKey, error.localizationArguments)
+        if case .incompleteConfig(let missing) = error {
+            let separator = locale.identifier.hasPrefix("zh") ? "、" : ", "
+            return format(
+                error.localizationKey,
+                ["fields": missing.map(localizedConfigField).joined(separator: separator)]
+            )
+        }
+        return format(error.localizationKey, error.localizationArguments)
+    }
+
+    private static func localizedConfigField(_ field: String) -> String {
+        guard let separator = field.lastIndex(of: " ") else {
+            return string(field)
+        }
+        let prefix = field[..<separator]
+        let fieldKey = field[field.index(after: separator)...]
+        return "\(prefix) \(string(String(fieldKey)))"
     }
 }
 

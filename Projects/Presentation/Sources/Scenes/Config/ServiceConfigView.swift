@@ -85,7 +85,7 @@ public final class ServiceConfigViewModel: ObservableObject {
             statusMessage = TandemL10n.format(error)
             return false
         } catch {
-            statusMessage = TandemL10n.format(AppError.unknown(error.localizedDescription))
+            statusMessage = TandemL10n.string("Unable to save configuration")
             return false
         }
     }
@@ -320,7 +320,7 @@ public struct ServiceConfigView: View {
                     ToolbarDoneButton(accessibilityLabel: "Save") {
                         Task {
                             if await viewModel.save() {
-                                session.showToast("Saved")
+                                session.showToast(TandemL10n.string("Saved"))
                                 if fromLogin {
                                     session.resetToLogin()
                                 } else {

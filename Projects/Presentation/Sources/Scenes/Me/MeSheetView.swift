@@ -316,7 +316,6 @@ public struct MeSheetView: View {
         }
         .environment(\.locale, language.effectiveLocale)
         .id(language.effectiveLocale.identifier)
-        .preferredColorScheme(theme.appearance.preferredColorScheme)
         .onAppear { ThemeWindowApplier.apply(theme.appearance) }
         .onChange(of: theme.appearance) { _, appearance in
             ThemeWindowApplier.apply(appearance)

@@ -174,7 +174,6 @@ public struct LibraryView: View {
             .sheet(isPresented: $viewModel.showMe) {
                 MeSheetView(session: session, theme: theme, language: language)
                     .environment(\.locale, language.effectiveLocale)
-                    .preferredColorScheme(theme.appearance.preferredColorScheme)
                     .presentationDetents(meSheetDetents)
                     .presentationDragIndicator(.visible)
             }

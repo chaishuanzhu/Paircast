@@ -52,7 +52,6 @@ public struct ThemeSettingsView: View {
         .background(TandemColors.groupedBackground.ignoresSafeArea())
         .navigationTitle("Theme")
         .navigationBarTitleDisplayMode(.inline)
-        .preferredColorScheme(theme.appearance.preferredColorScheme)
         .onAppear { ThemeWindowApplier.apply(theme.appearance) }
         .onChange(of: theme.appearance) { _, appearance in
             ThemeWindowApplier.apply(appearance)
