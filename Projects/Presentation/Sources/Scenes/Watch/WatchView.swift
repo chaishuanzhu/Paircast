@@ -199,13 +199,19 @@ public final class WatchViewModel: ObservableObject {
             "preparePlayer movie=\(movie.objectKey, privacy: .public) format=\(movie.format.rawValue, privacy: .public)"
         )
         player.stop()
+        player.loadCachedCover(for: movie.objectKey)
         do {
             let config = try await session.configGateway.load() ?? AppCloudConfig(
                 im: .init(sdkAppId: 0, secretKey: ""),
                 storage: .init(accessKey: "", secretKey: "", bucket: "", endpoint: "")
             )
             let url = try await session.catalogGateway.playURL(for: movie, config: config)
-            try await player.prepare(url: url)
+            try await player.prepare(url: url, format: movie.format)
+            let coverKey = movie.objectKey
+            Task { [weak self] in
+                await self?.player.generateCoverIfNeeded(url: url, cacheKey: coverKey)
+            }
+            player.prebuffer()
             if let playerError = player.lastError {
                 PaircastLog.playback.error("preparePlayer playerError=\(playerError, privacy: .public)")
                 errorMessage = playerError
@@ -1169,6 +1175,21 @@ public struct WatchView: View {
             }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // UIViewRepresentable 会吞掉触摸，不能依赖它上面的 onTapGesture
+
+            if !viewModel.player.hasStartedPlayback,
+               let cover = viewModel.player.coverImage {
+                GeometryReader { coverProxy in
+                    Image(uiImage: cover)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(
+                            width: coverProxy.size.width,
+                            height: coverProxy.size.height
+                        )
+                        .clipped()
+                }
+                .allowsHitTesting(false)
+            }
 
             // 透明点击层：点画面切换工具栏。必须盖在 VLC 之上，
             // 否则自动隐藏后无法再唤出（UIKit 视频视图不转发手势给 SwiftUI）。

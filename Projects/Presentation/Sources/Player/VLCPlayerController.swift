@@ -14,6 +14,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     @Published public private(set) var isPaused: Bool = true
     @Published public private(set) var lastError: String?
     @Published public private(set) var isReady: Bool = false
+    @Published public private(set) var coverImage: UIImage?
+    @Published public private(set) var hasStartedPlayback: Bool = false
     /// 0...1 while VLC is opening / buffering the stream.
     @Published public private(set) var loadProgress: Double = 0
     @Published public private(set) var positionMs: Int64 = 0
@@ -21,6 +23,11 @@ public final class VLCPlayerController: NSObject, ObservableObject {
 
     private let subtitleFontName: String
     private let subtitleFontPath: String?
+    private var coverCacheKey: String?
+    /// User intent, kept separate from VLC's transient opening/buffering states.
+    private var playRequested = false
+    /// VLC must briefly run to fill its input/decoder buffers before the user presses play.
+    private var isPrebuffering = false
 
     public override init() {
         _ = VLCLibrary.shared()
@@ -36,10 +43,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         self.subtitleFontName = font.name
         self.subtitleFontPath = font.path
 
-        // Prefer software decode for stability on high-bitrate MKV over HTTP —
-        // VideoToolbox 花屏 is common with certain H.264/HEVC annex streams.
         var options = [
-            "--avcodec-hw=none",
             "--clock-synchro=0",
             "--clock-jitter=0",
             // External files are normalized to UTF-8 before addPlaybackSlave.
@@ -65,9 +69,11 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         applySubtitleTextRendererFont()
     }
 
-    public func prepare(url: URL) async throws {
+    public func prepare(url: URL, format: VideoFormat) async throws {
         lastError = nil
         isReady = false
+        hasStartedPlayback = false
+        playRequested = false
         loadProgress = 0.05
         mediaPlayer.stop()
         mediaPlayer.rate = 1.0
@@ -79,10 +85,15 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.drawable = videoView
         let media = VLCMedia(url: streamURL)
         // VOD over HTTP — do NOT use :http-continuous (live clock → wrong speed / 花屏).
-        media.addOption(":network-caching=8000")
-        media.addOption(":file-caching=3000")
+        // Two seconds is enough for object-storage VOD without imposing an 8s startup delay.
+        media.addOption(":network-caching=2000")
+        media.addOption(":file-caching=1000")
         media.addOption(":http-reconnect")
-        media.addOption(":avcodec-hw=none")
+        // VideoToolbox starts MP4/M4V faster. Keep software decode for MKV,
+        // where some H.264/HEVC annex streams produce corrupt hardware frames.
+        if format == .mkv {
+            media.addOption(":avcodec-hw=none")
+        }
         media.addOption(":clock-synchro=0")
         media.addOption(":clock-jitter=0")
         media.addOption(":no-drop-late-frames")
@@ -106,7 +117,14 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.drawable = videoView
         mediaPlayer.rate = 1.0
         applySubtitleTextRendererFont()
-        mediaPlayer.play()
+        VideoCoverGenerator.shared.cancel()
+        isPrebuffering = false
+        playRequested = true
+        mediaPlayer.audio?.isMuted = false
+        if !mediaPlayer.isPlaying {
+            mediaPlayer.play()
+        }
+        hasStartedPlayback = true
         isPaused = false
         PaircastLog.playback.info("play rate=\(self.mediaPlayer.rate, privacy: .public)")
     }
@@ -123,6 +141,9 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     }
 
     public func pause() {
+        isPrebuffering = false
+        playRequested = false
+        mediaPlayer.audio?.isMuted = false
         mediaPlayer.pause()
         isPaused = true
         PaircastLog.playback.info("pause positionMs=\(self.currentPositionMs, privacy: .public)")
@@ -133,11 +154,41 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.pause()
         mediaPlayer.stop()
         mediaPlayer.rate = 1.0
+        mediaPlayer.audio?.isMuted = false
+        isPrebuffering = false
+        playRequested = false
         isReady = false
+        hasStartedPlayback = false
+        coverImage = nil
+        coverCacheKey = nil
         isPaused = true
         loadProgress = 0
         positionMs = 0
         durationMs = 0
+    }
+
+    /// Opens the stream and fills VLC's input/decoder buffers without changing
+    /// the room's paused state. The first decoded frame is immediately paused at 0.
+    public func prebuffer() {
+        guard isReady, isPaused, mediaPlayer.media != nil, !isPrebuffering else { return }
+        isPrebuffering = true
+        playRequested = false
+        mediaPlayer.audio?.isMuted = true
+        mediaPlayer.drawable = videoView
+        mediaPlayer.play()
+        PaircastLog.playback.info("prebuffer started")
+    }
+
+    public func loadCachedCover(for cacheKey: String) {
+        coverCacheKey = cacheKey
+        coverImage = VideoCoverGenerator.shared.cachedImage(for: cacheKey)
+    }
+
+    public func generateCoverIfNeeded(url: URL, cacheKey: String) async {
+        guard coverCacheKey == cacheKey, coverImage == nil else { return }
+        let image = await VideoCoverGenerator.shared.image(for: url, cacheKey: cacheKey)
+        guard coverCacheKey == cacheKey, !hasStartedPlayback else { return }
+        coverImage = image
     }
 
     public func seek(toMs positionMs: Int64) {
@@ -328,24 +379,46 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
             case .error:
                 PaircastLog.playback.error("vlc state=error")
                 lastError = AppError.playbackFailed.userMessage
+                isPrebuffering = false
+                mediaPlayer.audio?.isMuted = false
+                playRequested = false
                 isPaused = true
             case .ended, .stopped:
                 PaircastLog.playback.info("vlc state=\(String(describing: self.mediaPlayer.state), privacy: .public)")
+                isPrebuffering = false
+                mediaPlayer.audio?.isMuted = false
+                playRequested = false
                 isPaused = true
             case .paused:
-                isPaused = true
-            case .playing, .buffering:
+                // Drawable reattachment uses pause→play internally; keep the intended icon.
+                isPaused = !playRequested
+            case .buffering:
                 // VLC resets text renderer when opening media — re-apply CJK font.
                 applySubtitleTextRendererFont()
                 PaircastLog.playback.debug(
                     "vlc state=\(String(describing: self.mediaPlayer.state), privacy: .public) rate=\(self.mediaPlayer.rate, privacy: .public)"
                 )
-                isPaused = !mediaPlayer.isPlaying
-                if mediaPlayer.state == .buffering {
-                    loadProgress = max(loadProgress, 0.3)
-                } else if mediaPlayer.isPlaying {
+                // `isPlaying` is often false while buffering. Keep the pause icon
+                // because playback is still what the user requested.
+                isPaused = !playRequested
+                loadProgress = max(loadProgress, 0.3)
+            case .playing:
+                applySubtitleTextRendererFont()
+                if isPrebuffering {
+                    // First frame + input buffer are ready. Return to a true paused
+                    // state without seeking, because seeking would flush the buffer
+                    // we just filled. At most a fraction of a second has advanced.
+                    isPrebuffering = false
+                    mediaPlayer.pause()
+                    mediaPlayer.audio?.isMuted = false
+                    isPaused = true
                     loadProgress = 1
+                    PaircastLog.playback.info("prebuffer ready")
+                    return
                 }
+                playRequested = true
+                isPaused = false
+                loadProgress = 1
             default:
                 // opening / esadding etc.
                 applySubtitleTextRendererFont()
