@@ -26,4 +26,9 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/README.md
 fastlane/test_output/
-.asc/artifacts/
+
+# Local release / agent artifacts (do not commit)
+.asc/
+.agent-cache/
+.agent-state/
+Scripts/publish-*-testflight.sh
