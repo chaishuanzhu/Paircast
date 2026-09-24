@@ -52,10 +52,10 @@ public struct AcknowledgementsView: View {
     }
 
     private var privacyURL: URL {
-        URL(string: "https://blog.chaisz.com/Paircast/\(docsLocalePath)/privacy/")!
+        URL(string: "https://apps.chaisz.com/Paircast/\(docsLocalePath)/privacy/")!
     }
 
     private var supportURL: URL {
-        URL(string: "https://blog.chaisz.com/Paircast/\(docsLocalePath)/support/")!
+        URL(string: "https://apps.chaisz.com/Paircast/\(docsLocalePath)/support/")!
     }
 }

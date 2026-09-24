@@ -67,8 +67,8 @@ There is **no in-app registration**, **no paid content / IAP**, and **no public 
 
 **Privacy / support:**
 
-- https://blog.chaisz.com/Paircast/en-US/privacy/
-- https://blog.chaisz.com/Paircast/en-US/support/
+- https://apps.chaisz.com/Paircast/en-US/privacy/
+- https://apps.chaisz.com/Paircast/en-US/support/
 - zh-Hans: `/zh-Hans/privacy/` and `/zh-Hans/support/`
 
 ---

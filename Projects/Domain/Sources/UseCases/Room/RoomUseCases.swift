@@ -123,7 +123,7 @@ public extension InviteToRoomUseCase {
         inviterName: String,
         movieTitle: String
     ) -> URL {
-        var components = URLComponents(string: "https://blog.chaisz.com/Paircast/invite/")!
+        var components = URLComponents(string: "https://apps.chaisz.com/Paircast/invite/")!
         components.queryItems = [
             URLQueryItem(name: "roomId", value: roomId),
             URLQueryItem(name: "movieId", value: movieId),
@@ -131,6 +131,6 @@ public extension InviteToRoomUseCase {
             URLQueryItem(name: "inviter", value: inviterName),
             URLQueryItem(name: "title", value: movieTitle),
         ]
-        return components.url ?? URL(string: "https://blog.chaisz.com/Paircast/invite/")!
+        return components.url ?? URL(string: "https://apps.chaisz.com/Paircast/invite/")!
     }
 }

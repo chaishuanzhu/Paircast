@@ -90,7 +90,7 @@ final class InviteUseCasePresentationTests: XCTestCase {
         )
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         XCTAssertEqual(url.scheme, "https")
-        XCTAssertEqual(url.host, "blog.chaisz.com")
+        XCTAssertEqual(url.host, "apps.chaisz.com")
         XCTAssertEqual(url.path, "/Paircast/invite/")
         XCTAssertEqual(items.first(where: { $0.name == "roomId" })?.value, "abc")
         XCTAssertEqual(items.first(where: { $0.name == "movieId" })?.value, "film.mkv")
