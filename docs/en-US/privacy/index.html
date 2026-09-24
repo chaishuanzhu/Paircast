@@ -23,7 +23,7 @@
     <li><strong>Avatar</strong>: If you choose a photo from your library, it is compressed and uploaded to the object storage you configured. An object key is stored in your IM profile.</li>
     <li><strong>Chat messages</strong>: Messages are sent only to invite-only rooms you join and are delivered through Tencent Cloud IM.</li>
     <li><strong>Cloud credentials</strong>: Object-storage and IM secrets stay in the on-device Keychain so the app can access <b>your own</b> storage and messaging services. Shared configuration links are wrapped with AES-GCM instead of pasting secrets in plaintext.</li>
-    <li><strong>Optional third parties</strong>: If you enter OpenSubtitles or OMDb API keys, those queries go to the corresponding services. Douban and IMDb are not requested by default.</li>
+    <li><strong>Optional third parties</strong>: If you enter an OpenSubtitles API key or TMDB API Read Access Token, those queries go to the corresponding services.</li>
   </ul>
 
   <h2>What we do not do</h2>
@@ -33,7 +33,7 @@
   </ul>
 
   <h2>Third parties</h2>
-  <p>Tencent Cloud IM, your S3-compatible object storage, and any OpenSubtitles or OMDb services you configure yourself. Their processing is governed by their own terms.</p>
+  <p>Tencent Cloud IM, your S3-compatible object storage, and any OpenSubtitles or TMDB services you configure yourself. Their processing is governed by their own terms. This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
 
   <h2>Deletion</h2>
   <p>In the app, open Me → Delete Account to clear on-device configuration, session, nickname/avatar objects. Pre-provisioned IM accounts that must be removed from the console should be handled by the operator.</p>

@@ -7,7 +7,7 @@
 Clean Architecture（参考 tuan188）：Domain ← Data / Presentation ← App。
 
 - Domain：纯 Swift，可单测的规则与用例
-- Data：Keychain 配置、本地 UserSig、七牛/OMDb、**腾讯云 IM**（登录 / Meeting 群聊天 / 自定义播控信令）；观影页使用 **VLCKit**（`Vendor/VLCKitSPM`，首次 `make setup` / `Scripts/download-vlckit.sh`）；IM SDK 见 `Vendor/ImSDKSPM`（`Scripts/download-imsdk.sh`）
+- Data：Keychain 配置、本地 UserSig、S3 兼容存储/TMDB、**腾讯云 IM**（登录 / Meeting 群聊天 / 自定义播控信令）；观影页使用 **VLCKit**（`Vendor/VLCKitSPM`，首次 `make setup` / `Scripts/download-vlckit.sh`）；IM SDK 见 `Vendor/ImSDKSPM`（`Scripts/download-imsdk.sh`）
 - Presentation：SwiftUI SPA，无 Tab；「我的」在右上角 Sheet
 - 最低系统：**iOS 26.0**
 
@@ -35,8 +35,8 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 
 ```json
 {
-  "v": 1,
-  "type": "tandem-config",
+  "v": 3,
+  "type": "paircast-config",
   "im": { "sdkAppId": 123, "secretKey": "..." },
   "qiniu": {
     "accessKey": "...",
@@ -47,7 +47,7 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
     "prefix": "films/"
   },
   "subtitleApiKey": null,
-  "omdbApiKey": null
+  "tmdbAccessToken": null
 }
 ```
 
@@ -105,7 +105,7 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 ## 元数据
 
 1. **七牛 sidecar 优先**：同目录 `{base}.nfo` + `{base}-poster.jpg` + `{base}-fanart.jpg` 存在则直接读取，**不再刮削**
-2. 否则：内存缓存 → 豆瓣 → IMDb suggestion（无 Key，补海报）→ OMDb（需 `omdbApiKey`）→ 文件名 `{Title}.{Year}` / `{Title} (Year)`
+2. 否则：内存缓存 → TMDB 官方 API（需 `tmdbAccessToken`，补全本地化片名、简介、海报和背景图）→ 文件名 `{Title}.{Year}` / `{Title} (Year)`
 3. 刮削成功后写回七牛（NFO + 海报；无独立背景图时用海报兼作 fanart）
 
 命名示例：`films/Inception.2010.mkv` → `films/Inception.2010.nfo` / `films/Inception.2010-poster.jpg` / `films/Inception.2010-fanart.jpg`

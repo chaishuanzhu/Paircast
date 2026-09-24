@@ -134,7 +134,7 @@ struct AppCloudConfigDTO: Codable {
     var storageUseSSL: Bool
     var storageForcePathStyle: Bool
     var subtitleApiKey: String?
-    var omdbApiKey: String?
+    var tmdbAccessToken: String?
     var userSigExpireSeconds: Int
     var updatedAt: Date
     var configVersion: Int
@@ -153,7 +153,7 @@ struct AppCloudConfigDTO: Codable {
         storageUseSSL = config.storage.useSSL
         storageForcePathStyle = config.storage.forcePathStyle
         subtitleApiKey = config.subtitleApiKey
-        omdbApiKey = config.omdbApiKey
+        tmdbAccessToken = config.tmdbAccessToken
         userSigExpireSeconds = config.userSigExpireSeconds
         updatedAt = config.updatedAt
         configVersion = config.configVersion
@@ -176,7 +176,7 @@ struct AppCloudConfigDTO: Codable {
                 forcePathStyle: storageForcePathStyle
             ),
             subtitleApiKey: subtitleApiKey,
-            omdbApiKey: omdbApiKey,
+            tmdbAccessToken: tmdbAccessToken,
             userSigExpireSeconds: userSigExpireSeconds,
             updatedAt: updatedAt,
             configVersion: configVersion

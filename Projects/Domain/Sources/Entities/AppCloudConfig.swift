@@ -4,7 +4,7 @@ public struct AppCloudConfig: Equatable, Sendable {
     public var im: IMConfig
     public var storage: ObjectStorageConfig
     public var subtitleApiKey: String?
-    public var omdbApiKey: String?
+    public var tmdbAccessToken: String?
     public var userSigExpireSeconds: Int
     public var updatedAt: Date
     public var configVersion: Int
@@ -13,15 +13,15 @@ public struct AppCloudConfig: Equatable, Sendable {
         im: IMConfig,
         storage: ObjectStorageConfig,
         subtitleApiKey: String? = nil,
-        omdbApiKey: String? = nil,
+        tmdbAccessToken: String? = nil,
         userSigExpireSeconds: Int = 7 * 24 * 3600,
         updatedAt: Date = Date(),
-        configVersion: Int = 2
+        configVersion: Int = 3
     ) {
         self.im = im
         self.storage = storage
         self.subtitleApiKey = subtitleApiKey
-        self.omdbApiKey = omdbApiKey
+        self.tmdbAccessToken = tmdbAccessToken
         self.userSigExpireSeconds = userSigExpireSeconds
         self.updatedAt = updatedAt
         self.configVersion = configVersion

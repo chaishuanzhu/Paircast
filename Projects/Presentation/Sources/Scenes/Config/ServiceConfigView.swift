@@ -17,7 +17,7 @@ public final class ServiceConfigViewModel: ObservableObject {
     @Published public var useSSL = true
     @Published public var forcePathStyle = true
     @Published public var subtitleApiKey = ""
-    @Published public var omdbApiKey = ""
+    @Published public var tmdbAccessToken = ""
     @Published public var statusMessage: String?
     @Published public var exportShareURL: String?
     @Published public var showExportRisk = false
@@ -53,7 +53,7 @@ public final class ServiceConfigViewModel: ObservableObject {
         useSSL = config.storage.useSSL
         forcePathStyle = config.storage.forcePathStyle
         subtitleApiKey = config.subtitleApiKey ?? ""
-        omdbApiKey = config.omdbApiKey ?? ""
+        tmdbAccessToken = config.tmdbAccessToken ?? ""
     }
 
     public func selectProvider(_ newProvider: ObjectStorageProvider) {
@@ -172,7 +172,7 @@ public final class ServiceConfigViewModel: ObservableObject {
                 forcePathStyle: forcePathStyle
             ),
             subtitleApiKey: subtitleApiKey.isEmpty ? nil : subtitleApiKey,
-            omdbApiKey: omdbApiKey.isEmpty ? nil : omdbApiKey
+            tmdbAccessToken: tmdbAccessToken.isEmpty ? nil : tmdbAccessToken
         )
         return try ConfigValidation.normalized(draft)
     }
@@ -293,11 +293,13 @@ public struct ServiceConfigView: View {
                 }
                 Section {
                     SecureField("OpenSubtitles API Key", text: $viewModel.subtitleApiKey)
-                    SecureField("OMDb API Key", text: $viewModel.omdbApiKey)
+                    SecureField("TMDB API Read Access Token", text: $viewModel.tmdbAccessToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                 } header: {
                     Text("Extensions")
                 } footer: {
-                    Text("Paircast only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews.")
+                    Text("With your TMDB token, Paircast uses filenames to fetch localized titles, posters, backdrops, and overviews. This product uses the TMDB API but is not endorsed or certified by TMDB.")
                 }
                 if let status = viewModel.statusMessage {
                     Section {

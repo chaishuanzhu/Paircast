@@ -12,22 +12,22 @@ public enum ConfigQRCodec {
         public var im: IMPayload
         public var storage: StoragePayload
         public var subtitleApiKey: String?
-        public var omdbApiKey: String?
+        public var tmdbAccessToken: String?
 
         public init(
-            v: Int = 2,
+            v: Int = 3,
             type: String = ConfigQRCodec.payloadType,
             im: IMPayload,
             storage: StoragePayload,
             subtitleApiKey: String? = nil,
-            omdbApiKey: String? = nil
+            tmdbAccessToken: String? = nil
         ) {
             self.v = v
             self.type = type
             self.im = im
             self.storage = storage
             self.subtitleApiKey = subtitleApiKey
-            self.omdbApiKey = omdbApiKey
+            self.tmdbAccessToken = tmdbAccessToken
         }
     }
 
@@ -94,7 +94,7 @@ public enum ConfigQRCodec {
                 forcePathStyle: storage.forcePathStyle
             ),
             subtitleApiKey: config.subtitleApiKey,
-            omdbApiKey: config.omdbApiKey
+            tmdbAccessToken: config.tmdbAccessToken
         )
         let data = try JSONEncoder().encode(payload)
         if data.count > maxEncodedUTF8Bytes {
@@ -137,7 +137,7 @@ public enum ConfigQRCodec {
                 forcePathStyle: payload.storage.forcePathStyle
             ),
             subtitleApiKey: payload.subtitleApiKey,
-            omdbApiKey: payload.omdbApiKey,
+            tmdbAccessToken: payload.tmdbAccessToken,
             configVersion: payload.v
         )
         guard config.isComplete else {

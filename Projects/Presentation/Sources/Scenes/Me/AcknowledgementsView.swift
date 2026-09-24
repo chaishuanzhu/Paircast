@@ -19,7 +19,7 @@ public struct AcknowledgementsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Subtitles & Metadata") {
-                Text("Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb.")
+                Text("Online subtitle search uses the OpenSubtitles API (requires your own key). Movie metadata uses TMDB (requires your own token). This product uses the TMDB API but is not endorsed or certified by TMDB.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

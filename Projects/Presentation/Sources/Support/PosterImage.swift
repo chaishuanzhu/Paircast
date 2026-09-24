@@ -1,8 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Loads remote posters with the headers Douban CDN requires (`Referer` / UA).
-/// Plain `AsyncImage` gets HTTP 418 and shows nothing.
+/// Loads and caches remote poster images.
 struct PosterImage: View {
     let url: URL?
 
@@ -59,15 +58,7 @@ actor PosterImageLoader {
     }()
 
     func load(_ url: URL) async throws -> UIImage {
-        var request = URLRequest(url: url)
-        request.setValue(
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-            forHTTPHeaderField: "User-Agent"
-        )
-        if isDoubanHost(url.host) {
-            request.setValue("https://movie.douban.com/", forHTTPHeaderField: "Referer")
-        }
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
@@ -75,11 +66,6 @@ actor PosterImageLoader {
             throw URLError(.cannotDecodeContentData)
         }
         return image
-    }
-
-    private func isDoubanHost(_ host: String?) -> Bool {
-        guard let host else { return false }
-        return host.contains("doubanio.com") || host.contains("douban.com")
     }
 }
 

@@ -451,55 +451,51 @@ final class TencentIMGroupIDTests: XCTestCase {
 }
 
 final class MetadataGatewayHelpersTests: XCTestCase {
-    func test_validHTTPURLRejectsNA() {
-        XCTAssertNil(CascadingMetadataGateway.validHTTPURL("N/A"))
-        XCTAssertNil(CascadingMetadataGateway.validHTTPURL(""))
+    func test_tmdbSearchURLIncludesLanguageAndYear() {
+        let url = CascadingMetadataGateway.tmdbSearchURL(
+            title: "流浪地球",
+            year: "2019",
+            language: "zh-CN"
+        )
+        let components = url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }
+        XCTAssertEqual(url?.host, "api.themoviedb.org")
+        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "query" })?.value, "流浪地球")
+        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "language" })?.value, "zh-CN")
+        XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "primary_release_year" })?.value, "2019")
     }
 
-    func test_validHTTPURLUpgradesHTTP() {
-        let url = CascadingMetadataGateway.validHTTPURL("http://img.example.com/p.jpg")
-        XCTAssertEqual(url?.scheme, "https")
-        XCTAssertEqual(url?.host, "img.example.com")
-    }
-
-    func test_parseDoubanIntro() {
-        let html = #"<div>简介：大周年间，时局动荡，奸臣当道。直属帝王的秘密暗杀组织不良人一夜之间突然群龙无首。</div>"#
-        let intro = CascadingMetadataGateway.parseDoubanIntro(from: html)
-        XCTAssertNotNil(intro)
-        XCTAssertTrue(intro?.contains("大周年间") == true)
-    }
-
-    func test_imdbSuggestionURLUsesFirstLetterBucket() {
-        let url = CascadingMetadataGateway.imdbSuggestionURL(for: "Inception")
-        XCTAssertEqual(url?.absoluteString, "https://v3.sg.media-imdb.com/suggestion/i/inception.json")
-    }
-
-    func test_imdbSuggestionURLUsesXBucketForCJK() {
-        let url = CascadingMetadataGateway.imdbSuggestionURL(for: "画江湖之天罡")
-        XCTAssertTrue(url?.path.hasPrefix("/suggestion/x/") == true)
-        XCTAssertTrue(url?.absoluteString.contains("%E7%94%BB") == true)
-    }
-
-    func test_pickIMDbPrefersYearMatchedMovie() throws {
+    func test_pickTMDBResultPrefersExactYear() throws {
         let json = """
-        {"d":[
-          {"id":"tt1","l":"Wrong","qid":"movie","y":2010,"i":{"imageUrl":"https://m.media-amazon.com/a.jpg"}},
-          {"id":"tt2","l":"Right","qid":"movie","y":2023,"i":{"imageUrl":"https://m.media-amazon.com/b.jpg"}},
-          {"id":"tt3","l":"Series","qid":"tvSeries","y":2023,"i":{"imageUrl":"https://m.media-amazon.com/c.jpg"}}
+        {"results":[
+          {"id":1,"title":"Wrong","original_title":"Wrong","overview":"","release_date":"2010-01-01","poster_path":"/a.jpg","backdrop_path":null},
+          {"id":2,"title":"Right","original_title":"Right","overview":"Plot","release_date":"2023-06-01","poster_path":"/b.jpg","backdrop_path":"/bg.jpg"}
         ]}
         """
-        let dto = try JSONDecoder().decode(IMDbSuggestResponse.self, from: Data(json.utf8))
-        let pick = CascadingMetadataGateway.pickIMDbSuggestion(dto.d ?? [], preferringYear: "2023")
-        XCTAssertEqual(pick?.id, "tt2")
-        XCTAssertEqual(pick?.l, "Right")
+        let dto = try JSONDecoder().decode(TMDBSearchResponse.self, from: Data(json.utf8))
+        let pick = CascadingMetadataGateway.pickTMDBResult(dto.results, preferringYear: "2023")
+        XCTAssertEqual(pick?.id, 2)
+        XCTAssertEqual(pick?.title, "Right")
     }
 
-    func test_pickIMDbReturnsNilWhenYearMisses() throws {
-        let json = """
-        {"d":[{"id":"tt1","l":"Wrong","qid":"movie","y":2010,"i":{"imageUrl":"https://m.media-amazon.com/a.jpg"}}]}
-        """
-        let dto = try JSONDecoder().decode(IMDbSuggestResponse.self, from: Data(json.utf8))
-        XCTAssertNil(CascadingMetadataGateway.pickIMDbSuggestion(dto.d ?? [], preferringYear: "2023"))
+    func test_pickTMDBResultReturnsNilWhenYearMisses() {
+        let item = TMDBMovieResult(
+            id: 1,
+            title: "Wrong",
+            originalTitle: nil,
+            overview: nil,
+            releaseDate: "2010-01-01",
+            posterPath: nil,
+            backdropPath: nil
+        )
+        XCTAssertNil(CascadingMetadataGateway.pickTMDBResult([item], preferringYear: "2023"))
+    }
+
+    func test_tmdbImageURLUsesRequestedSize() {
+        XCTAssertEqual(
+            CascadingMetadataGateway.tmdbImageURL(path: "/poster.jpg", size: "w500")?.absoluteString,
+            "https://image.tmdb.org/t/p/w500/poster.jpg"
+        )
+        XCTAssertNil(CascadingMetadataGateway.tmdbImageURL(path: nil, size: "w500"))
     }
 }
 

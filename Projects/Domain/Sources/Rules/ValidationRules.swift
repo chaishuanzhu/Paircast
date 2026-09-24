@@ -68,7 +68,7 @@ public enum ConfigValidation {
             im: config.im,
             storage: try normalizedStorage(config.storage),
             subtitleApiKey: config.subtitleApiKey,
-            omdbApiKey: config.omdbApiKey,
+            tmdbAccessToken: config.tmdbAccessToken,
             userSigExpireSeconds: config.userSigExpireSeconds,
             updatedAt: config.updatedAt,
             configVersion: config.configVersion

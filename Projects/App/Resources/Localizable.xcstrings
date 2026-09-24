@@ -2330,19 +2330,19 @@
         }
       }
     },
-    "Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb.": {
+    "Online subtitle search uses the OpenSubtitles API (requires your own key). Movie metadata uses TMDB (requires your own token). This product uses the TMDB API but is not endorsed or certified by TMDB.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Online subtitle search uses the OpenSubtitles API (requires your own key). Optional poster enrichment uses OMDb (requires your own key). This app does not scrape Douban or IMDb."
+            "value": "Online subtitle search uses the OpenSubtitles API (requires your own key). Movie metadata uses TMDB (requires your own token). This product uses the TMDB API but is not endorsed or certified by TMDB."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在线字幕检索使用 OpenSubtitles API（需你自己的 Key）。可选的封面补全使用 OMDb（需你自己的 Key）。本应用不抓取豆瓣或 IMDb。"
+            "value": "在线字幕检索使用 OpenSubtitles API（需你自己的 Key）。影片元数据使用 TMDB（需你自己的令牌）。本产品使用 TMDB API，但未经 TMDB 认可或认证。"
           }
         }
       }
@@ -3537,6 +3537,23 @@
         }
       }
     },
+    "TMDB API Read Access Token": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB API Read Access Token"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDB API 读取访问令牌"
+          }
+        }
+      }
+    },
     "Theme": {
       "extractionState": "manual",
       "localizations": {
@@ -3945,19 +3962,19 @@
         }
       }
     },
-    "Paircast only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews.": {
+    "With your TMDB token, Paircast uses filenames to fetch localized titles, posters, backdrops, and overviews. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paircast only plays files from your own cloud storage and does not scrape movie posters from the public web. With an OMDb key, filenames are used to fetch posters and overviews."
+            "value": "With your TMDB token, Paircast uses filenames to fetch localized titles, posters, backdrops, and overviews. This product uses the TMDB API but is not endorsed or certified by TMDB."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paircast 只播放你自己网盘里的文件，不会从公网抓取影视海报。填写 OMDb Key 后，才用文件名向 OMDb 补全封面与简介。"
+            "value": "填写 TMDB 令牌后，Paircast 会根据文件名获取本地化片名、海报、背景图和简介。本产品使用 TMDB API，但未经 TMDB 认可或认证。"
           }
         }
       }

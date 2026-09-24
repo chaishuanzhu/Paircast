@@ -157,14 +157,6 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
         do {
             var request = URLRequest(url: remote)
             request.timeoutInterval = 30
-            if let host = remote.host?.lowercased(),
-               host.contains("doubanio.com") || host.contains("douban.com") {
-                request.setValue("https://movie.douban.com/", forHTTPHeaderField: "Referer")
-                request.setValue(
-                    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-                    forHTTPHeaderField: "User-Agent"
-                )
-            }
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
                   !data.isEmpty else {

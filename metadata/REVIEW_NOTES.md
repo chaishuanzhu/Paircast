@@ -81,9 +81,9 @@ There is **no in-app registration**, **no paid content / IAP**, and **no public 
 | **S3-compatible object storage** (e.g. Qiniu S3 / Tencent COS / other SigV4 hosts) | Private media library listing + presigned playback; avatar/room metadata objects |
 | **VLCKit (MobileVLCKit)** | Local playback of common containers/codecs |
 | **OpenSubtitles API** *(optional, user key)* | Online subtitle search when the user configures their own key |
-| **OMDb** *(optional, user key)* | Optional poster enrichment when the user configures their own key |
+| **TMDB API** *(optional, user token)* | Localized movie titles, overviews, posters, and backdrops when the user configures their own token |
 
-No payment processors. No AI services. The app does not scrape Douban or IMDb.
+No payment processors. No AI services. This product uses the TMDB API but is not endorsed or certified by TMDB.
 
 ---
 

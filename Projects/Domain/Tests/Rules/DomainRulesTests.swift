@@ -42,6 +42,7 @@ final class ConfigQRCodecTests: XCTestCase {
         let decoded = try ConfigQRCodec.decode(encoded)
         XCTAssertEqual(decoded.im.sdkAppId, config.im.sdkAppId)
         XCTAssertEqual(decoded.storage.bucket, config.storage.bucket)
+        XCTAssertEqual(decoded.tmdbAccessToken, config.tmdbAccessToken)
     }
 
     func test_invalidTypeDoesNotDecode() {
@@ -70,7 +71,7 @@ final class ConfigQRCodecTests: XCTestCase {
         XCTAssertEqual(decoded.storage.endpoint, "minio.local:9000")
         XCTAssertEqual(decoded.storage.useSSL, false)
         XCTAssertEqual(decoded.storage.forcePathStyle, true)
-        XCTAssertEqual(decoded.configVersion, 2)
+        XCTAssertEqual(decoded.configVersion, 3)
     }
 
     func test_tooLargeRejected() {
@@ -82,6 +83,13 @@ final class ConfigQRCodecTests: XCTestCase {
         XCTAssertThrowsError(try ConfigQRCodec.encode(config)) { error in
             XCTAssertEqual(error as? AppError, .configQRTooLarge)
         }
+    }
+
+    func test_decodesV2PayloadWithoutTMDBToken() throws {
+        let raw = #"{"v":2,"type":"paircast-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"#
+        let decoded = try ConfigQRCodec.decode(raw)
+        XCTAssertEqual(decoded.configVersion, 2)
+        XCTAssertNil(decoded.tmdbAccessToken)
     }
 }
 
@@ -491,7 +499,7 @@ private extension AppCloudConfig {
                 bucket: "movies",
                 endpoint: "s3-cn-east-1.qiniucs.com"
             ),
-            omdbApiKey: "omdb"
+            tmdbAccessToken: "tmdb-token"
         )
     }
 }
