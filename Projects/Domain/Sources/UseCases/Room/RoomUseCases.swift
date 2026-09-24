@@ -116,15 +116,21 @@ public extension ChangeMovieUseCase {
 public protocol InviteToRoomUseCase {}
 
 public extension InviteToRoomUseCase {
-    func inviteURL(roomId: String, movieId: String, hostUserId: String) -> URL {
-        var components = URLComponents()
-        components.scheme = "paircast"
-        components.host = "watch"
+    func inviteURL(
+        roomId: String,
+        movieId: String,
+        hostUserId: String,
+        inviterName: String,
+        movieTitle: String
+    ) -> URL {
+        var components = URLComponents(string: "https://blog.chaisz.com/Paircast/invite/")!
         components.queryItems = [
             URLQueryItem(name: "roomId", value: roomId),
             URLQueryItem(name: "movieId", value: movieId),
             URLQueryItem(name: "hostUserId", value: hostUserId),
+            URLQueryItem(name: "inviter", value: inviterName),
+            URLQueryItem(name: "title", value: movieTitle),
         ]
-        return components.url ?? URL(string: "paircast://watch?roomId=\(roomId)")!
+        return components.url ?? URL(string: "https://blog.chaisz.com/Paircast/invite/")!
     }
 }

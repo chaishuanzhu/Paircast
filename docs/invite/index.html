@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#f4f4f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0d0d0f" media="(prefers-color-scheme: dark)" />
+  <title>Paircast 邀请</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: #f4f4f7;
+      --card: rgba(255, 255, 255, .82);
+      --label: #151517;
+      --secondary: #68686f;
+      --line: rgba(60, 60, 67, .14);
+      --blue: #0a84ff;
+      --blue-pressed: #0071e3;
+      --shadow: 0 22px 60px rgba(20, 20, 28, .12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #0d0d0f;
+        --card: rgba(30, 30, 34, .88);
+        --label: #f5f5f7;
+        --secondary: #a1a1aa;
+        --line: rgba(235, 235, 245, .12);
+        --blue: #0a84ff;
+        --blue-pressed: #409cff;
+        --shadow: 0 22px 60px rgba(0, 0, 0, .35);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100svh;
+      margin: 0;
+      padding: max(28px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom));
+      display: grid;
+      place-items: center;
+      color: var(--label);
+      background:
+        radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--blue) 17%, transparent), transparent 42%),
+        var(--background);
+      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    main {
+      width: min(100%, 420px);
+      padding: 32px 24px 24px;
+      text-align: center;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px) saturate(130%);
+      -webkit-backdrop-filter: blur(24px) saturate(130%);
+    }
+
+    .icon {
+      width: 84px;
+      height: 84px;
+      border-radius: 20px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
+    }
+
+    .eyebrow {
+      margin: 18px 0 4px;
+      color: var(--secondary);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(25px, 7vw, 32px);
+      line-height: 1.22;
+      letter-spacing: -.025em;
+      text-wrap: balance;
+    }
+
+    .hint {
+      margin: 14px 0 24px;
+      color: var(--secondary);
+      font-size: 15px;
+    }
+
+    .button {
+      width: 100%;
+      min-height: 52px;
+      border: 0;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--blue);
+      font: inherit;
+      font-size: 17px;
+      font-weight: 650;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform .14s ease, background-color .14s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .button:active {
+      background: var(--blue-pressed);
+      transform: scale(.985);
+    }
+
+    .error {
+      display: none;
+      margin: 18px 0 0;
+      padding: 12px;
+      color: #ff3b30;
+      background: color-mix(in srgb, #ff3b30 10%, transparent);
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--secondary);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <img class="icon" src="../icon.png" alt="Paircast" />
+    <p class="eyebrow">Paircast · 一起看</p>
+    <h1 id="invitation">好友邀请你一起看电影，快来加入吧！</h1>
+    <p class="hint">点击按钮打开 Paircast 并加入观影房间</p>
+    <a class="button" id="join" href="#">加入房间</a>
+    <p class="error" id="error">邀请链接缺少房间参数，请让好友重新分享。</p>
+    <footer>私人房间 · 同步播放 · 边看边聊</footer>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const roomId = params.get("roomId") || "";
+    const movieId = params.get("movieId") || "";
+    const hostUserId = params.get("hostUserId") || "";
+    const inviter = params.get("inviter") || "好友";
+    const title = params.get("title") || "一部电影";
+    const invitation = `${inviter}邀请你看${title}，快来加入吧！`;
+
+    document.title = `${inviter} 邀请你加入 Paircast`;
+    document.getElementById("invitation").textContent = invitation;
+
+    const join = document.getElementById("join");
+    if (!roomId) {
+      join.hidden = true;
+      document.getElementById("error").style.display = "block";
+    } else {
+      const deepLink = new URL("paircast://watch");
+      deepLink.searchParams.set("roomId", roomId);
+      if (movieId) deepLink.searchParams.set("movieId", movieId);
+      if (hostUserId) deepLink.searchParams.set("hostUserId", hostUserId);
+      join.href = deepLink.toString();
+    }
+  </script>
+</body>
+</html>

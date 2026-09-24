@@ -859,8 +859,15 @@ public final class WatchViewModel: ObservableObject {
         InviteHarness().inviteURL(
             roomId: room?.id ?? "",
             movieId: room?.movieId ?? movie?.id ?? "",
-            hostUserId: room?.hostUserId ?? ""
+            hostUserId: room?.hostUserId ?? "",
+            inviterName: session.currentUser?.nickname ?? session.currentUser?.id ?? "",
+            movieTitle: movie?.title ?? ""
         )
+    }
+
+    public func inviteMessage() -> String {
+        let inviter = session.currentUser?.nickname ?? session.currentUser?.id ?? ""
+        return "\(inviter)邀请你看\(movie?.title ?? "")，快来加入吧！"
     }
 
     public func leave() async {
@@ -1078,7 +1085,7 @@ public struct WatchView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $viewModel.showInvite) {
-            InviteSheetView(url: viewModel.inviteURL())
+            InviteSheetView(url: viewModel.inviteURL(), message: viewModel.inviteMessage())
                 .environment(\.locale, locale)
                 .preferredColorScheme(theme.appearance.preferredColorScheme)
                 .presentationDetents([.medium])
@@ -1814,6 +1821,7 @@ private struct SwitchMovieRow: View {
 
 private struct InviteSheetView: View {
     let url: URL
+    let message: String
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
 
@@ -1822,7 +1830,7 @@ private struct InviteSheetView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(spacing: 0) {
-                        ShareLink(item: url) {
+                        ShareLink(item: url, message: Text(message)) {
                             inviteRow(title: "System Share", trailing: .chevron)
                         }
                         .buttonStyle(.plain)

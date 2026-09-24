@@ -81,13 +81,22 @@ final class LanguageStoreTests: XCTestCase {
 @MainActor
 final class InviteUseCasePresentationTests: XCTestCase {
     func test_inviteURLFormat() {
-        let url = InviteHarness().inviteURL(roomId: "abc", movieId: "film.mkv", hostUserId: "alice")
+        let url = InviteHarness().inviteURL(
+            roomId: "abc",
+            movieId: "film.mkv",
+            hostUserId: "alice",
+            inviterName: "小明",
+            movieTitle: "流浪地球"
+        )
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        XCTAssertEqual(url.scheme, "paircast")
-        XCTAssertEqual(url.host, "watch")
+        XCTAssertEqual(url.scheme, "https")
+        XCTAssertEqual(url.host, "blog.chaisz.com")
+        XCTAssertEqual(url.path, "/Paircast/invite/")
         XCTAssertEqual(items.first(where: { $0.name == "roomId" })?.value, "abc")
         XCTAssertEqual(items.first(where: { $0.name == "movieId" })?.value, "film.mkv")
         XCTAssertEqual(items.first(where: { $0.name == "hostUserId" })?.value, "alice")
+        XCTAssertEqual(items.first(where: { $0.name == "inviter" })?.value, "小明")
+        XCTAssertEqual(items.first(where: { $0.name == "title" })?.value, "流浪地球")
     }
 }
 
