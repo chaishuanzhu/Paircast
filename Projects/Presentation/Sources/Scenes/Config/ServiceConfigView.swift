@@ -382,7 +382,7 @@ public struct ServiceConfigView: View {
     }
 
     private var configurationGuideURL: URL {
-        URL(string: "https://apps.chaisz.com/Paircast/\(docsLocalePath)/guide/")!
+        URL(string: "https://paircast.chaisz.com/\(docsLocalePath)/guide/")!
     }
 
     private func storageFooter(for provider: ObjectStorageProvider) -> String {

@@ -6,8 +6,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${1:-$ROOT/docs/source.json}"
 REPO="${GITHUB_REPOSITORY:-chaishuanzhu/Paircast}"
-SOURCE_URL="${SOURCE_URL:-https://apps.chaisz.com/Paircast/source.json}"
-ICON_URL="${ICON_URL:-https://apps.chaisz.com/Paircast/icon.png}"
+SOURCE_URL="${SOURCE_URL:-https://paircast.chaisz.com/source.json}"
+ICON_URL="${ICON_URL:-https://paircast.chaisz.com/icon.png}"
 
 mkdir -p "$(dirname "$OUT")"
 
@@ -94,7 +94,7 @@ source = {
     "subtitle": "Invite-only private cloud sync player",
     "description": "Paircast sideload source. Install or update from GitHub Releases IPAs.",
     "iconURL": icon_url,
-    "website": "https://apps.chaisz.com/Paircast/",
+    "website": "https://paircast.chaisz.com/",
     "tintColor": "#1A73E8",
     "apps": [
         {
