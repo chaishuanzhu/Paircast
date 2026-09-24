@@ -1,7 +1,8 @@
 # Paircast iOS 设计说明（Apple HIG）
 
-> 对应 PRD v1.4  
+> 对应 PRD v1.5  
 > Figma：[Paircast iOS Design](https://www.figma.com/design/5wmtldOSN7EznnnpjIRDnD)  
+> Token：[designtoken.md](./designtoken.md)  
 > 画板基准：**iPhone 16 / 393×852**，圆角设备框仅用于展示
 
 ---

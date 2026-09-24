@@ -1,0 +1,12 @@
+---
+description: Paircast 模块边界、密钥红线、docs 域名与发布约定
+alwaysApply: true
+---
+
+# Paircast
+
+- 依赖方向：`App → Presentation/Data → Domain`。Domain 保持纯 Swift，不引入 UIKit / IM / VLC。
+- 用 Tuist 生成工程；不要提交生成的 `*.xcodeproj` / `*.xcworkspace`，也不要提交 `.asc/` IPA、描述文件、真实密钥。
+- 公开文档与邀请页域名使用 `https://paircast.chaisz.com/`（无 `/Paircast/` 路径前缀）。
+- 改产品行为时同步 `docs/PRD.md` / `docs/TECH.md`（版本号对齐）及需要的 `metadata/`、公开 HTML。
+- 完整说明见仓库根目录 `AGENTS.md`。

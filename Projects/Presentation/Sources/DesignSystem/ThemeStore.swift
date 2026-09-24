@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// User-facing appearance preference (designtoken.md Theme Settings).
+/// User-facing appearance preference (docs/designtoken.md Theme Settings).
 public enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
     case system
     case light

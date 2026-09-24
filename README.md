@@ -50,6 +50,8 @@ tuist generate
 
 ## 文档
 
+- 索引：[docs/README.md](docs/README.md)
 - 产品：[docs/PRD.md](docs/PRD.md)
 - 设计：[docs/DESIGN.md](docs/DESIGN.md) · 本地预览 [docs/design-preview/index.html](docs/design-preview/index.html)
 - 技术：[docs/TECH.md](docs/TECH.md)
+- Agent 约定：[AGENTS.md](AGENTS.md)

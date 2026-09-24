@@ -1,6 +1,6 @@
 # Paircast 技术说明（MVP）
 
-对应 PRD v1.4 与本地设计预览 `docs/design-preview/index.html`。
+对应 PRD v1.5 与本地设计预览 `docs/design-preview/index.html`。
 
 ## 架构
 

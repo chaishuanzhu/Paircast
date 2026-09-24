@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 public enum TandemColors {
-    /// Primary-500 / dark fill.brand (designtoken.md).
+    /// Primary-500 / dark fill.brand (docs/designtoken.md).
     public static let systemBlue = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 10 / 255, green: 132 / 255, blue: 1, alpha: 1)

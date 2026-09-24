@@ -90,6 +90,11 @@
       font-size: 15px;
     }
 
+    .actions {
+      display: grid;
+      gap: 10px;
+    }
+
     .button {
       width: 100%;
       min-height: 52px;
@@ -104,13 +109,47 @@
       font-weight: 650;
       text-decoration: none;
       cursor: pointer;
-      transition: transform .14s ease, background-color .14s ease;
+      transition: transform .14s ease, background-color .14s ease, opacity .14s ease;
       -webkit-tap-highlight-color: transparent;
     }
 
     .button:active {
       background: var(--blue-pressed);
       transform: scale(.985);
+    }
+
+    .button.secondary {
+      color: var(--label);
+      background: color-mix(in srgb, var(--label) 6%, transparent);
+      border: 1px solid var(--line);
+    }
+
+    .button.secondary:active {
+      background: color-mix(in srgb, var(--label) 11%, transparent);
+    }
+
+    .download {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      text-align: center;
+    }
+
+    .download-title {
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    .download-hint {
+      margin: 0 0 14px;
+      color: var(--secondary);
+      font-size: 13px;
+    }
+
+    .download-actions {
+      display: grid;
+      gap: 10px;
     }
 
     .error {
@@ -135,9 +174,31 @@
     <img class="icon" src="../icon.png" alt="Paircast" />
     <p class="eyebrow">Paircast · 一起看</p>
     <h1 id="invitation">好友邀请你一起看电影，快来加入吧！</h1>
-    <p class="hint">点击按钮打开 Paircast 并加入观影房间</p>
-    <a class="button" id="join" href="#">加入房间</a>
+    <p class="hint">已安装 Paircast 时可直接加入观影房间</p>
+    <div class="actions">
+      <a class="button" id="join" href="#">加入房间</a>
+    </div>
     <p class="error" id="error">邀请链接缺少房间参数，请让好友重新分享。</p>
+
+    <section class="download" aria-label="下载 Paircast">
+      <p class="download-title">还没安装？</p>
+      <p class="download-hint">正式版走 App Store；想先体验新功能可选 TestFlight</p>
+      <div class="download-actions">
+        <a
+          class="button"
+          href="https://apps.apple.com/app/id6798781578"
+          target="_blank"
+          rel="noopener noreferrer"
+        >App Store 下载</a>
+        <a
+          class="button secondary"
+          href="https://testflight.apple.com/join/WDfaez7p"
+          target="_blank"
+          rel="noopener noreferrer"
+        >TestFlight Beta</a>
+      </div>
+    </section>
+
     <footer>私人房间 · 同步播放 · 边看边聊</footer>
   </main>
 
