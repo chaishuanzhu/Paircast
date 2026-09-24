@@ -49,8 +49,9 @@ final class KeyboardInsetObserver: ObservableObject {
         if hidden {
             next = 0
         } else if let endFrame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-            // Intersection with the screen — works for docked keyboards without keyWindow.
-            next = endFrame.intersection(UIScreen.main.bounds).height
+            // Prefer the foreground scene's screen (UIScreen.main is deprecated in iOS 26).
+            let bounds = Self.activeScreenBounds
+            next = bounds == .zero ? 0 : endFrame.intersection(bounds).height
         } else {
             next = 0
         }
@@ -59,6 +60,14 @@ final class KeyboardInsetObserver: ObservableObject {
         withAnimation(.easeInOut(duration: duration)) {
             inset = next
         }
+    }
+
+    private static var activeScreenBounds: CGRect {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        if let screen = scenes.first(where: { $0.activationState == .foregroundActive })?.screen {
+            return screen.bounds
+        }
+        return scenes.first?.screen.bounds ?? .zero
     }
 }
 

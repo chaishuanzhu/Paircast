@@ -116,7 +116,10 @@ struct TwemojiComposerField: UIViewRepresentable {
             }
 
             let selected = textView.selectedRange
-            textView.attributedText = TwemojiComposerStyle.attributed(from: plain)
+            textView.attributedText = TwemojiComposerStyle.attributed(
+                from: plain,
+                displayScale: textView.traitCollection.displayScale
+            )
             let maxLoc = textView.attributedText.length
             textView.selectedRange = NSRange(location: min(selected.location, maxLoc), length: 0)
             updatePlaceholder()
@@ -160,7 +163,9 @@ struct TwemojiComposerField: UIViewRepresentable {
 /// Fixed vertical metrics so SwiftUI layout matches the previous capsule TextField.
 final class PaddingTextView: UITextView {
     override var intrinsicContentSize: CGSize {
-        let width = bounds.width > 0 ? bounds.width : UIScreen.main.bounds.width
+        let width = bounds.width > 0
+            ? bounds.width
+            : (superview?.bounds.width ?? (traitCollection.horizontalSizeClass == .regular ? 400 : 320))
         let fitting = sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
         let height = min(max(fitting.height, 40), 88)
         return CGSize(width: UIView.noIntrinsicMetric, height: height)
@@ -192,17 +197,27 @@ enum TwemojiComposerStyle {
         return result
     }
 
-    static func attributed(from plain: String, textColor: UIColor = .label) -> NSAttributedString {
+    static func attributed(
+        from plain: String,
+        textColor: UIColor = .label,
+        displayScale: CGFloat
+    ) -> NSAttributedString {
         let result = NSMutableAttributedString()
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: textColor,
         ]
+        let scale = max(displayScale, 1)
         for ch in plain {
             let glyph = String(ch)
             if ch.isTwemojiCandidate,
                let image = TwemojiImageCache.imageSyncIfCached(forEmoji: glyph) {
-                result.append(NSAttributedString(attachment: TwemojiAttachment(emoji: glyph, image: image, side: emojiSide)))
+                result.append(NSAttributedString(attachment: TwemojiAttachment(
+                    emoji: glyph,
+                    image: image,
+                    side: emojiSide,
+                    displayScale: scale
+                )))
             } else {
                 result.append(NSAttributedString(string: glyph, attributes: attrs))
             }
@@ -214,13 +229,13 @@ enum TwemojiComposerStyle {
 final class TwemojiAttachment: NSTextAttachment {
     let emoji: String
 
-    init(emoji: String, image: UIImage, side: CGFloat) {
+    init(emoji: String, image: UIImage, side: CGFloat, displayScale: CGFloat) {
         self.emoji = emoji
         super.init(data: nil, ofType: nil)
-        // Bundled Twemoji PNGs load via `contentsOfFile` at scale 1. Re-rasterizing
-        // with that scale yields ~18px bitmaps on a 3x screen → blurry glyphs.
+        // Bundled Twemoji PNGs load via `contentsOfFile` at scale 1. Re-rasterize
+        // with the view's displayScale so 3x screens get sharp glyphs (not UIScreen.main).
         let format = UIGraphicsImageRendererFormat()
-        format.scale = UIScreen.main.scale
+        format.scale = max(displayScale, 1)
         format.opaque = false
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format)
         self.image = renderer.image { _ in

@@ -23,6 +23,7 @@ public struct StickerImageView: View {
 
     @State private var url: URL?
     @State private var failed = false
+    @Environment(\.displayScale) private var displayScale
 
     public init(
         ref: StickerRef,
@@ -67,7 +68,7 @@ public struct StickerImageView: View {
 
     @ViewBuilder
     private func thumbnailImage(url: URL) -> some View {
-        let pixels = thumbnailPointSide * UIScreen.main.scale
+        let pixels = thumbnailPointSide * displayScale
         KFImage.url(url, cacheKey: "\(ref.bindKey).thumb")
             .targetCache(StickerKingfisher.cache)
             .setProcessor(DownsamplingImageProcessor(size: CGSize(width: pixels, height: pixels)))
