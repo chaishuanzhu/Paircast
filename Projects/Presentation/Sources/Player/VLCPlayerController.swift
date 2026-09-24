@@ -31,6 +31,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
 
     public override init() {
         _ = VLCLibrary.shared()
+        VLCOpenGLESMainThreadGuard.installIfNeeded()
         Self.configureAudioSession()
 
         let view = UIView(frame: .zero)
