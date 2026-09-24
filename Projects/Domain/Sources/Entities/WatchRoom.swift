@@ -9,6 +9,8 @@ public struct WatchRoom: Equatable, Sendable, Identifiable {
     public var status: RoomStatus
     public var lastAppliedSeq: UInt64
     public var hostTransferSeq: UInt64
+    /// Monotonic object-storage revision used to reject stale reads after a write.
+    public var revision: UInt64
 
     public init(
         id: String,
@@ -18,7 +20,8 @@ public struct WatchRoom: Equatable, Sendable, Identifiable {
         joinOrder: [String] = [],
         status: RoomStatus = .active,
         lastAppliedSeq: UInt64 = 0,
-        hostTransferSeq: UInt64 = 0
+        hostTransferSeq: UInt64 = 0,
+        revision: UInt64 = 0
     ) {
         self.id = id
         self.movieId = movieId
@@ -28,6 +31,7 @@ public struct WatchRoom: Equatable, Sendable, Identifiable {
         self.status = status
         self.lastAppliedSeq = lastAppliedSeq
         self.hostTransferSeq = hostTransferSeq
+        self.revision = revision
     }
 
     public var imGroupId: String { "paircast_\(id)" }

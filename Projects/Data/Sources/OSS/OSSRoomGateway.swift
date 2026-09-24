@@ -20,7 +20,12 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
 
     public func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom {
         let id = UUID().uuidString.lowercased()
-        let room = WatchRoom(id: id, movieId: movieId, hostUserId: hostUserId)
+        let room = WatchRoom(
+            id: id,
+            movieId: movieId,
+            hostUserId: hostUserId,
+            revision: 1
+        )
         try await putRoom(room)
         cacheAndBroadcast(room)
         return room
@@ -51,6 +56,7 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
             room.memberIds.append(userId)
             room.joinOrder.append(userId)
         }
+        room.revision = nextRevision(for: room)
         try await putRoom(room)
         cacheAndBroadcast(room)
         return room
@@ -63,23 +69,25 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
     }
 
     public func updateRoom(_ room: WatchRoom) async throws {
-        if room.status == .ended {
+        var updated = room
+        updated.revision = nextRevision(for: room)
+        if updated.status == .ended {
             // Notify local observers first, then remove the storage object so dissolved
             // rooms do not leave orphan `_paircast/rooms/{id}.json` files.
-            cacheAndBroadcast(room)
+            cacheAndBroadcast(updated)
             do {
-                try await deleteRoomObject(id: room.id)
+                try await deleteRoomObject(id: updated.id)
             } catch {
                 PaircastLog.catalog.error(
-                    "room DELETE failed id=\(room.id, privacy: .public); writing ended tombstone"
+                    "room DELETE failed id=\(updated.id, privacy: .public); writing ended tombstone"
                 )
-                try await putRoom(room)
+                try await putRoom(updated)
             }
-            stopPolling(roomId: room.id)
+            stopPolling(roomId: updated.id)
             return
         }
-        try await putRoom(room)
-        cacheAndBroadcast(room)
+        try await putRoom(updated)
+        cacheAndBroadcast(updated)
     }
 
     public func observeRoom(roomId: String) -> AsyncStream<WatchRoom> {
@@ -245,12 +253,51 @@ public final class OSSRoomGateway: RoomGateway, @unchecked Sendable {
         lock.withLock { localCache[id] }
     }
 
-    private func cacheAndBroadcast(_ room: WatchRoom) {
+    private func cacheAndBroadcast(_ incoming: WatchRoom) {
+        var acceptedRoom: WatchRoom?
         let conts = lock.withLock {
-            localCache[room.id.lowercased()] = room
-            return continuations[room.id.lowercased()]?.values.map { $0 } ?? []
+            let id = incoming.id.lowercased()
+            let cached = localCache[id]
+            guard let room = Self.reconciled(incoming, over: cached) else {
+                PaircastLog.catalog.debug(
+                    "ignore stale room id=\(id, privacy: .public) revision=\(incoming.revision) cached=\(cached?.revision ?? 0)"
+                )
+                return [AsyncStream<WatchRoom>.Continuation]()
+            }
+            acceptedRoom = room
+            localCache[id] = room
+            return continuations[id]?.values.map { $0 } ?? []
         }
-        conts.forEach { $0.yield(room) }
+        guard let acceptedRoom else { return }
+        conts.forEach { $0.yield(acceptedRoom) }
+    }
+
+    /// Reconciles snapshots written by current and pre-revision builds.
+    ///
+    /// An older joining client drops the unknown `revision` field when it writes the
+    /// enlarged member list. Accept that strict/same superset, but retain our local
+    /// revision so a delayed pre-join snapshot still cannot regress the roster.
+    static func reconciled(_ incoming: WatchRoom, over cached: WatchRoom?) -> WatchRoom? {
+        guard let cached else { return incoming }
+        guard incoming.revision < cached.revision else { return incoming }
+
+        let incomingMembers = Set(incoming.memberIds)
+        let cachedMembers = Set(cached.memberIds)
+        guard incoming.revision == 0,
+              incomingMembers.isSuperset(of: cachedMembers) else {
+            return nil
+        }
+
+        var compatible = incoming
+        compatible.revision = cached.revision
+        return compatible
+    }
+
+    private func nextRevision(for room: WatchRoom) -> UInt64 {
+        let cachedRevision = lock.withLock {
+            localCache[room.id.lowercased()]?.revision ?? 0
+        }
+        return max(room.revision, cachedRevision) + 1
     }
 
     private func stopPolling(roomId: String) {
@@ -271,6 +318,8 @@ struct WatchRoomDTO: Codable, Equatable {
     var status: String
     var lastAppliedSeq: UInt64
     var hostTransferSeq: UInt64
+    /// Optional so rooms written by pre-revision builds still decode.
+    var revision: UInt64?
 
     init(_ room: WatchRoom) {
         id = room.id
@@ -281,6 +330,7 @@ struct WatchRoomDTO: Codable, Equatable {
         status = room.status.rawValue
         lastAppliedSeq = room.lastAppliedSeq
         hostTransferSeq = room.hostTransferSeq
+        revision = room.revision
     }
 
     func toDomain() -> WatchRoom {
@@ -292,7 +342,8 @@ struct WatchRoomDTO: Codable, Equatable {
             joinOrder: joinOrder,
             status: RoomStatus(rawValue: status) ?? .ended,
             lastAppliedSeq: lastAppliedSeq,
-            hostTransferSeq: hostTransferSeq
+            hostTransferSeq: hostTransferSeq,
+            revision: revision ?? 0
         )
     }
 }

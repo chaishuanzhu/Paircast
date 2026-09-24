@@ -338,13 +338,74 @@ final class WatchRoomDTOTests: XCTestCase {
             joinOrder: ["alice", "bob"],
             status: .active,
             lastAppliedSeq: 3,
-            hostTransferSeq: 1
+            hostTransferSeq: 1,
+            revision: 4
         )
         let data = try JSONEncoder().encode(WatchRoomDTO(room))
         let decoded = try JSONDecoder().decode(WatchRoomDTO.self, from: data).toDomain()
         XCTAssertEqual(decoded, room)
         XCTAssertEqual(OSSRoomGateway.objectKeyPrefix, "_paircast/rooms/")
         XCTAssertEqual(OSSRoomGateway.objectKey(roomId: "AbC-123"), "_paircast/rooms/abc-123.json")
+    }
+
+    func test_legacyRoomWithoutRevisionStillDecodes() throws {
+        let data = Data("""
+        {
+          "id": "r1",
+          "movieId": "m1",
+          "hostUserId": "alice",
+          "memberIds": ["alice"],
+          "joinOrder": ["alice"],
+          "status": "active",
+          "lastAppliedSeq": 0,
+          "hostTransferSeq": 0
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(WatchRoomDTO.self, from: data).toDomain()
+        XCTAssertEqual(decoded.revision, 0)
+    }
+
+    func test_staleRoomSnapshotIsRejected() {
+        let cached = WatchRoom(
+            id: "r1",
+            movieId: "m1",
+            hostUserId: "alice",
+            memberIds: ["alice", "bob"],
+            revision: 2
+        )
+        let stale = WatchRoom(
+            id: "r1",
+            movieId: "m1",
+            hostUserId: "alice",
+            memberIds: ["alice"],
+            revision: 1
+        )
+
+        XCTAssertNil(OSSRoomGateway.reconciled(stale, over: cached))
+        XCTAssertEqual(OSSRoomGateway.reconciled(cached, over: stale), cached)
+    }
+
+    func test_legacyJoiningClientCanAddMemberWithoutRegressingRevision() {
+        let cached = WatchRoom(
+            id: "r1",
+            movieId: "m1",
+            hostUserId: "alice",
+            memberIds: ["alice"],
+            revision: 1
+        )
+        let legacyJoin = WatchRoom(
+            id: "r1",
+            movieId: "m1",
+            hostUserId: "alice",
+            memberIds: ["alice", "bob"],
+            joinOrder: ["alice", "bob"],
+            revision: 0
+        )
+
+        let reconciled = OSSRoomGateway.reconciled(legacyJoin, over: cached)
+        XCTAssertEqual(reconciled?.memberIds, ["alice", "bob"])
+        XCTAssertEqual(reconciled?.revision, 1)
     }
 }
 
