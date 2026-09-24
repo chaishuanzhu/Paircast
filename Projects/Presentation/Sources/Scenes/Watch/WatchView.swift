@@ -926,6 +926,11 @@ public struct WatchView: View {
     @State private var scrubProgress: CGFloat?
     @State private var chromeHideTask: Task<Void, Never>?
     @State private var showEmojiPanel = false
+    /// True while the text field is first-responder (more reliable than keyboard frame alone).
+    @State private var isComposerFocused = false
+    /// Bumped to ask `TwemojiComposerField` to become first responder (emoji → keyboard).
+    @State private var composerFocusRequest = 0
+    @StateObject private var keyboardInset = KeyboardInsetObserver()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.openURL) private var openURL
     @Environment(\.locale) private var locale
@@ -948,39 +953,75 @@ public struct WatchView: View {
         // 播放器必须始终处在视图树的同一位置：一旦 SwiftUI 因分支切换重建
         // VLCPlayerView，VLC 的 drawable 会被摘出窗口，vout 销毁后不再重建（黑屏）。
         GeometryReader { proxy in
+            let stageH = isFullscreen ? proxy.size.height : stageHeight(in: proxy.size)
+            // Reserve space above the keyboard for chat + input; video stays fixed.
+            let keyboardLift = (isFullscreen || showEmojiPanel) ? 0 : keyboardInset.inset
+            // Members hide only while actively composing — don't tie this to keyboard
+            // frame (inset can lag / stick after emoji ↔ keyboard switches).
+            let composing = showEmojiPanel || isComposerFocused
+
             VStack(spacing: 0) {
-                playerStage(height: isFullscreen ? nil : stageHeight(in: proxy.size))
+                playerStage(height: isFullscreen ? nil : stageH)
+                    .frame(height: stageH)
+                    .frame(maxWidth: .infinity)
+
                 if !isFullscreen {
-                    membersBar
-                    chatList
-                        .layoutPriority(0)
-                        .simultaneousGesture(
-                            TapGesture().onEnded { dismissKeyboardAndEmojiPanel() }
-                        )
                     VStack(spacing: 0) {
-                        chatInput
-                        if showEmojiPanel {
-                            ChatEmojiStickerPanel(
-                                draft: $viewModel.draft,
-                                catalog: session.stickerCatalog,
-                                config: session.config,
-                                onSendSticker: { ref in
-                                    Task { await viewModel.sendSticker(ref) }
-                                }
-                            )
+                        VStack(spacing: 0) {
+                            if !composing {
+                                membersBar
+                                    .transition(.move(edge: .top).combined(with: .opacity))
+                            }
+
+                            chatList
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .layoutPriority(0)
+                                .contentShape(Rectangle())
+                                .onTapGesture { dismissKeyboardAndEmojiPanel() }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .clipped()
+
+                        VStack(spacing: 0) {
+                            chatInput
+                            if showEmojiPanel {
+                                ChatEmojiStickerPanel(
+                                    draft: $viewModel.draft,
+                                    catalog: session.stickerCatalog,
+                                    config: session.config,
+                                    onSendSticker: { ref in
+                                        Task { await viewModel.sendSticker(ref) }
+                                    }
+                                )
+                            }
+                            // Fill the reserved strip above the keyboard (and home
+                            // indicator when idle) with the toolbar color.
+                            TandemColors.secondaryGrouped
+                                .frame(height: keyboardLift)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .layoutPriority(1)
+                        .background(TandemColors.secondaryGrouped.ignoresSafeArea(edges: .bottom))
                     }
-                    .layoutPriority(1)
-                    // Fill the home-indicator strip so the accessory doesn't leave a blank band.
-                    .background(TandemColors.secondaryGrouped.ignoresSafeArea(edges: .bottom))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
             }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+            .animation(.easeInOut(duration: 0.22), value: composing)
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .disableHostingKeyboardAvoidance()
         .background(TandemColors.groupedBackground.ignoresSafeArea())
         .ignoresSafeArea(edges: isFullscreen ? .all : [])
         .statusBarHidden(isFullscreen)
         .onChange(of: isFullscreen) { _, fullscreen in
             applyFullscreenOrientation(fullscreen)
+        }
+        .onChange(of: showEmojiPanel) { _, open in
+            if open {
+                isComposerFocused = false
+                keyboardInset.reset()
+            }
         }
         .task {
             await viewModel.start()
@@ -988,6 +1029,7 @@ public struct WatchView: View {
         }
         .onDisappear {
             chromeHideTask?.cancel()
+            keyboardInset.reset()
             OrientationLock.lock(.portrait)
             viewModel.stop()
         }
@@ -1463,9 +1505,6 @@ public struct WatchView: View {
                     .foregroundStyle(TandemColors.tertiaryLabel)
                     .frame(maxWidth: .infinity)
                     .padding(.bottom, 8)
-                // Expand hit area so empty chat region also dismisses keyboard.
-                Color.clear
-                    .frame(maxWidth: .infinity, minHeight: 120)
             }
             .onChange(of: viewModel.messages.count) { _, _ in
                 if let last = viewModel.messages.last {
@@ -1481,6 +1520,8 @@ public struct WatchView: View {
     }
 
     private func dismissKeyboardAndEmojiPanel() {
+        isComposerFocused = false
+        keyboardInset.reset()
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
             to: nil,
@@ -1490,6 +1531,29 @@ public struct WatchView: View {
         if showEmojiPanel {
             withAnimation(.easeInOut(duration: 0.2)) {
                 showEmojiPanel = false
+            }
+        }
+    }
+
+    private func toggleEmojiPanel() {
+        if showEmojiPanel {
+            // Keyboard icon: leave sticker panel and bring the system keyboard back.
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showEmojiPanel = false
+            }
+            composerFocusRequest += 1
+        } else {
+            // Face icon: show sticker panel and drop the system keyboard.
+            isComposerFocused = false
+            keyboardInset.reset()
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showEmojiPanel = true
             }
         }
     }
@@ -1565,9 +1629,7 @@ public struct WatchView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showEmojiPanel.toggle()
-                    }
+                    toggleEmojiPanel()
                 } label: {
                     Image(systemName: showEmojiPanel ? "keyboard" : "face.smiling")
                         .font(.system(size: 22))
@@ -1580,12 +1642,17 @@ public struct WatchView: View {
                     text: $viewModel.draft,
                     placeholder: String(localized: "Say something…"),
                     isEmojiPanelOpen: showEmojiPanel,
+                    focusRequest: composerFocusRequest,
                     onBeganEditing: {
+                        isComposerFocused = true
                         if showEmojiPanel {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 showEmojiPanel = false
                             }
                         }
+                    },
+                    onEndedEditing: {
+                        isComposerFocused = false
                     }
                 )
                 .frame(minHeight: 40)

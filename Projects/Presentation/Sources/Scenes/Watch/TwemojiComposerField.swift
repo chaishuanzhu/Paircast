@@ -7,7 +7,10 @@ struct TwemojiComposerField: UIViewRepresentable {
     @Binding var text: String
     var placeholder: String
     var isEmojiPanelOpen: Bool
+    /// Increment to request first-responder (e.g. switching emoji panel → keyboard).
+    var focusRequest: Int = 0
     var onBeganEditing: (() -> Void)?
+    var onEndedEditing: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -57,8 +60,16 @@ struct TwemojiComposerField: UIViewRepresentable {
             context.coordinator.reload(from: text, force: true)
         }
         context.coordinator.updatePlaceholder()
+
         if isEmojiPanelOpen, uiView.isFirstResponder {
             uiView.resignFirstResponder()
+        } else if focusRequest != context.coordinator.lastFocusRequest {
+            context.coordinator.lastFocusRequest = focusRequest
+            if focusRequest > 0, !isEmojiPanelOpen, !uiView.isFirstResponder {
+                DispatchQueue.main.async {
+                    _ = uiView.becomeFirstResponder()
+                }
+            }
         }
     }
 
@@ -66,6 +77,7 @@ struct TwemojiComposerField: UIViewRepresentable {
         var parent: TwemojiComposerField
         private weak var textView: PaddingTextView?
         private var isApplying = false
+        var lastFocusRequest = 0
 
         init(_ parent: TwemojiComposerField) {
             self.parent = parent
@@ -113,6 +125,10 @@ struct TwemojiComposerField: UIViewRepresentable {
 
         func textViewDidBeginEditing(_ textView: UITextView) {
             parent.onBeganEditing?()
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            parent.onEndedEditing?()
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -201,8 +217,11 @@ final class TwemojiAttachment: NSTextAttachment {
     init(emoji: String, image: UIImage, side: CGFloat) {
         self.emoji = emoji
         super.init(data: nil, ofType: nil)
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = image.scale
+        // Bundled Twemoji PNGs load via `contentsOfFile` at scale 1. Re-rasterizing
+        // with that scale yields ~18px bitmaps on a 3x screen → blurry glyphs.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = UIScreen.main.scale
+        format.opaque = false
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format)
         self.image = renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: CGSize(width: side, height: side)))
