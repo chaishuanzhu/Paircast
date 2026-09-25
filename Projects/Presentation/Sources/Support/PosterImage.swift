@@ -9,21 +9,25 @@ struct PosterImage: View {
     @State private var failed = false
 
     var body: some View {
-        ZStack {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else if failed || url == nil {
-                Image(systemName: "film")
-                    .foregroundStyle(.secondary)
-            } else {
-                ProgressView()
+        // Size to the offered frame, not the bitmap's intrinsic size — otherwise
+        // scaledToFill posters inflate parent ZStacks (e.g. watch chrome).
+        Color.clear
+            .overlay {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else if failed || url == nil {
+                    Image(systemName: "film")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ProgressView()
+                }
             }
-        }
-        .task(id: url?.absoluteString) {
-            await load()
-        }
+            .clipped()
+            .task(id: url?.absoluteString) {
+                await load()
+            }
     }
 
     private func load() async {

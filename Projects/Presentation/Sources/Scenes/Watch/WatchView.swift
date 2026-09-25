@@ -1188,13 +1188,16 @@ public struct WatchView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // UIViewRepresentable 会吞掉触摸，不能依赖它上面的 onTapGesture
 
-            // Prefer landscape fanart; fall back to poster. No VLC frame grab (saves traffic).
+            // Prefer landscape fanart; fall back to poster. Bound to the stage so
+            // portrait posters cannot inflate the chrome VStack.
             if !viewModel.player.hasStartedPlayback {
-                PosterImage(
-                    url: viewModel.movie?.backdropURL ?? viewModel.movie?.posterURL
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
+                GeometryReader { coverProxy in
+                    PosterImage(
+                        url: viewModel.movie?.backdropURL ?? viewModel.movie?.posterURL
+                    )
+                    .frame(width: coverProxy.size.width, height: coverProxy.size.height)
+                    .clipped()
+                }
                 .allowsHitTesting(false)
             }
 
