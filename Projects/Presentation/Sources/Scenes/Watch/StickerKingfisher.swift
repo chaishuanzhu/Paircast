@@ -10,7 +10,7 @@ enum StickerKingfisher {
         cache.memoryStorage.config.totalCostLimit = 32 * 1024 * 1024
         cache.memoryStorage.config.countLimit = 48
         cache.memoryStorage.config.expiration = .seconds(120)
-        cache.diskStorage.config.sizeLimit = 256 * 1024 * 1024
+        cache.diskStorage.config.sizeLimit = 512 * 1024 * 1024
         return cache
     }()
 

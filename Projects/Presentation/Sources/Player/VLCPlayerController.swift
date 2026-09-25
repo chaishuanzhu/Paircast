@@ -26,8 +26,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     private var playRequested = false
     /// VLC must briefly run to fill its input/decoder buffers before the user presses play.
     private var isPrebuffering = false
-    /// Network VOD often ignores `setTime` while fully paused; briefly play to apply seek.
-    private var isSeekNudging = false
+    /// Generation token so delayed prebuffer re-pause ignores stale tasks after stop/prepare.
+    private var prebufferGeneration = 0
     /// Keep the scrubber on the host's target until VLC reports a matching clock (or play resumes).
     private var pausedSeekTargetMs: Int64?
 
@@ -77,7 +77,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         isReady = false
         hasStartedPlayback = false
         playRequested = false
-        isSeekNudging = false
+        isPrebuffering = false
+        prebufferGeneration += 1
         pausedSeekTargetMs = nil
         loadProgress = 0.05
         mediaPlayer.stop()
@@ -123,9 +124,16 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.rate = 1.0
         applySubtitleTextRendererFont()
         isPrebuffering = false
-        isSeekNudging = false
-        pausedSeekTargetMs = nil
         playRequested = true
+        // Apply any scrub done while paused — VLC often ignores setTime until playing.
+        if let pinned = pausedSeekTargetMs {
+            mediaPlayer.time = VLCTime(int: Int32(pinned))
+            if durationMs > 0 {
+                mediaPlayer.position = Float(Double(pinned) / Double(durationMs))
+            }
+            positionMs = pinned
+            pausedSeekTargetMs = nil
+        }
         mediaPlayer.audio?.isMuted = false
         if !mediaPlayer.isPlaying {
             mediaPlayer.play()
@@ -140,7 +148,9 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     /// on a plain `drawable` assignment — the symptom is video audio with a black frame.
     public func refreshDrawable() {
         mediaPlayer.drawable = videoView
-        guard mediaPlayer.media != nil, mediaPlayer.isPlaying else { return }
+        // Never pause→play unless the user actually requested playback. Doing so during
+        // prebuffer / muted seek nudges restarts the stream ("auto play" on enter).
+        guard mediaPlayer.media != nil, playRequested, mediaPlayer.isPlaying else { return }
         mediaPlayer.pause()
         mediaPlayer.play()
         PaircastLog.playback.info("drawable reattached positionMs=\(self.currentPositionMs, privacy: .public)")
@@ -162,8 +172,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.rate = 1.0
         mediaPlayer.audio?.isMuted = false
         isPrebuffering = false
+        prebufferGeneration += 1
         playRequested = false
-        isSeekNudging = false
         pausedSeekTargetMs = nil
         isReady = false
         hasStartedPlayback = false
@@ -176,13 +186,15 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     /// Opens the stream and fills VLC's input/decoder buffers without changing
     /// the room's paused state. The first decoded frame is immediately paused at 0.
     public func prebuffer() {
-        guard isReady, isPaused, mediaPlayer.media != nil, !isPrebuffering else { return }
+        guard isReady, isPaused, mediaPlayer.media != nil, !isPrebuffering, !playRequested else { return }
         isPrebuffering = true
+        prebufferGeneration += 1
+        let generation = prebufferGeneration
         playRequested = false
         mediaPlayer.audio?.isMuted = true
         mediaPlayer.drawable = videoView
         mediaPlayer.play()
-        PaircastLog.playback.info("prebuffer started")
+        PaircastLog.playback.info("prebuffer started gen=\(generation, privacy: .public)")
     }
 
     public func seek(toMs positionMs: Int64) {
@@ -190,25 +202,18 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         self.positionMs = clamped
         mediaPlayer.rate = 1.0
 
-        let applyTime = {
-            self.mediaPlayer.time = VLCTime(int: Int32(clamped))
-            if self.durationMs > 0 {
-                self.mediaPlayer.position = Float(Double(clamped) / Double(self.durationMs))
-            }
-        }
-
-        // While the user intends to stay paused, MobileVLCKit frequently ignores
-        // setTime on network VOD. Nudge play → set time → pause so the seek sticks,
-        // and pin the scrubber so refreshTiming cannot snap back to the old clock.
+        // Paused scrub: only pin UI + best-effort setTime. Do NOT play→pause nudge —
+        // rapid nudges leave MobileVLCKit unable to resume later.
         if isPaused || !playRequested {
             pausedSeekTargetMs = clamped
             mediaPlayer.audio?.isMuted = true
-            applyTime()
+            mediaPlayer.time = VLCTime(int: Int32(clamped))
+            if durationMs > 0 {
+                mediaPlayer.position = Float(Double(clamped) / Double(durationMs))
+            }
+            // If a previous prebuffer left VLC running, stop it from advancing.
             if mediaPlayer.isPlaying {
                 mediaPlayer.pause()
-            } else {
-                isSeekNudging = true
-                mediaPlayer.play()
             }
             isPaused = true
             PaircastLog.playback.info("seek while paused toMs=\(clamped, privacy: .public)")
@@ -216,7 +221,10 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         }
 
         pausedSeekTargetMs = nil
-        applyTime()
+        mediaPlayer.time = VLCTime(int: Int32(clamped))
+        if durationMs > 0 {
+            mediaPlayer.position = Float(Double(clamped) / Double(durationMs))
+        }
         PaircastLog.playback.info("seek toMs=\(clamped, privacy: .public)")
     }
 
@@ -431,35 +439,32 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
                     // state without seeking, because seeking would flush the buffer
                     // we just filled. At most a fraction of a second has advanced.
                     isPrebuffering = false
+                    let generation = prebufferGeneration
                     mediaPlayer.pause()
-                    // Stay muted until an explicit play() — otherwise a failed/racy
-                    // pause can leak audio under the poster ("auto play" on enter).
                     mediaPlayer.audio?.isMuted = true
                     playRequested = false
                     isPaused = true
                     loadProgress = 1
-                    PaircastLog.playback.info("prebuffer ready")
-                    return
-                }
-                if isSeekNudging {
-                    isSeekNudging = false
-                    let target = pausedSeekTargetMs ?? positionMs
-                    mediaPlayer.time = VLCTime(int: Int32(target))
-                    if durationMs > 0 {
-                        mediaPlayer.position = Float(Double(target) / Double(durationMs))
+                    PaircastLog.playback.info("prebuffer ready gen=\(generation, privacy: .public)")
+                    // VLC sometimes ignores the first pause; re-assert shortly.
+                    Task { @MainActor [weak self] in
+                        try? await Task.sleep(for: .milliseconds(120))
+                        guard let self else { return }
+                        guard self.prebufferGeneration == generation else { return }
+                        guard !self.playRequested, self.isPaused else { return }
+                        if self.mediaPlayer.isPlaying {
+                            self.mediaPlayer.pause()
+                            self.mediaPlayer.audio?.isMuted = true
+                            PaircastLog.playback.warning("prebuffer re-pause after sticky play")
+                        }
                     }
-                    mediaPlayer.pause()
-                    mediaPlayer.audio?.isMuted = true
-                    isPaused = true
-                    positionMs = target
-                    PaircastLog.playback.info("seek nudge applied toMs=\(target, privacy: .public)")
                     return
                 }
                 if playRequested {
                     isPaused = false
                     loadProgress = 1
                 } else {
-                    // Spurious .playing after prebuffer (VLC often fires twice).
+                    // Spurious .playing after prebuffer / layout reattach.
                     PaircastLog.playback.warning("vlc playing without playRequested; forcing pause")
                     mediaPlayer.pause()
                     mediaPlayer.audio?.isMuted = true

@@ -356,7 +356,15 @@ public final class WatchViewModel: ObservableObject {
             if state.isPaused {
                 if !player.isPaused { player.pause() }
             } else if player.isPaused {
-                player.play()
+                // Host must not auto-start from a stray heartbeat/echo while still on the poster.
+                // Members joining a live room still start via host play/heartbeat.
+                if signal.action == .heartbeat,
+                   isHost,
+                   !player.hasStartedPlayback {
+                    PaircastLog.playback.info("ignore host heartbeat auto-play before first play")
+                } else {
+                    player.play()
+                }
             }
         }
     }
