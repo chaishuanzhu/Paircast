@@ -76,7 +76,7 @@ public struct StickerImageView: View {
             .onFailure { _ in failed = true }
             .cancelOnDisappear(true)
             .loadDiskFileSynchronously(false)
-            .cacheOriginalImage(false)
+            .cacheOriginalImage(true)
             .resizable()
             .scaledToFit()
     }
