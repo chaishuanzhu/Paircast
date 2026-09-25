@@ -24,9 +24,72 @@ struct ChatEmojiStickerPanel: View {
     @State private var recent: [StickerRef] = []
     @State private var loading = false
     @State private var loadFailed = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private let recentKey = "paircast.stickers.recent"
-    private let panelHeight: CGFloat = 280
+    /// Emoji / sticker cell size is derived from available width so rows fill edge-to-edge.
+    private static let emojiTargetSide: CGFloat = 40
+    private static let emojiMinSide: CGFloat = 32
+    private static let emojiMaxSide: CGFloat = 48
+    private static let emojiSpacing: CGFloat = 4
+    private static let stickerSpacing: CGFloat = 2
+    private static let stickerTargetSide: CGFloat = 72
+    private static let stickerMinSide: CGFloat = 56
+    private static let stickerMaxSide: CGFloat = 96
+
+    private var panelHeight: CGFloat {
+        horizontalSizeClass == .regular ? 340 : 280
+    }
+
+    /// Column count from a target cell size, then grow/shrink cells to fill the row.
+    private static func fillLayout(
+        width: CGFloat,
+        horizontalPadding: CGFloat,
+        spacing: CGFloat,
+        target: CGFloat,
+        minSide: CGFloat,
+        maxSide: CGFloat,
+        minimumColumns: Int
+    ) -> (columns: [GridItem], cell: CGFloat) {
+        let usable = max(minSide, width - horizontalPadding)
+        var count = max(minimumColumns, Int((usable + spacing) / (target + spacing)))
+        var cell = (usable - CGFloat(count - 1) * spacing) / CGFloat(count)
+        while cell > maxSide {
+            count += 1
+            cell = (usable - CGFloat(count - 1) * spacing) / CGFloat(count)
+        }
+        if cell < minSide {
+            count = max(minimumColumns, Int((usable + spacing) / (minSide + spacing)))
+            cell = (usable - CGFloat(count - 1) * spacing) / CGFloat(count)
+        }
+        cell = (cell * 2).rounded(.down) / 2
+        let columns = Array(repeating: GridItem(.fixed(cell), spacing: spacing), count: count)
+        return (columns, cell)
+    }
+
+    private static func emojiLayout(width: CGFloat) -> (columns: [GridItem], cell: CGFloat) {
+        fillLayout(
+            width: width,
+            horizontalPadding: 24,
+            spacing: emojiSpacing,
+            target: emojiTargetSide,
+            minSide: emojiMinSide,
+            maxSide: emojiMaxSide,
+            minimumColumns: 8
+        )
+    }
+
+    private static func stickerLayout(width: CGFloat) -> (columns: [GridItem], cell: CGFloat) {
+        fillLayout(
+            width: width,
+            horizontalPadding: 8,
+            spacing: stickerSpacing,
+            target: stickerTargetSide,
+            minSide: stickerMinSide,
+            maxSide: stickerMaxSide,
+            minimumColumns: 4
+        )
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,24 +150,25 @@ struct ChatEmojiStickerPanel: View {
     }
 
     private var emojiGrid: some View {
-        ScrollView {
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 8),
-                spacing: 10
-            ) {
-                ForEach(Twemoji.pickerEmojis, id: \.self) { emoji in
-                    Button {
-                        draft.append(emoji)
-                    } label: {
-                        TwemojiImage(emoji: emoji, size: 28)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 4)
+        GeometryReader { geo in
+            let layout = Self.emojiLayout(width: geo.size.width)
+            // Glyph slightly smaller than the cell so taps stay comfortable.
+            let glyph = min(layout.cell * 0.7, layout.cell - 8)
+            ScrollView {
+                LazyVGrid(columns: layout.columns, alignment: .leading, spacing: 8) {
+                    ForEach(Twemoji.pickerEmojis, id: \.self) { emoji in
+                        Button {
+                            draft.append(emoji)
+                        } label: {
+                            TwemojiImage(emoji: emoji, size: glyph)
+                                .frame(width: layout.cell, height: layout.cell)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 12)
         }
     }
 
@@ -224,34 +288,36 @@ struct ChatEmojiStickerPanel: View {
             } else if items.isEmpty {
                 emptyState(pageId == Self.recentPageId ? "No recent stickers" : "No stickers in this pack")
             } else {
-                ScrollView {
-                    LazyVGrid(
-                        columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 2), count: 4),
-                        spacing: 2
-                    ) {
-                        ForEach(items, id: \.bindKey) { ref in
-                            Button {
-                                recordRecent(ref)
-                                onSendSticker(ref)
-                            } label: {
-                                StickerImageView(
-                                    ref: ref,
-                                    catalog: catalog,
-                                    config: config,
-                                    side: nil,
-                                    playback: .thumbnail,
-                                    thumbnailPointSide: 72
-                                )
-                                .aspectRatio(1, contentMode: .fit)
-                                .frame(maxWidth: .infinity)
+                GeometryReader { geo in
+                    let layout = Self.stickerLayout(width: geo.size.width)
+                    ScrollView {
+                        LazyVGrid(
+                            columns: layout.columns,
+                            alignment: .leading,
+                            spacing: Self.stickerSpacing
+                        ) {
+                            ForEach(items, id: \.bindKey) { ref in
+                                Button {
+                                    recordRecent(ref)
+                                    onSendSticker(ref)
+                                } label: {
+                                    StickerImageView(
+                                        ref: ref,
+                                        catalog: catalog,
+                                        config: config,
+                                        side: layout.cell,
+                                        playback: .thumbnail,
+                                        thumbnailPointSide: layout.cell
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, 4)
+                        .padding(.bottom, 4)
                     }
-                    .padding(.horizontal, 4)
-                    .padding(.bottom, 4)
+                    .scrollIndicators(.hidden)
                 }
-                .scrollIndicators(.hidden)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
