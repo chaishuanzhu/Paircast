@@ -185,12 +185,20 @@ public final class WatchViewModel: ObservableObject {
         )
         let movies = (try? await harness.listMovies(enrichMetadata: false)) ?? []
         libraryMovies = movies
-        movie = movies.first(where: { $0.id == id }) ?? Movie(
+        var current = movies.first(where: { $0.id == id }) ?? Movie(
             id: id,
             objectKey: id,
             title: id,
             format: VideoFormat(filename: id) ?? .mp4
         )
+        // Stage cover uses OSS/TMDB art — enrich this title before prepare.
+        if let config = try? await session.configGateway.load() {
+            current = await session.metadataGateway.enrich(current, config: config)
+            if let index = libraryMovies.firstIndex(where: { $0.id == current.id }) {
+                libraryMovies[index] = current
+            }
+        }
+        movie = current
     }
 
     private func preparePlayer() async {
@@ -199,7 +207,6 @@ public final class WatchViewModel: ObservableObject {
             "preparePlayer movie=\(movie.objectKey, privacy: .public) format=\(movie.format.rawValue, privacy: .public)"
         )
         player.stop()
-        player.loadCachedCover(for: movie.objectKey)
         do {
             let config = try await session.configGateway.load() ?? AppCloudConfig(
                 im: .init(sdkAppId: 0, secretKey: ""),
@@ -207,10 +214,6 @@ public final class WatchViewModel: ObservableObject {
             )
             let url = try await session.catalogGateway.playURL(for: movie, config: config)
             try await player.prepare(url: url, format: movie.format)
-            let coverKey = movie.objectKey
-            Task { [weak self] in
-                await self?.player.generateCoverIfNeeded(url: url, cacheKey: coverKey)
-            }
             player.prebuffer()
             if let playerError = player.lastError {
                 PaircastLog.playback.error("preparePlayer playerError=\(playerError, privacy: .public)")
@@ -512,11 +515,15 @@ public final class WatchViewModel: ObservableObject {
                 seq: seq
             )
             self.room = updated
-            movie = target
-            onlineQuery = [target.title, target.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
-            playback = PlaybackState(positionMs: 0, isPaused: true, movieId: target.id, lastSeq: seq)
-            let offset = SubtitleOffsetStore.load(movieId: target.id)
-            subtitleState = SubtitleState(movieId: target.id, offsetMs: offset)
+            var next = target
+            if let config = try? await session.configGateway.load() {
+                next = await session.metadataGateway.enrich(next, config: config)
+            }
+            movie = next
+            onlineQuery = [next.title, next.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
+            playback = PlaybackState(positionMs: 0, isPaused: true, movieId: next.id, lastSeq: seq)
+            let offset = SubtitleOffsetStore.load(movieId: next.id)
+            subtitleState = SubtitleState(movieId: next.id, offsetMs: offset)
             player.pause()
             await preparePlayer()
             pendingMovie = nil
@@ -1181,18 +1188,13 @@ public struct WatchView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // UIViewRepresentable 会吞掉触摸，不能依赖它上面的 onTapGesture
 
-            if !viewModel.player.hasStartedPlayback,
-               let cover = viewModel.player.coverImage {
-                GeometryReader { coverProxy in
-                    Image(uiImage: cover)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(
-                            width: coverProxy.size.width,
-                            height: coverProxy.size.height
-                        )
-                        .clipped()
-                }
+            // Prefer landscape fanart; fall back to poster. No VLC frame grab (saves traffic).
+            if !viewModel.player.hasStartedPlayback {
+                PosterImage(
+                    url: viewModel.movie?.backdropURL ?? viewModel.movie?.posterURL
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
                 .allowsHitTesting(false)
             }
 

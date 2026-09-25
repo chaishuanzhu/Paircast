@@ -100,25 +100,6 @@ final class InviteUseCasePresentationTests: XCTestCase {
     }
 }
 
-@MainActor
-final class VideoCoverGeneratorTests: XCTestCase {
-    func test_snapshotUsesFiveSecondMark() {
-        XCTAssertEqual(
-            VideoCoverGenerator.snapshotPosition(durationMs: 100_000),
-            0.05,
-            accuracy: 0.0001
-        )
-    }
-
-    func test_shortVideoUsesMidpoint() {
-        XCTAssertEqual(
-            VideoCoverGenerator.snapshotPosition(durationMs: 8_000),
-            0.5,
-            accuracy: 0.0001
-        )
-    }
-}
-
 private struct InviteHarness: InviteToRoomUseCase {}
 
 @MainActor
