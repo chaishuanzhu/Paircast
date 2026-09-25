@@ -105,7 +105,7 @@ public final class TencentIMAuthGateway: AuthGateway, @unchecked Sendable {
         let userId = await currentUserId()
         let avatarKey = lock.withLock { cachedUser?.avatarKey }
         if let userId {
-            try? await client.updateProfile(nickname: userId, avatarKey: "")
+            _ = try? await client.updateProfile(nickname: userId, avatarKey: "")
         }
         if let avatarKey,
            let config = try? await configGateway.load(),

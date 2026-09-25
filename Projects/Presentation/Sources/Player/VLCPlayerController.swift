@@ -399,7 +399,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
 
 extension VLCPlayerController: VLCMediaPlayerDelegate {
     nonisolated public func mediaPlayerStateChanged(_ aNotification: Notification) {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             // Keep 1x — sync/seek paths must not leave the player in FF/REW.
             if abs(mediaPlayer.rate - 1.0) > 0.01, mediaPlayer.state == .playing {
                 mediaPlayer.rate = 1.0
@@ -447,9 +448,9 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
                     loadProgress = 1
                     PaircastLog.playback.info("prebuffer ready gen=\(generation, privacy: .public)")
                     // VLC sometimes ignores the first pause; re-assert shortly.
-                    Task { @MainActor [weak self] in
+                    // Outer Task already resolved `self` strongly for this hop.
+                    Task { @MainActor in
                         try? await Task.sleep(for: .milliseconds(120))
-                        guard let self else { return }
                         guard self.prebufferGeneration == generation else { return }
                         guard !self.playRequested, self.isPaused else { return }
                         if self.mediaPlayer.isPlaying {
@@ -478,8 +479,8 @@ extension VLCPlayerController: VLCMediaPlayerDelegate {
     }
 
     nonisolated public func mediaPlayerTimeChanged(_ aNotification: Notification) {
-        Task { @MainActor in
-            refreshTiming()
+        Task { @MainActor [weak self] in
+            self?.refreshTiming()
         }
     }
 
