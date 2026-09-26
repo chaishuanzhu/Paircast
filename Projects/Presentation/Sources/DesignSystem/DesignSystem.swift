@@ -118,6 +118,8 @@ public struct TandemAvatarView: View {
     public var avatarURL: URL? = nil
     public var localImage: UIImage? = nil
 
+    @State private var remoteLoadFailed = false
+
     nonisolated public init(
         initial: String,
         size: CGFloat = 36,
@@ -157,18 +159,20 @@ public struct TandemAvatarView: View {
                 Image(uiImage: localImage)
                     .resizable()
                     .scaledToFill()
-            } else if let avatarURL {
-                initialView
-                    .overlay {
-                        KFImage.url(avatarURL)
-                            .targetCache(PaircastKingfisher.images)
-                            .cacheOriginalImage(true)
-                            .placeholder { ProgressView() }
-                            .cancelOnDisappear(true)
-                            .loadDiskFileSynchronously(false)
-                            .resizable()
-                            .scaledToFill()
-                    }
+                    .frame(width: size, height: size)
+                    .clipped()
+            } else if let avatarURL, !remoteLoadFailed {
+                KFImage.url(avatarURL)
+                    .targetCache(PaircastKingfisher.images)
+                    .cacheOriginalImage(true)
+                    .placeholder { ProgressView() }
+                    .onFailure { _ in remoteLoadFailed = true }
+                    .cancelOnDisappear(true)
+                    .loadDiskFileSynchronously(false)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipped()
             } else {
                 initialView
             }
@@ -182,12 +186,16 @@ public struct TandemAvatarView: View {
                     .stroke(Color(red: 1, green: 107 / 255, blue: 129 / 255), lineWidth: 2)
             }
         }
+        .onChange(of: avatarURL) { _, _ in
+            remoteLoadFailed = false
+        }
     }
 
     private var initialView: some View {
         Text(initial)
             .font(.system(size: size * 0.42, weight: .semibold))
             .foregroundStyle(.white)
+            .frame(width: size, height: size)
     }
 }
 
