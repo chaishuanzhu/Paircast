@@ -85,6 +85,7 @@ public struct StickerImageView: View {
     private func animatedImage(url: URL) -> some View {
         KFAnimatedImage.url(url, cacheKey: ref.bindKey)
             .targetCache(StickerKingfisher.cache)
+            .cacheOriginalImage(true)
             .placeholder { ProgressView() }
             .onFailure { _ in failed = true }
             .cancelOnDisappear(true)

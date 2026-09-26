@@ -4,7 +4,7 @@ import Domain
 /// Member avatar with an outer circular playback progress ring.
 /// Track uses opacity 0.3; progress maps `position / duration` for that member.
 ///
-/// Progress ticks via an internal `TimelineView` so the avatar `AsyncImage` is not
+/// Progress ticks via an internal `TimelineView` so the avatar Kingfisher image is not
 /// rebuilt every tick (rebuilding forced repeated avatar downloads).
 public struct MemberPlaybackAvatar: View {
     public var userId: String

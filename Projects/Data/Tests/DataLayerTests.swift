@@ -497,6 +497,17 @@ final class MetadataGatewayHelpersTests: XCTestCase {
         )
         XCTAssertNil(CascadingMetadataGateway.tmdbImageURL(path: nil, size: "w500"))
     }
+
+    func test_needsOSSArtPersistDetectsTMDBHost() {
+        var movie = Movie(id: "1", objectKey: "films/A.2020.mkv", title: "A", format: .mkv)
+        XCTAssertFalse(CascadingMetadataGateway.needsOSSArtPersist(movie))
+
+        movie.posterURL = URL(string: "https://image.tmdb.org/t/p/w500/x.jpg")
+        XCTAssertTrue(CascadingMetadataGateway.needsOSSArtPersist(movie))
+
+        movie.posterURL = URL(string: "https://s3.example.com/bucket/films/A.2020-poster.jpg?X-Amz-Signature=1")
+        XCTAssertFalse(CascadingMetadataGateway.needsOSSArtPersist(movie))
+    }
 }
 
 final class OSSAvatarStorageTests: XCTestCase {

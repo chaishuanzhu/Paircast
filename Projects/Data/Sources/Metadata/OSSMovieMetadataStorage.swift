@@ -70,11 +70,18 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
                         contentType: downloaded.contentType
                     )
                     result.posterURL = try signedGETURL(objectKey: posterKey, config: config)
+                    PaircastLog.catalog.info(
+                        "metadata poster uploaded key=\(posterKey, privacy: .public) bytes=\(downloaded.data.count, privacy: .public)"
+                    )
                 } catch {
                     PaircastLog.catalog.error(
-                        "metadata poster upload failed key=\(posterKey, privacy: .public)"
+                        "metadata poster upload failed key=\(posterKey, privacy: .public) error=\(String(describing: error), privacy: .public)"
                     )
                 }
+            } else {
+                PaircastLog.catalog.error(
+                    "metadata poster download failed url=\(remotePoster.absoluteString, privacy: .public)"
+                )
             }
         }
 
@@ -154,23 +161,54 @@ public final class OSSMovieMetadataStorage: MovieMetadataStorageGateway, @unchec
     }
 
     private func downloadImage(from remote: URL) async -> (data: Data, contentType: String)? {
-        do {
-            var request = URLRequest(url: remote)
-            request.timeoutInterval = 30
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
-                  !data.isEmpty else {
-                return nil
+        var lastStatus = -1
+        for attempt in 1...3 {
+            do {
+                var request = URLRequest(url: remote)
+                request.timeoutInterval = 30
+                request.setValue("image/avif,image/webp,image/*,*/*;q=0.8", forHTTPHeaderField: "Accept")
+                let (data, response) = try await session.data(for: request)
+                guard let http = response as? HTTPURLResponse else {
+                    lastStatus = -1
+                    continue
+                }
+                lastStatus = http.statusCode
+                guard (200..<300).contains(http.statusCode), !data.isEmpty else {
+                    PaircastLog.catalog.error(
+                        "metadata art download HTTP \(http.statusCode, privacy: .public) attempt=\(attempt, privacy: .public) host=\(remote.host ?? "", privacy: .public)"
+                    )
+                    if http.statusCode == 429 || (500..<600).contains(http.statusCode) {
+                        try? await Task.sleep(for: .milliseconds(200 * attempt))
+                        continue
+                    }
+                    return nil
+                }
+                let rawType = http.value(forHTTPHeaderField: "Content-Type") ?? "image/jpeg"
+                let contentType = Self.normalizedImageContentType(rawType)
+                return (data, contentType)
+            } catch {
+                PaircastLog.catalog.error(
+                    "metadata art download failed attempt=\(attempt, privacy: .public) error=\(String(describing: error), privacy: .public)"
+                )
+                try? await Task.sleep(for: .milliseconds(200 * attempt))
             }
-            let rawType = http.value(forHTTPHeaderField: "Content-Type") ?? "image/jpeg"
-            let contentType = rawType.contains("image") ? rawType : "image/jpeg"
-            return (data, contentType)
-        } catch {
-            PaircastLog.catalog.error(
-                "metadata art download failed error=\(String(describing: error), privacy: .public)"
-            )
-            return nil
         }
+        if lastStatus >= 0 {
+            PaircastLog.catalog.error(
+                "metadata art download gave up HTTP \(lastStatus, privacy: .public) host=\(remote.host ?? "", privacy: .public)"
+            )
+        }
+        return nil
+    }
+
+    /// Strip charset / parameters so SigV4 + S3-compatible PUTs stay stable.
+    private static func normalizedImageContentType(_ raw: String) -> String {
+        let base = raw.split(separator: ";", maxSplits: 1).first
+            .map(String.init)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? "image/jpeg"
+        if base.hasPrefix("image/") { return base }
+        return "image/jpeg"
     }
 
     // MARK: - S3 helpers

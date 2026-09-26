@@ -30,7 +30,7 @@ public struct AcknowledgementsView: View {
                 Link("Twemoji on GitHub", destination: URL(string: "https://github.com/twitter/twemoji")!)
             }
             Section("Images") {
-                Text("Sticker images are loaded and cached with Kingfisher (MIT).")
+                Text("Network images (posters, avatars, stickers, Twemoji CDN) are loaded and cached with Kingfisher (MIT), including original files on disk.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 Link("Kingfisher on GitHub", destination: URL(string: "https://github.com/onevcat/Kingfisher")!)

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Kingfisher
 
 public enum TandemColors {
     /// Primary-500 / dark fill.brand (docs/designtoken.md).
@@ -157,18 +158,17 @@ public struct TandemAvatarView: View {
                     .resizable()
                     .scaledToFill()
             } else if let avatarURL {
-                AsyncImage(url: avatarURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        initialView
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        initialView
+                initialView
+                    .overlay {
+                        KFImage.url(avatarURL)
+                            .targetCache(PaircastKingfisher.images)
+                            .cacheOriginalImage(true)
+                            .placeholder { ProgressView() }
+                            .cancelOnDisappear(true)
+                            .loadDiskFileSynchronously(false)
+                            .resizable()
+                            .scaledToFill()
                     }
-                }
             } else {
                 initialView
             }

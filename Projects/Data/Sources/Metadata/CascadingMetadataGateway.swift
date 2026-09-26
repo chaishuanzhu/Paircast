@@ -18,14 +18,13 @@ public struct CascadingMetadataGateway: MetadataGateway {
 
     public func enrich(_ movie: Movie, config: AppCloudConfig) async -> Movie {
         if let cached = await cache.movie(for: movie.objectKey) {
-            return cached
-        }
-
-        // Prefer existing OSS NFO / art sidecars — skip live scrape when present.
-        if let storage,
-           let stored = await storage.load(for: movie, config: config) {
-            await cache.store(stored, for: movie.objectKey)
-            return stored
+            // UI may already show a TMDB CDN URL; keep retrying OSS persist until art is local.
+            guard let storage, Self.needsOSSArtPersist(cached) else {
+                return cached
+            }
+            let saved = await storage.save(cached, config: config)
+            await cache.store(saved, for: movie.objectKey)
+            return saved
         }
 
         let parsed = MovieCatalogRules.parseFilenameMetadata(from: movie.objectKey)
@@ -33,8 +32,24 @@ public struct CascadingMetadataGateway: MetadataGateway {
         result.title = parsed.title
         result.year = parsed.year ?? result.year
 
+        // Prefer existing OSS sidecars. Complete hit (with poster) skips scrape.
+        // NFO-only / missing art falls through so we can still fetch and upload posters.
+        if let storage, let stored = await storage.load(for: movie, config: config) {
+            if stored.posterURL != nil {
+                await cache.store(stored, for: movie.objectKey)
+                return stored
+            }
+            result = stored
+            if result.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                result.title = parsed.title
+            }
+            if result.year == nil || result.year?.isEmpty == true {
+                result.year = parsed.year ?? result.year
+            }
+        }
+
         // Use the official TMDB API only when the user supplies their own token.
-        if result.posterURL == nil || (result.overview ?? "").isEmpty {
+        if result.posterURL == nil || Self.needsOSSArtPersist(result) || (result.overview ?? "").isEmpty {
             if let tmdb = await fetchTMDB(
                 title: result.title,
                 year: result.year,
@@ -55,6 +70,11 @@ public struct CascadingMetadataGateway: MetadataGateway {
         // Persist to object storage so the next launch reads sidecars instead of re-scraping.
         if let storage, result.posterURL != nil || !(result.overview ?? "").isEmpty {
             result = await storage.save(result, config: config)
+            if Self.needsOSSArtPersist(result) {
+                PaircastLog.catalog.error(
+                    "metadata oss art still remote after save movie=\(movie.objectKey, privacy: .public)"
+                )
+            }
         }
 
         // Only cache successful enrichments so a token added later can retry.
@@ -62,6 +82,12 @@ public struct CascadingMetadataGateway: MetadataGateway {
             await cache.store(result, for: movie.objectKey)
         }
         return result
+    }
+
+    /// True when poster still points at TMDB CDN and needs upload to object storage.
+    static func needsOSSArtPersist(_ movie: Movie) -> Bool {
+        guard let host = movie.posterURL?.host?.lowercased() else { return false }
+        return host == "image.tmdb.org" || host.hasSuffix(".tmdb.org")
     }
 
     // MARK: - TMDB

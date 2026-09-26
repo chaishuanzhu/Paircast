@@ -1,8 +1,9 @@
 import Foundation
 import UIKit
 import Domain
+import Kingfisher
 
-/// Resolves Twemoji PNGs: bundled `Twemoji/{code}.png` first, then CDN cache.
+/// Resolves Twemoji PNGs: bundled `Twemoji/{code}.png` first, then CDN via Kingfisher.
 enum TwemojiImageCache {
     private static let lock = NSLock()
     private static var memory: [String: UIImage] = [:]
@@ -32,6 +33,13 @@ enum TwemojiImageCache {
             lock.unlock()
             return bundled
         }
+        let cacheKey = Self.kingfisherKey(key)
+        if let memoryHit = PaircastKingfisher.images.retrieveImageInMemoryCache(forKey: cacheKey) {
+            lock.lock()
+            memory[key] = memoryHit
+            lock.unlock()
+            return memoryHit
+        }
         return nil
     }
 
@@ -58,10 +66,25 @@ enum TwemojiImageCache {
             finish(key: key, image: nil)
             return
         }
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            let image = data.flatMap { UIImage(data: $0) }
-            finish(key: key, image: image)
-        }.resume()
+        let resource = KF.ImageResource(downloadURL: url, cacheKey: Self.kingfisherKey(key))
+        KingfisherManager.shared.retrieveImage(
+            with: resource,
+            options: [
+                .targetCache(PaircastKingfisher.images),
+                .cacheOriginalImage,
+            ]
+        ) { result in
+            switch result {
+            case .success(let value):
+                finish(key: key, image: value.image)
+            case .failure:
+                finish(key: key, image: nil)
+            }
+        }
+    }
+
+    private static func kingfisherKey(_ codepoints: String) -> String {
+        "twemoji.\(codepoints)"
     }
 
     private static func finish(key: String, image: UIImage?) {
