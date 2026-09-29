@@ -132,7 +132,7 @@ public actor StickerCatalogStore: StickerCatalogGateway {
 
     private func configFingerprint(_ config: AppCloudConfig) -> String {
         let s = config.storage
-        return [s.bucket, s.endpoint, s.prefix ?? "", s.domain ?? ""].joined(separator: "|")
+        return [s.bucket, s.endpoint, s.prefix ?? ""].joined(separator: "|")
     }
 
     private func diskFileURL(packId: String, fileName: String, fingerprint: String) -> URL {

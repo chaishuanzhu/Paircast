@@ -184,8 +184,7 @@ final class ConfigValidationTests: XCTestCase {
                 accessKey: "a",
                 secretKey: "b",
                 bucket: "c",
-                endpoint: "https://qiniu.chaisz.com",
-                domain: nil
+                endpoint: "https://qiniu.chaisz.com"
             )
         )
         XCTAssertThrowsError(try ConfigValidation.validate(config)) { error in
@@ -196,24 +195,18 @@ final class ConfigValidationTests: XCTestCase {
         }
     }
 
-    func test_normalizesSchemeAndRejectsS3AsDomain() throws {
+    func test_normalizesEndpointScheme() throws {
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "s"),
             storage: .init(
                 accessKey: "a",
                 secretKey: "b",
                 bucket: "c",
-                endpoint: "https://s3.cn-south-1.qiniucs.com/",
-                domain: "https://qiniu.chaisz.com/"
+                endpoint: "https://s3.cn-south-1.qiniucs.com/"
             )
         )
         let normalized = try ConfigValidation.normalized(config)
         XCTAssertEqual(normalized.storage.endpoint, "s3.cn-south-1.qiniucs.com")
-        XCTAssertEqual(normalized.storage.domain, "qiniu.chaisz.com")
-
-        XCTAssertThrowsError(
-            try ConfigValidation.validatedDomain("s3.cn-south-1.qiniucs.com", provider: .qiniu)
-        )
     }
 
     func test_acceptsAliyunOSSEndpoint() throws {

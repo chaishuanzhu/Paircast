@@ -77,7 +77,6 @@ public enum ConfigValidation {
 
     public static func normalizedStorage(_ storage: ObjectStorageConfig) throws -> ObjectStorageConfig {
         let endpoint = try validatedEndpoint(storage.endpoint, provider: storage.provider)
-        let domain = try validatedDomain(storage.domain, provider: storage.provider)
         let region = storage.region?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return ObjectStorageConfig(
@@ -87,7 +86,6 @@ public enum ConfigValidation {
             bucket: storage.bucket.trimmingCharacters(in: .whitespacesAndNewlines),
             endpoint: endpoint,
             region: (region?.isEmpty == false) ? region : storage.provider.defaultRegion,
-            domain: domain,
             prefix: normalizedPrefix(storage.prefix),
             useSSL: storage.useSSL,
             forcePathStyle: storage.forcePathStyle
@@ -127,16 +125,6 @@ public enum ConfigValidation {
         }
         guard isAPIEndpointHost(host, provider: provider) else {
             throw AppError.validation(endpointHint(for: provider), args: endpointHintArgs(for: provider))
-        }
-        return host
-    }
-
-    public static func validatedDomain(_ raw: String?, provider: ObjectStorageProvider) throws -> String? {
-        guard let raw else { return nil }
-        let host = normalizedHost(raw)
-        guard !host.isEmpty else { return nil }
-        if isAPIEndpointHost(host, provider: provider) {
-            throw AppError.validation("Custom domain cannot be an API endpoint. Use a CDN or public domain")
         }
         return host
     }

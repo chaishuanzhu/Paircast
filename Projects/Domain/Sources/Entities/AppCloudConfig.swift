@@ -107,7 +107,6 @@ public struct ObjectStorageConfig: Equatable, Sendable {
     /// API host, optionally with port (`minio.local:9000`). No scheme/path.
     public var endpoint: String
     public var region: String?
-    public var domain: String?
     public var prefix: String?
     public var useSSL: Bool
     public var forcePathStyle: Bool
@@ -119,7 +118,6 @@ public struct ObjectStorageConfig: Equatable, Sendable {
         bucket: String,
         endpoint: String,
         region: String? = nil,
-        domain: String? = nil,
         prefix: String? = nil,
         useSSL: Bool? = nil,
         forcePathStyle: Bool? = nil
@@ -130,7 +128,6 @@ public struct ObjectStorageConfig: Equatable, Sendable {
         self.bucket = bucket
         self.endpoint = endpoint
         self.region = region
-        self.domain = domain
         self.prefix = prefix
         self.useSSL = useSSL ?? provider.defaultUseSSL
         self.forcePathStyle = forcePathStyle ?? provider.defaultForcePathStyle

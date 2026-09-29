@@ -640,7 +640,7 @@ IM 群文本；系统消息含加入/离开/**房主转让**。
 
 **腾讯云 IM：** SDKAppID（必填）、SecretKey（签发 UserSig，敏感，Keychain）、UserSig 有效期（可选）。
 
-**七牛云（S3 兼容）：** AccessKey、SecretKey、Bucket、Endpoint/Region（必填）；自定义域名、对象 Prefix（可选）。
+**七牛云（S3 兼容）：** AccessKey、SecretKey、Bucket、Endpoint/Region（必填）；对象 Prefix（可选）。
 
 **扩展可选：** 在线字幕 API Key。
 
@@ -701,7 +701,6 @@ paircast://config?args=ABCEDbase64url…
     "secretKey": "...",
     "bucket": "movies",
     "endpoint": "s3-cn-east-1.qiniucs.com",
-    "domain": "optional.cdn.example.com",
     "prefix": "films/"
   }
 }
@@ -825,7 +824,7 @@ flowchart TD
 | 字段 | 说明 |
 |------|------|
 | im.sdkAppId / im.secretKey / im.userSigExpire | IM |
-| qiniu.accessKey / secretKey / bucket / endpoint / domain / prefix | 七牛 |
+| qiniu.accessKey / secretKey / bucket / endpoint / prefix | 七牛 |
 | subtitleApiKey | 可选 |
 | tmdbAccessToken | 可选；TMDB API 读取访问令牌 |
 | updatedAt / configVersion | 元信息 |

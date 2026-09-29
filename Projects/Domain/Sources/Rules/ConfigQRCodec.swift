@@ -47,7 +47,6 @@ public enum ConfigQRCodec {
         public var bucket: String
         public var endpoint: String
         public var region: String?
-        public var domain: String?
         public var prefix: String?
         public var useSSL: Bool
         public var forcePathStyle: Bool
@@ -59,7 +58,6 @@ public enum ConfigQRCodec {
             bucket: String,
             endpoint: String,
             region: String? = nil,
-            domain: String? = nil,
             prefix: String? = nil,
             useSSL: Bool,
             forcePathStyle: Bool
@@ -70,7 +68,6 @@ public enum ConfigQRCodec {
             self.bucket = bucket
             self.endpoint = endpoint
             self.region = region
-            self.domain = domain
             self.prefix = prefix
             self.useSSL = useSSL
             self.forcePathStyle = forcePathStyle
@@ -88,7 +85,6 @@ public enum ConfigQRCodec {
                 bucket: storage.bucket,
                 endpoint: storage.endpoint,
                 region: storage.region,
-                domain: storage.domain,
                 prefix: storage.prefix,
                 useSSL: storage.useSSL,
                 forcePathStyle: storage.forcePathStyle
@@ -131,7 +127,6 @@ public enum ConfigQRCodec {
                 bucket: payload.storage.bucket,
                 endpoint: payload.storage.endpoint,
                 region: payload.storage.region,
-                domain: payload.storage.domain,
                 prefix: payload.storage.prefix,
                 useSSL: payload.storage.useSSL,
                 forcePathStyle: payload.storage.forcePathStyle

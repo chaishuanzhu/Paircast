@@ -1021,40 +1021,6 @@
         }
       }
     },
-    "Custom domain (optional)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom domain (optional)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自定义域名（可选）"
-          }
-        }
-      }
-    },
-    "Custom domain cannot be an API endpoint. Use a CDN or public domain": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Custom domain cannot be an API endpoint. Use a CDN or public domain"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自定义域名不能填写 API Endpoint，请填写 CDN / 公网域名"
-          }
-        }
-      }
-    },
     "Dark": {
       "extractionState": "manual",
       "localizations": {
@@ -3809,19 +3775,19 @@
         }
       }
     },
-    "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint.": {
+    "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint."
+            "value": "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Endpoint 填七牛 S3 地址（如 s3.cn-south-1.qiniucs.com）。自定义域名只用于头像下载，不要填进 Endpoint。"
+            "value": "Endpoint 填七牛 S3 地址（如 s3.cn-south-1.qiniucs.com），不要填 CDN 或自定义域名。"
           }
         }
       }

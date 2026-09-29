@@ -102,11 +102,6 @@
         <td>常可留空，App 会从 Endpoint 推断</td>
       </tr>
       <tr>
-        <td>自定义域名（可选）</td>
-        <td>绑定到 Bucket 的 HTTPS 域名</td>
-        <td>主要用于头像等下载；须已在云厂商开通证书</td>
-      </tr>
-      <tr>
         <td><code>Prefix</code>（可选）</td>
         <td>桶内目录前缀，如 <code>movies/</code></td>
         <td>只列出该前缀下的影片</td>
@@ -213,7 +208,7 @@
   <ul>
     <li><strong>配置链接无效</strong>：确认完整复制；导入失败不会覆盖已有配置。</li>
     <li><strong>导入后仍像旧配置</strong>：按提示重新登录；导入后不要立刻用空的密钥栏再点保存。</li>
-    <li><strong>Endpoint 报错</strong>：必须是 API 地域域名（见上表），自定义 CDN 域名填「自定义域名」栏。</li>
+    <li><strong>Endpoint 报错</strong>：必须是 API 地域域名（见上表），不要填 CDN 或自定义域名。</li>
     <li><strong>无法登录</strong>：User ID 是否已在 IM 控制台创建；SDKAppID/SecretKey 是否属于同一应用。</li>
   </ul>
 

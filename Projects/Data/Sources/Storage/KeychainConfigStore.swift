@@ -129,7 +129,6 @@ struct AppCloudConfigDTO: Codable {
     var storageBucket: String
     var storageEndpoint: String
     var storageRegion: String?
-    var storageDomain: String?
     var storagePrefix: String?
     var storageUseSSL: Bool
     var storageForcePathStyle: Bool
@@ -148,7 +147,6 @@ struct AppCloudConfigDTO: Codable {
         storageBucket = config.storage.bucket
         storageEndpoint = config.storage.endpoint
         storageRegion = config.storage.region
-        storageDomain = config.storage.domain
         storagePrefix = config.storage.prefix
         storageUseSSL = config.storage.useSSL
         storageForcePathStyle = config.storage.forcePathStyle
@@ -170,7 +168,6 @@ struct AppCloudConfigDTO: Codable {
                 bucket: storageBucket,
                 endpoint: storageEndpoint,
                 region: storageRegion,
-                domain: storageDomain,
                 prefix: storagePrefix,
                 useSSL: storageUseSSL,
                 forcePathStyle: storageForcePathStyle

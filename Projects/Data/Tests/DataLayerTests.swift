@@ -295,7 +295,7 @@ final class OSSCatalogFilterTests: XCTestCase {
 }
 
 final class OSSPlayURLTests: XCTestCase {
-    func test_playURLAlwaysPresignsEvenWhenDomainSet() async throws {
+    func test_playURLAlwaysPresignsViaEndpoint() async throws {
         let gateway = OSSMovieCatalogGateway()
         let config = AppCloudConfig(
             im: .init(sdkAppId: 1, secretKey: "im"),
@@ -304,7 +304,6 @@ final class OSSPlayURLTests: XCTestCase {
                 secretKey: "SK",
                 bucket: "870027381",
                 endpoint: "s3.cn-south-1.qiniucs.com",
-                domain: "cdn.example.com",
                 prefix: nil
             )
         )

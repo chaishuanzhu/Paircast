@@ -12,7 +12,6 @@ public final class ServiceConfigViewModel: ObservableObject {
     @Published public var bucket = ""
     @Published public var endpoint = ""
     @Published public var region = ""
-    @Published public var domain = ""
     @Published public var prefix = ""
     @Published public var useSSL = true
     @Published public var forcePathStyle = true
@@ -48,7 +47,6 @@ public final class ServiceConfigViewModel: ObservableObject {
         bucket = config.storage.bucket
         endpoint = config.storage.endpoint
         region = config.storage.region ?? ""
-        domain = config.storage.domain ?? ""
         prefix = config.storage.prefix ?? ""
         useSSL = config.storage.useSSL
         forcePathStyle = config.storage.forcePathStyle
@@ -166,7 +164,6 @@ public final class ServiceConfigViewModel: ObservableObject {
                 bucket: bucket,
                 endpoint: endpoint,
                 region: region.isEmpty ? nil : region,
-                domain: domain.isEmpty ? nil : domain,
                 prefix: prefix.isEmpty ? nil : prefix,
                 useSSL: useSSL,
                 forcePathStyle: forcePathStyle
@@ -277,10 +274,6 @@ public struct ServiceConfigView: View {
                     )
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Custom domain (optional)", text: $viewModel.domain)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
                     TextField("Prefix (optional)", text: $viewModel.prefix)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -388,7 +381,7 @@ public struct ServiceConfigView: View {
     private func storageFooter(for provider: ObjectStorageProvider) -> String {
         switch provider {
         case .qiniu:
-            return "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Custom domains are for avatar downloads only — do not put them in Endpoint."
+            return "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint."
         case .aliyunOSS:
             return "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
         case .tencentCOS:

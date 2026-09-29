@@ -43,7 +43,6 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
     "secretKey": "...",
     "bucket": "movies",
     "endpoint": "s3-cn-east-1.qiniucs.com",
-    "domain": null,
     "prefix": "films/"
   },
   "subtitleApiKey": null,
@@ -112,10 +111,9 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 
 ## 片库（七牛 S3 兼容）
 
-- **Endpoint**（必填）：`s3.cn-south-1.qiniucs.com` 这类 **S3 API 主机**；片库列表 / 播放 / 房间 JSON **只走 Endpoint**，不要填自定义域名
-- **自定义域名**（可选）：如 `qiniu.chaisz.com`，仅用于头像等下载凭证；保存时会去掉 `https://`。需在七牛控制台为该域名开通 **HTTPS 证书**（证书必须匹配该域名，否则 iOS 会因 ATS/证书校验失败而无法加载）
+- **Endpoint**（必填）：`s3.cn-south-1.qiniucs.com` 这类 **S3 API 主机**；片库列表 / 播放 / 头像 / 海报 / 房间 JSON **全部只走 Endpoint**（SigV4 预签名），不支持自定义域名
 - 列表：`ListObjectsV2` + **AWS Signature V4**；自动按 `NextContinuationToken` 翻页（每页最多 1000，最多 50 页）
-- 播放：对 `/{bucket}/{key}` 生成 **AWS SigV4 预签名 GET**（默认 **6h**）；不走未签名自定义域名，避免私有桶 403
+- 播放：对 `/{bucket}/{key}` 生成 **AWS SigV4 预签名 GET**（默认 **6h**），私有桶也可播放
 - 观影页播放器：**MobileVLCKit**（`VLCPlayerController`），用预签名 URL 拉取后本地解码，支持 `.mp4` / `.m4v` / `.mkv`
 - 仅展示 `.mp4` / `.m4v` / `.mkv`；失败返回明确错误；刷新取消不会清空已有列表
 
