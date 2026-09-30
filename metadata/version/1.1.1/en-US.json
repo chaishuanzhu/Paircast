@@ -3,5 +3,5 @@
   "keywords": "sync player,private cloud,subtitles,chat,invite,remote,room,playback,storage,movie night",
   "promotionalText": "Use your own cloud storage to watch in sync with invited friends, and chat while you watch.",
   "supportUrl": "https://paircast.chaisz.com/en-US/support/",
-  "whatsNew": "Privacy and support pages now live at paircast.chaisz.com. Also improves localization, system theme updates, TMDB metadata, and playback stability on iOS 26."
+  "whatsNew": "Privacy and support pages now live at paircast.chaisz.com.\n- Watch screen cover now uses posters from your storage or TMDB\n- Fixed accidental auto-play when entering a room and seeking while paused\n- Emoji and sticker panels fill the full width on iPad\n- Better image caching and avatar display\n- Localization, system theme, and iOS 26 playback stability improvements"
 }

@@ -3,5 +3,5 @@
   "keywords": "同步播放,私人云,播放器,字幕,聊天,邀请,网盘,远程,一起看,房间",
   "promotionalText": "用你自己的云存储，和受邀好友同步播放、边看边聊。",
   "supportUrl": "https://paircast.chaisz.com/zh-Hans/support/",
-  "whatsNew": "隐私政策与支持页已迁移至 paircast.chaisz.com。同时优化本地化、跟随系统主题、TMDB 元数据，以及 iOS 26 播放稳定性。"
+  "whatsNew": "隐私政策与支持页已迁移至 paircast.chaisz.com。\n- 观影页封面改用存储中的海报或 TMDB 海报\n- 修复进入房间时意外自动播放、暂停时拖动进度无效的问题\n- iPad 上表情与贴纸面板按屏幕宽度铺满\n- 图片缓存与头像显示优化\n- 本地化、跟随系统主题与 iOS 26 播放稳定性改进"
 }
