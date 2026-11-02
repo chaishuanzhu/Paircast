@@ -16,7 +16,7 @@ Android: androidApp (Compose + libVLC + Coil) ───────────�
 |------|------|
 | `shared/core` | 纯 Kotlin：实体、规则（播控/转让/配置码/校验）、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
 | `shared/data` | GO-IM（Wire protobuf over WebSocket + Ktor REST）、S3 兼容存储（SigV4）、房间 JSON、片库/元数据（NFO + TMDB）、字幕（OpenSubtitles + GBK 转码）、贴纸、安全存储接口 |
-| `shared/umbrella` | `PaircastGraph` 组装依赖；iOS 导出 `PaircastShared.xcframework`（SKIE：`suspend` → `async throws`，`Flow` → `AsyncSequence`） |
+| `shared/umbrella` | `PaircastGraph` 组装依赖（两端共用）；iOS 由 Xcode 构建阶段 `embedAndSignAppleFrameworkForXcode` 编译 `PaircastShared` 框架（SKIE：`suspend` → `async throws`，`Flow` → `AsyncSequence`） |
 | `Projects/Presentation` | SwiftUI 场景、`VLCPlayerController`（实现 `PlayerPort`）、Keychain / UserDefaults 平台存储 |
 | `androidApp` | Compose 场景、`VlcPlayer`（libVLC，实现 `PlayerPort`）、EncryptedSharedPreferences |
 
@@ -28,7 +28,7 @@ Android: androidApp (Compose + libVLC + Coil) ───────────�
 构建：
 
 ```bash
-make setup        # VLCKit + PaircastShared.xcframework + tuist generate
+make setup        # VLCKit + tuist generate（Kotlin 框架在 Xcode 构建时自动编译）
 make shared-test  # Kotlin 单测（Android 单元 + iOS 模拟器）
 make test         # shared-test + iOS Presentation 测试
 make android      # Debug APK

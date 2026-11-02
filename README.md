@@ -13,13 +13,13 @@
 ## 快速开始
 
 ```bash
-make setup         # 下载 VLCKit + 构建 PaircastShared.xcframework + tuist install/generate
+make setup         # 下载 VLCKit + tuist install/generate
 make test          # Kotlin 单测 + iOS Presentation 测试
 make open          # 打开生成的 workspace
 make android       # Android Debug APK
 ```
 
-改了 `shared/` 下的 Kotlin 代码后，iOS 需要重新 `make shared`（xcframework 不会自动重建）。
+iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Framework” 构建阶段会调用 Gradle `embedAndSignAppleFrameworkForXcode`，按当前配置 / SDK 编译 `PaircastShared.framework`，改了 `shared/` 直接在 Xcode 里构建即可（需要 JDK 17–21，脚本会自动找 Android Studio 自带 JBR）。
 
 ## 模块
 
@@ -27,7 +27,7 @@ make android       # Android Debug APK
 |------|------|
 | `shared/core` | 纯 Kotlin：实体、规则、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
 | `shared/data` | GO-IM（WebSocket protobuf + REST）、S3 兼容存储、元数据、字幕、贴纸 |
-| `shared/umbrella` | `PaircastGraph` 组装；导出 `PaircastShared.xcframework`（SKIE） |
+| `shared/umbrella` | `PaircastGraph` 组装（两端共用）；iOS 导出 `PaircastShared` 框架（SKIE） |
 | `Projects/Presentation` | iOS SwiftUI 场景、VLCKit 播放器、Keychain |
 | `Projects/App` | iOS 入口与 Deep Link `paircast://` |
 | `androidApp` | Android Compose 场景、libVLC 播放器、加密存储 |

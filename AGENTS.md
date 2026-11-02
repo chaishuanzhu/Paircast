@@ -11,7 +11,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 
 - **shared:core**：纯 Kotlin（commonMain），无 Ktor / 平台 SDK；Entities、Rules、Gateway 接口、UseCases、`WatchSession` + `PlayerPort`
 - **shared:data**：GO-IM（WebSocket protobuf + REST）、S3 兼容存储、房间 JSON、字幕、元数据、贴纸
-- **shared:umbrella**：`PaircastGraph` 组装；iOS 导出 `PaircastShared.xcframework`（SKIE）
+- **shared:umbrella**：`PaircastGraph` 组装（iOS / Android 共用的组合根）；iOS 导出 `PaircastShared` 框架（SKIE）
 - **Presentation**（iOS）：SwiftUI Scenes / ViewModel 适配层、VLCKit 播放器（实现 `PlayerPort`）、Keychain
 - **App**（iOS）：组装 `PaircastGraph`、Deep Link（`paircast://`）
 - **androidApp**：Compose 场景、libVLC 播放器（实现 `PlayerPort`）、EncryptedSharedPreferences、Deep Link
@@ -21,7 +21,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 ## 工程约定
 
 - iOS 用 **Tuist** 生成工程：`make setup` / `tuist generate`；不要手改生成的 `*.xcodeproj` / `*.xcworkspace`（已 gitignore）
-- 改了 `shared/` 后 iOS 需 `make shared` 重建 xcframework；Gradle 用根目录 `./gradlew`（JDK 17）
+- iOS 构建时由 `Presentation` 的 “Compile Kotlin Framework” 阶段（`Scripts/xcode-build-shared.sh` → `embedAndSignAppleFrameworkForXcode`）自动编译 Kotlin，无需手动重建；Gradle 用根目录 `./gradlew`（JDK 17–21）
 - 版本号：iOS 在 `Projects/App/Project.swift`（`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`），Android 在 `gradle.properties`（`paircast.versionName` / `paircast.versionCode`），两边保持一致
 - 文案：两端共用 `Projects/App/Resources/Localizable.xcstrings`（key = 英文模板）
 - 商店文案在 `metadata/`；公开隐私/支持/邀请页在 `docs/`（GitHub Pages → `paircast.chaisz.com`）
@@ -47,7 +47,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 
 ## 发布相关
 
-- IPA：打 tag `v*` 触发 `.github/workflows/release-ipa.yaml`（self-hosted，先 Gradle 构建 xcframework）
+- IPA：打 tag `v*` 触发 `.github/workflows/release-ipa.yaml`（self-hosted，先跑 Kotlin 单测，归档时 Xcode 自动编译 KMP 框架）
 - APK：`.github/workflows/android.yaml`（PR / main 出 Debug；tag 出 Release，签名走 `PAIRCAST_KEYSTORE_*` secrets）
 - TestFlight / ASC：本机 `asc` + keychain；Agent 环境若无完整网络则在本机终端执行
 - LiveContainer：`Scripts/update-livecontainer-source.sh` + `docs/source.json`

@@ -1,9 +1,8 @@
 import ProjectDescription
 
 let deploymentTargets: DeploymentTargets = .iOS("26.0")
-let paircastShared = TargetDependency.xcframework(
-    path: "../../shared/umbrella/build/XCFrameworks/release/PaircastShared.xcframework"
-)
+/// Built by the Presentation target's "Compile Kotlin Framework" phase (`embedAndSignAppleFrameworkForXcode`).
+let paircastSharedFrameworkDir = "$(SRCROOT)/../../shared/umbrella/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
 
 let project = Project(
     name: "Paircast",
@@ -51,7 +50,6 @@ let project = Project(
             resources: ["Resources/**"],
             dependencies: [
                 .project(target: "Presentation", path: "../Presentation"),
-                paircastShared,
                 .external(name: "VLCKitSPM"),
             ],
             settings: .settings(base: [
@@ -60,8 +58,10 @@ let project = Project(
                 "CODE_SIGN_IDENTITY": "Apple Distribution",
                 "PROVISIONING_PROFILE_SPECIFIER": "Tandem AppStore",
                 "EXCLUDED_ARCHS[sdk=iphoneos*]": "armv7 armv7s",
-                // PaircastShared.xcframework ships arm64 simulator only.
+                // PaircastShared ships arm64 simulator only.
                 "EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64",
+                "FRAMEWORK_SEARCH_PATHS": .array(["$(inherited)", paircastSharedFrameworkDir]),
+                "OTHER_LDFLAGS": ["$(inherited)", "-framework", "PaircastShared"],
                 "MARKETING_VERSION": "2.0.0",
                 "CURRENT_PROJECT_VERSION": "14",
             ])

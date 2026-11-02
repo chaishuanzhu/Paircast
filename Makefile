@@ -3,13 +3,12 @@
 DESTINATION ?= platform=iOS Simulator,name=iPhone 17,OS=26.5
 GRADLE ?= ./gradlew
 
-setup: ## Download VLCKit, build the KMP framework, resolve deps, generate workspace
+setup: ## Download VLCKit, resolve deps, generate workspace (Xcode compiles the KMP framework itself)
 	./Scripts/download-vlckit.sh
-	$(MAKE) shared
 	tuist install
 	tuist generate --no-open
 
-shared: ## Build PaircastShared.xcframework (Kotlin core + data) for the iOS app
+shared: ## Optional: standalone PaircastShared.xcframework for distribution (not needed for Xcode builds)
 	$(GRADLE) :shared:umbrella:assemblePaircastSharedReleaseXCFramework
 
 shared-test: ## Kotlin unit tests (JVM/Android + iOS simulator)

@@ -1,13 +1,28 @@
 import ProjectDescription
 
 let deploymentTargets: DeploymentTargets = .iOS("26.0")
-/// Built by `make shared` (Gradle `assemblePaircastSharedReleaseXCFramework`).
-let paircastShared = TargetDependency.xcframework(
-    path: "../../shared/umbrella/build/XCFrameworks/release/PaircastShared.xcframework"
+
+/// Compiles the KMP umbrella (`PaircastShared.framework`) for the active configuration before Swift sources.
+let buildPaircastShared = TargetScript.pre(
+    path: "../../Scripts/xcode-build-shared.sh",
+    name: "Compile Kotlin Framework",
+    basedOnDependencyAnalysis: false
 )
 
-/// PaircastShared.xcframework ships arm64 simulator only.
-let simulatorArm64Only: Settings = .settings(base: ["EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64"])
+let paircastSharedFrameworkDir = "$(SRCROOT)/../../shared/umbrella/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+
+/// PaircastShared ships iosArm64 / iosSimulatorArm64 only; Gradle needs to write outside the script sandbox.
+let presentationSettings: Settings = .settings(base: [
+    "EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64",
+    "ENABLE_USER_SCRIPT_SANDBOXING": "NO",
+    "FRAMEWORK_SEARCH_PATHS": .array(["$(inherited)", paircastSharedFrameworkDir]),
+])
+
+let testSettings: Settings = .settings(base: [
+    "EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64",
+    "FRAMEWORK_SEARCH_PATHS": .array(["$(inherited)", paircastSharedFrameworkDir]),
+    "OTHER_LDFLAGS": ["$(inherited)", "-framework", "PaircastShared"],
+])
 
 let project = Project(
     name: "Presentation",
@@ -21,12 +36,12 @@ let project = Project(
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Sources/**"],
+            scripts: [buildPaircastShared],
             dependencies: [
-                paircastShared,
                 .external(name: "VLCKitSPM"),
                 .external(name: "Kingfisher"),
             ],
-            settings: simulatorArm64Only
+            settings: presentationSettings
         ),
         .target(
             name: "PresentationTests",
@@ -36,8 +51,8 @@ let project = Project(
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/**"],
-            dependencies: [.target(name: "Presentation"), paircastShared],
-            settings: simulatorArm64Only
+            dependencies: [.target(name: "Presentation")],
+            settings: testSettings
         ),
     ],
     schemes: [

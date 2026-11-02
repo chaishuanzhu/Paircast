@@ -10,7 +10,7 @@ Read `AGENTS.md` first for module boundaries and hard rules.
 ## When editing code
 
 1. Keep Clean Architecture: business logic lives in Kotlin Multiplatform (`shared/core` is pure Kotlin, `shared/data` implements gateways); iOS Presentation is SwiftUI, Android is Compose — both only render shared state.
-2. After changing `shared/`, run `make shared` so iOS picks up a fresh `PaircastShared.xcframework`; after adding Swift files under `Projects/*/Sources`, run `tuist generate`.
+2. Xcode recompiles `shared/` automatically (Presentation's "Compile Kotlin Framework" phase → `embedAndSignAppleFrameworkForXcode`); after adding Swift files under `Projects/*/Sources`, run `tuist generate`.
 3. Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `Projects/App/Project.swift` and `paircast.versionName` / `paircast.versionCode` in `gradle.properties` together when cutting a user-facing release.
 
 ## When editing docs or store copy

@@ -1,5 +1,5 @@
 # Build a signed App Store IPA on tag push and attach it to the GitHub Release.
-# The app links PaircastShared.xcframework (Kotlin Multiplatform), built here before `tuist generate`.
+# Xcode compiles the Kotlin Multiplatform framework during the archive (Scripts/xcode-build-shared.sh).
 # Intentionally has NO pull_request trigger — fork PRs never run this on the self-hosted Mac.
 name: Release IPA
 
@@ -47,11 +47,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Build PaircastShared.xcframework (KMP)
+      - name: Kotlin shared tests
         run: |
           # The KMP build also configures the Android targets; the runner keeps the SDK at the default path.
           export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-          ./gradlew --no-daemon :shared:core:allTests :shared:umbrella:assemblePaircastSharedReleaseXCFramework
+          ./gradlew --no-daemon :shared:core:allTests
 
       - name: Install Ruby gems
         run: |
