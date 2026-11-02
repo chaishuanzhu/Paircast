@@ -18,8 +18,12 @@ import com.chaisz.paircast.core.store.KeyValueStore
 import com.chaisz.paircast.core.store.SecureStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
 import com.chaisz.paircast.core.usecase.ChangePasswordUseCase
+import com.chaisz.paircast.core.usecase.DeleteAccountUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
+import com.chaisz.paircast.core.usecase.LoadAuthOptionsUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
+import com.chaisz.paircast.core.usecase.RegisterUseCase
+import com.chaisz.paircast.core.usecase.SendRegisterCodeUseCase
 import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
 import com.chaisz.paircast.core.usecase.UpdateProfileUseCase
 import com.chaisz.paircast.data.files.FileStore
@@ -87,6 +91,10 @@ class PaircastGraph(
     val chatSafety = ChatSafetyStore(keyValueStore)
 
     val login get() = LoginUseCase(configGateway, authGateway)
+    val authOptions get() = LoadAuthOptionsUseCase(configGateway, authGateway)
+    val sendRegisterCode get() = SendRegisterCodeUseCase(configGateway, authGateway)
+    val register get() = RegisterUseCase(configGateway, authGateway)
+    val deleteAccount get() = DeleteAccountUseCase(authGateway)
     val changePassword get() = ChangePasswordUseCase(authGateway)
     val updateProfile get() = UpdateProfileUseCase(authGateway)
     val saveConfig get() = SaveCloudConfigUseCase(configGateway)

@@ -16,11 +16,16 @@ import com.chaisz.paircast.core.session.WatchSession
 import com.chaisz.paircast.core.store.ChatSafetyStore
 import com.chaisz.paircast.core.store.InMemoryKeyValueStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
+import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.usecase.ChangeMovieUseCase
+import com.chaisz.paircast.core.usecase.DeleteAccountUseCase
 import com.chaisz.paircast.core.usecase.LeaveRoomUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
+import com.chaisz.paircast.core.usecase.LoadAuthOptionsUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
+import com.chaisz.paircast.core.usecase.RegisterUseCase
 import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
+import com.chaisz.paircast.core.usecase.SendRegisterCodeUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -58,6 +63,51 @@ class LoginUseCaseTest {
     @Test fun wrongPasswordSurfacesInvalidCredentials() = runTest {
         val sut = LoginUseCase(FakeConfigGateway(configFixture()), FakeAuthGateway(null))
         assertEquals(AppError.InvalidCredentials, assertFailsWith<AppError> { sut("alice", "nope") })
+    }
+}
+
+class RegisterUseCaseTest {
+    @Test fun optionsUnavailableWithoutServer() = runTest {
+        val sut = LoadAuthOptionsUseCase(FakeConfigGateway(null), FakeAuthGateway())
+        assertEquals(AuthOptions.Unavailable, sut())
+    }
+
+    @Test fun optionsFromServer() = runTest {
+        val auth = FakeAuthGateway().apply { options = AuthOptions(registrationOpen = false, emailVerification = true) }
+        val options = LoadAuthOptionsUseCase(FakeConfigGateway(configFixture()), auth)()
+        assertFalse(options.canRegister)
+    }
+
+    @Test fun sendCodeNormalizesEmail() = runTest {
+        val auth = FakeAuthGateway(null)
+        val cooldown = SendRegisterCodeUseCase(FakeConfigGateway(configFixture()), auth)(" Dana@Example.com ")
+        assertEquals(60, cooldown)
+        assertEquals(listOf("dana@example.com"), auth.sentCodes)
+    }
+
+    @Test fun sendCodeRejectsBadEmailBeforeNetwork() = runTest {
+        val auth = FakeAuthGateway(null)
+        assertIs<AppError.Validation>(assertFailsWith<AppError> {
+            SendRegisterCodeUseCase(FakeConfigGateway(configFixture()), auth)("not-an-email")
+        })
+        assertTrue(auth.sentCodes.isEmpty())
+    }
+
+    @Test fun registerValidatesAndSignsIn() = runTest {
+        val auth = FakeAuthGateway(null)
+        val sut = RegisterUseCase(FakeConfigGateway(configFixture()), auth)
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "12345", "secret1", "secret1", "") })
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "123456", "secret1", "secret2", "") })
+        val result = sut("a@b.co", "123456", "secret1", "secret1", "  ")
+        assertEquals("100000", result.user.id)
+        assertEquals(Triple("a@b.co", "secret1", null), auth.registered)
+    }
+
+    @Test fun deleteAccountNeedsPassword() = runTest {
+        val auth = FakeAuthGateway()
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { DeleteAccountUseCase(auth)("") })
+        DeleteAccountUseCase(auth)("secret")
+        assertTrue(auth.deleted)
     }
 }
 

@@ -25,7 +25,25 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
 /** Non-2xx gateway response. [body] is the plain-text `http.Error` message. */
-class GoImHttpException(val status: Int, val body: String) : Exception("HTTP $status: $body")
+class GoImHttpException(
+    val status: Int,
+    val body: String,
+    /** `Retry-After` seconds on 429 responses. */
+    val retryAfterSeconds: Int? = null,
+) : Exception("HTTP $status: $body")
+
+@Serializable
+internal data class AuthConfigDto(
+    @SerialName("registration_open") val registrationOpen: Boolean = true,
+    /** Missing on older gateways — assume available and let `/auth/email-code` report 503. */
+    @SerialName("email_verification") val emailVerification: Boolean = true,
+)
+
+@Serializable
+internal data class EmailCodeDto(
+    @SerialName("expires_in") val expiresIn: Int = 0,
+    @SerialName("retry_after") val retryAfter: Int = 0,
+)
 
 @Serializable
 internal data class LoginResponseDto(
@@ -68,6 +86,39 @@ class GoImApi(private val client: HttpClient) {
             send { client.submitForm(url(serverUrl, "login"), Parameters.build { append("account", account); append("password", password) }) { short() } },
             LoginResponseDto.serializer(),
         )
+
+    internal suspend fun authConfig(serverUrl: String): AuthConfigDto =
+        decode(send { client.get(url(serverUrl, "auth/config")) { short() } }, AuthConfigDto.serializer())
+
+    internal suspend fun sendEmailCode(serverUrl: String, email: String, purpose: String): EmailCodeDto =
+        decode(
+            send {
+                client.submitForm(url(serverUrl, "auth/email-code"), Parameters.build { append("email", email); append("purpose", purpose) }) {
+                    timeout { requestTimeoutMillis = 30_000 }
+                }
+            },
+            EmailCodeDto.serializer(),
+        )
+
+    internal suspend fun register(serverUrl: String, email: String, code: String, password: String, nickname: String?): LoginResponseDto =
+        decode(
+            send {
+                client.submitForm(
+                    url(serverUrl, "register"),
+                    Parameters.build {
+                        append("email", email)
+                        append("code", code)
+                        append("password", password)
+                        if (!nickname.isNullOrEmpty()) append("nickname", nickname)
+                    },
+                ) { short() }
+            },
+            LoginResponseDto.serializer(),
+        )
+
+    suspend fun deleteAccount(session: GoImSession, password: String) {
+        post(session, "user/delete", "password" to password)
+    }
 
     suspend fun changePassword(session: GoImSession, oldPassword: String, newPassword: String) {
         post(session, "change-password", "old_password" to oldPassword, "new_password" to newPassword)
@@ -167,7 +218,13 @@ class GoImApi(private val client: HttpClient) {
         } catch (e: Exception) {
             throw AppError.ServerUnreachable
         }
-        if (!response.status.isSuccess()) throw GoImHttpException(response.status.value, response.bodyAsText().trim())
+        if (!response.status.isSuccess()) {
+            throw GoImHttpException(
+                response.status.value,
+                response.bodyAsText().trim(),
+                response.headers[HttpHeaders.RetryAfter]?.trim()?.toIntOrNull(),
+            )
+        }
         return response
     }
 

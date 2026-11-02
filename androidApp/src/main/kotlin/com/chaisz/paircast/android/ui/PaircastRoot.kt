@@ -45,6 +45,7 @@ fun PaircastRoot(app: AppState) {
             when (route) {
                 AppRoute.Splash -> SplashScreen()
                 AppRoute.Login -> LoginScreen(app)
+                AppRoute.Register -> RegisterScreen(app)
                 is AppRoute.Config -> ConfigScreen(app, fromLogin = true)
                 AppRoute.Library -> LibraryHost(app)
             }

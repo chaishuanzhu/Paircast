@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -90,6 +91,89 @@ class GoImAuthTest {
         val login = h.requests.single()
         assertEquals("https://im.example.com/login", login.url.toString())
         assertTrue(formBody(login).contains("account=alice"))
+        h.scope.cancel()
+    }
+
+    @Test
+    fun authOptionsDefaultsWhenFieldMissing() = runTest {
+        val h = harness { respond("""{"registration_open":false}""", HttpStatusCode.OK, json) }
+        val options = h.auth.authOptions()
+        assertEquals(false, options.registrationOpen)
+        assertEquals(true, options.emailVerification)
+        assertEquals("https://im.example.com/auth/config", h.requests.single().url.toString())
+        h.scope.cancel()
+    }
+
+    @Test
+    fun sendRegisterCodeMapsErrors() = runTest {
+        var status = HttpStatusCode.OK
+        val h = harness {
+            when (status) {
+                HttpStatusCode.OK -> respond("""{"status":"ok","expires_in":600,"retry_after":60}""", status, json)
+                HttpStatusCode.TooManyRequests -> respond("too frequent", status, headersOf(HttpHeaders.RetryAfter, "42"))
+                else -> respond("x", status)
+            }
+        }
+        assertEquals(60, h.auth.sendRegisterCode("a@b.co"))
+        val body = formBody(h.requests.single())
+        assertTrue(body.contains("purpose=register") && body.contains("email=a%40b.co"))
+        status = HttpStatusCode.TooManyRequests
+        assertEquals(42, assertFailsWith<AppError.TooManyCodeRequests> { h.auth.sendRegisterCode("a@b.co") }.retryAfterSeconds)
+        status = HttpStatusCode.Forbidden
+        assertFailsWith<AppError.RegistrationClosed> { h.auth.sendRegisterCode("a@b.co") }
+        status = HttpStatusCode.Conflict
+        assertFailsWith<AppError.EmailAlreadyRegistered> { h.auth.sendRegisterCode("a@b.co") }
+        status = HttpStatusCode.ServiceUnavailable
+        assertFailsWith<AppError.EmailVerificationUnavailable> { h.auth.sendRegisterCode("a@b.co") }
+        h.scope.cancel()
+    }
+
+    @Test
+    fun registerPersistsSession() = runTest {
+        val h = harness { req ->
+            if (req.url.encodedPath.endsWith("/register")) {
+                respond("""{"uid":"100000","token":"jwt","nickname":"dana","email":"dana@example.com"}""", HttpStatusCode.OK, json)
+            } else {
+                respond("", HttpStatusCode.NotFound)
+            }
+        }
+        val result = h.auth.register("dana@example.com", "123456", "secret1", null)
+        assertEquals("100000", result.user.id)
+        assertEquals("dana@example.com", result.user.email)
+        assertEquals(GoImSession("https://im.example.com", "100000", "jwt"), h.sessions.load())
+        assertTrue(!formBody(h.requests.first()).contains("nickname"))
+        h.auth.logout()
+        h.scope.cancel()
+    }
+
+    @Test
+    fun registerMapsBadCode() = runTest {
+        val h = harness { respond("invalid or expired verification code", HttpStatusCode.BadRequest) }
+        assertFailsWith<AppError.InvalidVerificationCode> { h.auth.register("a@b.co", "000000", "secret1", null) }
+        assertNull(h.sessions.load())
+        h.scope.cancel()
+    }
+
+    @Test
+    fun deleteAccountCallsServerThenClearsEverything() = runTest {
+        var deleteStatus = HttpStatusCode.Unauthorized
+        val h = harness { req ->
+            when {
+                req.url.encodedPath.endsWith("/login") -> respond("""{"uid":"me","token":"t"}""", HttpStatusCode.OK, json)
+                req.url.encodedPath.endsWith("/user/delete") -> respond(if (deleteStatus.value == 200) """{"status":"ok"}""" else "invalid password", deleteStatus, json)
+                else -> respond("", HttpStatusCode.OK)
+            }
+        }
+        h.auth.login("me", "pw")
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { h.auth.deleteAccount("bad") })
+        assertEquals("me", h.sessions.load()?.uid)
+        deleteStatus = HttpStatusCode.Forbidden
+        assertFailsWith<AppError.AdminAccountDeletion> { h.auth.deleteAccount("pw") }
+        deleteStatus = HttpStatusCode.OK
+        h.auth.deleteAccount("pw")
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/user/delete") }).contains("password=pw"))
+        assertNull(h.sessions.load())
+        assertNull(h.auth.currentUser.value)
         h.scope.cancel()
     }
 

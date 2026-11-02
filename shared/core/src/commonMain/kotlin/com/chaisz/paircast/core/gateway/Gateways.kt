@@ -1,6 +1,7 @@
 package com.chaisz.paircast.core.gateway
 
 import com.chaisz.paircast.core.model.AppCloudConfig
+import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.MediaSource
@@ -45,9 +46,18 @@ interface AuthGateway {
     /** Batch profile lookup (nickname + avatar URL). Preserves request order. */
     @Throws(Exception::class)
     suspend fun fetchUsers(userIds: List<String>): List<User>
-    /** Best-effort wipe of nickname/avatar on the server, then logout and local cleanup. */
+    /** Server sign-up options; [AuthOptions.Unavailable] when unconfigured or unreachable. */
     @Throws(Exception::class)
-    suspend fun deleteAccount()
+    suspend fun authOptions(): AuthOptions
+    /** Mails a sign-up code to [email]; returns the seconds before another code may be requested. */
+    @Throws(Exception::class)
+    suspend fun sendRegisterCode(email: String): Int
+    /** Creates the account and signs in (same session handling as [login]). */
+    @Throws(Exception::class)
+    suspend fun register(email: String, code: String, password: String, nickname: String?): LoginResult
+    /** Deletes the account on the server (password re-check), then logout and local cleanup. */
+    @Throws(Exception::class)
+    suspend fun deleteAccount(password: String)
 }
 
 interface ConfigGateway {

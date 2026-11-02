@@ -9,6 +9,7 @@ import com.chaisz.paircast.PaircastGraph
 import com.chaisz.paircast.core.gateway.SessionEvent
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.model.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,7 @@ import kotlin.time.TimeSource
 sealed interface AppRoute {
     data object Splash : AppRoute
     data object Login : AppRoute
+    data object Register : AppRoute
     data class Config(val fromLogin: Boolean) : AppRoute
     data object Library : AppRoute
 }
@@ -54,6 +56,8 @@ class AppState(val graph: PaircastGraph) {
     var currentUser by mutableStateOf<User?>(null)
     var toast by mutableStateOf<String?>(null)
     var mustChangePassword by mutableStateOf(false)
+    var authOptions by mutableStateOf(AuthOptions.Unavailable)
+        private set
 
     private var pendingInvite: RoomInvite? = null
     private var bootstrapped = false
@@ -112,6 +116,34 @@ class AppState(val graph: PaircastGraph) {
         } else {
             finishLogin()
         }
+    }
+
+    /** Re-reads the server's sign-up switch (login screen shows "Create Account" only when open). */
+    suspend fun refreshAuthOptions() {
+        authOptions = graph.authOptions()
+    }
+
+    fun openRegister() {
+        route = AppRoute.Register
+    }
+
+    /** Returns the cooldown in seconds before another code can be requested. */
+    suspend fun sendRegisterCode(email: String): Int = graph.sendRegisterCode(email)
+
+    suspend fun register(email: String, code: String, password: String, confirm: String, nickname: String) {
+        val result = graph.register(email, code, password, confirm, nickname)
+        currentUser = result.user
+        finishLogin()
+    }
+
+    /** Deletes the account on the server, then wipes local config / caches and returns to login. */
+    suspend fun deleteAccount(password: String) {
+        val uid = currentUser?.id
+        graph.deleteAccount(password)
+        uid?.let { graph.chatSafety.clear(it) }
+        graph.clearLocalCaches()
+        config = null
+        logout()
     }
 
     suspend fun changePassword(old: String, new: String, confirm: String) {

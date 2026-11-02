@@ -10,6 +10,7 @@ import com.chaisz.paircast.core.gateway.RoomGateway
 import com.chaisz.paircast.core.gateway.SubtitleGateway
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
@@ -22,6 +23,7 @@ import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
 import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.ProfileRules
+import com.chaisz.paircast.core.rules.RegisterRules
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -47,6 +49,66 @@ class LoginUseCase(private val configGateway: ConfigGateway, private val authGat
             throw AppError.Network
         }
     }
+}
+
+/** Whether the login screen should offer email sign-up. Never throws. */
+class LoadAuthOptionsUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
+    suspend operator fun invoke(): AuthOptions {
+        val config = runCatching { configGateway.load() }.getOrNull() ?: return AuthOptions.Unavailable
+        if (!config.im.isComplete) return AuthOptions.Unavailable
+        return try {
+            authGateway.authOptions()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            AuthOptions.Unavailable
+        }
+    }
+}
+
+class SendRegisterCodeUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
+    /** Returns the cooldown (seconds) before the next code request. */
+    @Throws(Exception::class)
+    suspend operator fun invoke(email: String): Int {
+        val normalized = RegisterRules.normalizedEmail(email)
+        requireServer(configGateway)
+        return mapNetwork { authGateway.sendRegisterCode(normalized) }
+    }
+}
+
+class RegisterUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(email: String, code: String, password: String, confirm: String, nickname: String): LoginResult {
+        val normalized = RegisterRules.normalizedEmail(email)
+        val validCode = RegisterRules.normalizedCode(code)
+        LoginRules.validateChosenPassword(password, confirm)
+        val name = RegisterRules.normalizedNickname(nickname)
+        requireServer(configGateway)
+        return mapNetwork { authGateway.register(normalized, validCode, password, name) }
+    }
+}
+
+class DeleteAccountUseCase(private val authGateway: AuthGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(password: String) {
+        LoginRules.validatePassword(password)
+        mapNetwork { authGateway.deleteAccount(password) }
+    }
+}
+
+private suspend fun requireServer(configGateway: ConfigGateway) {
+    val config = configGateway.load() ?: throw AppError.NotConfigured
+    if (!config.im.isComplete) throw AppError.IncompleteConfig(listOf("Server"))
+}
+
+private suspend fun <T> mapNetwork(block: suspend () -> T): T = try {
+    block()
+} catch (e: CancellationException) {
+    throw e
+} catch (e: AppError) {
+    throw e
+} catch (_: Exception) {
+    throw AppError.Network
 }
 
 class ChangePasswordUseCase(private val authGateway: AuthGateway) {

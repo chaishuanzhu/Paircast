@@ -311,31 +311,48 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
     }
 
     if (showChangePassword) ChangePasswordDialog(app, forced = false) { showChangePassword = false }
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text(t("Delete account?")) },
-            text = { Text(t("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The account itself must be disabled separately by the server admin.")) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
+    if (confirmDelete) DeleteAccountDialog(app, onDismiss = { confirmDelete = false }, onDeleted = onDismiss)
+}
+
+/** Permanent server-side deletion; the password is re-checked by the server. */
+@Composable
+private fun DeleteAccountDialog(app: AppState, onDismiss: () -> Unit, onDeleted: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var password by remember { mutableStateOf("") }
+    var deleting by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = { if (!deleting) onDismiss() },
+        title = { Text(t("Delete account?")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(t("Your account and profile are permanently deleted from the server, and this device's config and caches are cleared. This can't be undone."))
+                PaircastField(t("Current password"), password, { password = it }, secure = true)
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !deleting && password.isNotEmpty(),
+                onClick = {
                     scope.launch {
+                        deleting = true
+                        error = null
                         try {
-                            app.graph.authGateway.deleteAccount()
-                            user?.id?.let { app.graph.chatSafety.clear(it) }
-                            app.graph.clearLocalCaches()
-                            app.config = null
+                            app.deleteAccount(password)
                             onDismiss()
-                            app.logout()
+                            onDeleted()
                         } catch (e: Exception) {
-                            error = L10n.message(e)
+                            error = L10n.message(e, AppError.AccountDeletionFailed)
+                        } finally {
+                            deleting = false
                         }
                     }
-                }) { Text(t("Delete Account"), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(t("Cancel")) } },
-        )
-    }
+                },
+            ) { Text(t("Delete Account"), color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = { TextButton(enabled = !deleting, onClick = onDismiss) { Text(t("Cancel")) } },
+    )
 }
 
 @Composable

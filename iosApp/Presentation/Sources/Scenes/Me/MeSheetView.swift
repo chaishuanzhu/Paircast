@@ -82,22 +82,68 @@ public final class MeViewModel: ObservableObject {
         await session.logout()
     }
 
-    public func deleteAccount() async {
-        isSaving = true
-        defer { isSaving = false }
-        if let userId = session.currentUser?.id {
-            session.graph.chatSafety.clear(ownerId: userId)
+}
+
+/// Permanent server-side deletion; the password is re-checked by the server.
+struct DeleteAccountView: View {
+    @ObservedObject var session: AppSession
+    @Environment(\.dismiss) private var dismiss
+    @State private var password = ""
+    @State private var isDeleting = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Your account and profile are permanently deleted from the server, and this device's config and caches are cleared. This can't be undone.")
+                        .font(.footnote)
+                        .foregroundStyle(TandemColors.secondaryLabel)
+                }
+                Section {
+                    SecureField("Current password", text: $password)
+                        .textContentType(.password)
+                } footer: {
+                    if let errorMessage {
+                        Text(errorMessage).foregroundStyle(TandemColors.danger)
+                    }
+                }
+                Section {
+                    Button(role: .destructive) {
+                        Task { await delete() }
+                    } label: {
+                        HStack {
+                            Text("Delete Account")
+                            if isDeleting {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(password.isEmpty || isDeleting)
+                }
+            }
+            .navigationTitle("Delete account?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .disabled(isDeleting)
+                }
+            }
         }
+        .interactiveDismissDisabled(isDeleting)
+    }
+
+    private func delete() async {
+        errorMessage = nil
+        isDeleting = true
+        defer { isDeleting = false }
         do {
-            try await session.authGateway.deleteAccount()
+            try await session.deleteAccount(password: password)
         } catch {
-            statusMessage = TandemL10n.message(for: error, fallback: .network)
-            return
+            errorMessage = TandemL10n.message(for: error, fallback: .accountDeletionFailed)
         }
-        session.graph.clearLocalCaches()
-        session.config = nil
-        session.currentUser = nil
-        session.resetToLogin()
     }
 }
 
@@ -290,13 +336,9 @@ public struct MeSheetView: View {
             } message: {
                 Text("Local cloud service configuration will be kept")
             }
-            .confirmationDialog("Delete account?", isPresented: $viewModel.showDeleteConfirm, titleVisibility: .visible) {
-                Button("Delete Account", role: .destructive) {
-                    Task { await viewModel.deleteAccount() }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The account itself must be disabled separately by the server admin.")
+            .sheet(isPresented: $viewModel.showDeleteConfirm) {
+                DeleteAccountView(session: session)
+                    .environment(\.locale, language.effectiveLocale)
             }
             .sheet(isPresented: $viewModel.showChangePassword) {
                 ChangePasswordView(session: session, isForced: false)

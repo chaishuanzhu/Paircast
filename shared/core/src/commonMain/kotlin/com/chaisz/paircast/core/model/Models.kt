@@ -21,6 +21,18 @@ data class User(
 /** Result of `/login`. When [mustChangePassword] is true the UI must force a password change. */
 data class LoginResult(val user: User, val mustChangePassword: Boolean)
 
+/**
+ * Public sign-in options of the configured server (`/auth/config`). Registration is open by default;
+ * an admin can close it. Email sign-up also needs SMTP on the server ([emailVerification]).
+ */
+data class AuthOptions(val registrationOpen: Boolean, val emailVerification: Boolean) {
+    val canRegister: Boolean get() = registrationOpen && emailVerification
+
+    companion object {
+        val Unavailable = AuthOptions(registrationOpen = false, emailVerification = false)
+    }
+}
+
 enum class RoomStatus(val rawValue: String) {
     ACTIVE("active"),
     ENDED("ended"),

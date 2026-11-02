@@ -66,7 +66,7 @@ im.example.com {
   <p>完成后 App 里的服务器地址填 <code>im.example.com</code>。用 nginx 时记得透传 <code>Upgrade</code> / <code>Connection</code> 头。只在局域网用可跳过这一步，地址填 <code>http://192.168.x.x:8080</code>。</p>
 
   <h2>3. 邮件与管理员账号</h2>
-  <p>Paircast 不开放注册，账号由管理员创建，初始密码通过邮件发出，所以需要先配置 SMTP。编辑 <code>config.minimal.json</code>：</p>
+  <p>App 内邮箱注册要发验证码，管理员创建账号要把初始密码发到对方邮箱，所以需要先配置 SMTP（不配时 App 不显示注册入口）。编辑 <code>config.minimal.json</code>：</p>
 <pre><code>"gateway": {
     "mail": {
         "enabled": true,
@@ -82,7 +82,17 @@ im.example.com {
 <pre><code>MAIL_PASSWORD=你的SMTP密码</code></pre>
   <p>重启 gateway 后，网关会用 <code>admin_email</code> 自动创建管理员账号，并把随机密码发到该邮箱（邮件发送失败时写在 <code>docker compose -f docker-compose.minimal.yml logs gateway</code> 里）。用这个邮箱和密码在 App 登录，首次登录会要求改密码。</p>
 
-  <h2>4. 给好友创建账号</h2>
+  <h2>4. 用户账号</h2>
+  <h3>4.1 自助注册（默认开放）</h3>
+  <p>配好 SMTP 后，好友在 App 登录页点「注册账号」，用邮箱验证码即可注册，无需管理员操作。发码有频率限制：同一邮箱 60 秒一次、每天 10 次，同一 IP 每小时 20 次。</p>
+  <p>只想让认识的人用？关闭注册，二选一：</p>
+  <ul>
+    <li>配置文件：在 <code>config.minimal.json</code> 的 <code>gateway.auth</code> 里设 <code>"disable_registration": true</code>，然后 <code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code>。</li>
+    <li>运行时：用管理员令牌调用 <code>curl -s -X POST $SERVER/admin/settings -d uid=管理员UID -d token=令牌 -d registration_open=false</code>（改回 <code>true</code> 即重新开放）。后台改过之后以数据库里的值为准，配置文件里的值不再生效。</li>
+  </ul>
+  <p>关闭后 App 登录页自动隐藏注册入口，管理员仍可按下面的方法创建账号。用户可在 App「我的 → 删除账号」输入密码后自行注销（管理员账号除外）。</p>
+
+  <h3>4.2 管理员创建账号</h3>
   <p>先用管理员账号换一个令牌，再创建账号；新账号的初始密码会发到对方邮箱，对方首次登录时修改：</p>
 <pre><code>SERVER=https://im.example.com
 curl -s -X POST $SERVER/login -d account=you@example.com -d password='管理员密码'

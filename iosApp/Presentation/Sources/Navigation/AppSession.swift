@@ -11,6 +11,10 @@ public final class AppSession: ObservableObject {
     @Published public var toast: String?
     /// Set after a login that requires a password change before entering the library.
     @Published public var mustChangePassword = false
+    /// Server sign-up switch (`/auth/config`), refreshed whenever the login screen appears.
+    @Published public private(set) var authOptions = AppSession.registrationUnavailable
+
+    static let registrationUnavailable = AuthOptions(registrationOpen: false, emailVerification: false)
 
     public let graph: PaircastGraph
     public var configGateway: ConfigGateway { graph.configGateway }
@@ -90,6 +94,41 @@ public final class AppSession: ObservableObject {
             return
         }
         finishLogin()
+    }
+
+    /// Re-reads the server's sign-up switch; the login screen offers "Create Account" only when open.
+    public func refreshAuthOptions() async {
+        authOptions = (try? await graph.authOptions.invoke()) ?? Self.registrationUnavailable
+    }
+
+    public func openRegister() {
+        route = .register
+    }
+
+    /// Mails a sign-up code; returns the seconds before another code can be requested.
+    public func sendRegisterCode(email: String) async throws -> Int {
+        let cooldown = try await graph.sendRegisterCode.invoke(email: email)
+        return Int(truncating: cooldown)
+    }
+
+    public func register(email: String, code: String, password: String, confirm: String, nickname: String) async throws {
+        let result = try await graph.register.invoke(
+            email: email, code: code, password: password, confirm: confirm, nickname: nickname
+        )
+        currentUser = result.user
+        finishLogin()
+    }
+
+    /// Deletes the account on the server, then wipes local config / caches and returns to login.
+    public func deleteAccount(password: String) async throws {
+        let userId = currentUser?.id
+        try await graph.deleteAccount.invoke(password: password)
+        if let userId { graph.chatSafety.clear(ownerId: userId) }
+        graph.clearLocalCaches()
+        config = nil
+        currentUser = nil
+        pendingInvite = nil
+        resetToLogin()
     }
 
     public func changePassword(old: String, new: String, confirm: String) async throws {
@@ -235,6 +274,7 @@ public struct RoomInvite: Equatable, Sendable {
 public enum AppRoute: Equatable, Hashable {
     case splash
     case login
+    case register
     case config(fromLogin: Bool)
     case library
 }

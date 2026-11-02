@@ -13,6 +13,7 @@ import com.chaisz.paircast.core.gateway.SharedSubtitleStorageGateway
 import com.chaisz.paircast.core.gateway.SubtitleGateway
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.ChatMessageKind
 import com.chaisz.paircast.core.model.LoginResult
@@ -60,7 +61,29 @@ internal class FakeAuthGateway(user: User? = User("host", "Host")) : AuthGateway
     override suspend fun updateProfile(nickname: String, avatarJpeg: ByteArray?) = User("u", nickname)
     override suspend fun fetchProfile() = currentUser.value!!
     override suspend fun fetchUsers(userIds: List<String>) = userIds.map { User(it, "nick-$it") }
-    override suspend fun deleteAccount() { currentUser.value = null }
+    var options = AuthOptions(registrationOpen = true, emailVerification = true)
+    val sentCodes = mutableListOf<String>()
+    var registered: Triple<String, String, String?>? = null
+    var deleted = false
+
+    override suspend fun authOptions() = options
+    override suspend fun sendRegisterCode(email: String): Int {
+        if (!options.registrationOpen) throw AppError.RegistrationClosed
+        sentCodes += email
+        return 60
+    }
+    override suspend fun register(email: String, code: String, password: String, nickname: String?): LoginResult {
+        if (code != "123456") throw AppError.InvalidVerificationCode
+        registered = Triple(email, password, nickname)
+        val u = User("100000", nickname ?: email.substringBefore('@'), email = email)
+        currentUser.value = u
+        return LoginResult(u, mustChangePassword = false)
+    }
+    override suspend fun deleteAccount(password: String) {
+        if (password != this.password) throw AppError.Validation("Current password is incorrect")
+        deleted = true
+        currentUser.value = null
+    }
 }
 
 internal class FakeRoomGateway : RoomGateway {

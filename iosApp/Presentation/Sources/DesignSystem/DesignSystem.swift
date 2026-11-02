@@ -88,9 +88,9 @@ public struct TandemTextField: View {
         HStack {
             Group {
                 if isSecure && !reveal {
-                    SecureField(title, text: $text)
+                    SecureField(LocalizedStringKey(title), text: $text)
                 } else {
-                    TextField(title, text: $text)
+                    TextField(LocalizedStringKey(title), text: $text)
                 }
             }
             .font(.system(size: 17))

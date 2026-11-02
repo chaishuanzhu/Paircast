@@ -28,6 +28,14 @@ sealed class AppError(key: String) : Exception(key) {
     data object SubtitleShareFailed : AppError("Failed to sync subtitles to members")
     data object AvatarUploadFailed : AppError("Avatar upload failed. Please try again")
     data object PasswordChangeFailed : AppError("Failed to change password")
+    data object RegistrationClosed : AppError("Registration is closed on this server. Contact an admin for an account")
+    data object EmailVerificationUnavailable : AppError("Email verification is not configured on the server")
+    data object EmailAlreadyRegistered : AppError("This email is already registered")
+    data object InvalidVerificationCode : AppError("Invalid or expired verification code")
+    data class TooManyCodeRequests(val retryAfterSeconds: Int?) : AppError("Too many code requests. Please try again later")
+    data object EmailSendFailed : AppError("Failed to send the email. Please try again later")
+    data object AdminAccountDeletion : AppError("Admin accounts cannot be deleted in the app")
+    data object AccountDeletionFailed : AppError("Failed to delete account")
 
     /** Localization template key (may contain `{{name}}`) plus replacement values. */
     data class Validation(val key: String, val args: Map<String, String> = emptyMap()) : AppError(key)

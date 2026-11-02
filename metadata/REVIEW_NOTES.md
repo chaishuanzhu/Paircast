@@ -25,9 +25,10 @@ A screen recording captured on a physical iPhone running the latest iOS is attac
 4. Browse private library (sample public-domain shorts only)
 5. Open a title → create/join watch room → synced playback controls
 6. In-room chat → long-press a message → Block / Report
-7. Me → Delete Account (clears avatar and on-device account data, then signs out)
+7. Login → Create Account → email + verification code sign-up (optional; the demo account works without it)
+8. Me → Delete Account → enter password (permanently deletes the account on the server, clears on-device data, signs out)
 
-There is **no in-app registration**, **no paid content / IAP**, and **no public catalog**.
+There is **no paid content / IAP** and **no public catalog**.
 
 ---
 
@@ -59,7 +60,8 @@ There is **no in-app registration**, **no paid content / IAP**, and **no public 
 5. Library lists videos from the demo server’s media library. Sample files are public-domain / Creative Commons shorts only (e.g. Big Buck Bunny). Do **not** expect commercial films.
 6. Tap a title → create or join a room → use play/pause and invite/sync.
 7. Chat is invite-only. Long-press a message to **Block** (local hide) or **Report** (opens the public issue form).
-8. Me → **Delete Account** clears the uploaded avatar, Keychain config (server address), and session token, then signs out. Accounts on the GO-IM server are admin-managed (no public self-serve registration).
+8. Optional: sign out, tap **Create Account** on Login, enter any email you can read, tap **Send Code**, enter the 6-digit code from the email, choose a password, and tap **Create Account** — you land in the Library signed in.
+9. Me → **Delete Account** asks for the current password, then permanently deletes the account on the GO-IM server (the session is revoked and the email can register again) and clears the Keychain config (server address), session token and caches. Please use a freshly registered account for this step so the demo accounts stay available.
 
 **Demo server address:**  
 *(Keep the live server address and demo passwords only in App Store Connect Notes / Resolution Center — do not commit them to git.)*
@@ -76,7 +78,7 @@ There is **no in-app registration**, **no paid content / IAP**, and **no public 
 
 | Service | Role |
 |---------|------|
-| **GO-IM (self-hosted)** | Account sign-in (account + password), invite-only room messaging, avatars, and transient sync signaling; server address comes from the user-supplied config |
+| **GO-IM (self-hosted)** | Email sign-up (verification code mailed by the server), account sign-in (account + password), account deletion, invite-only room messaging, avatars, and transient sync signaling; server address comes from the user-supplied config |
 | **S3-compatible object storage** (configured on the GO-IM server) | Private media library; the server lists videos and issues short-lived presigned playback URLs. The app stores no storage keys |
 | **VLCKit (MobileVLCKit)** | Local playback of common containers/codecs |
 | **OpenSubtitles API** *(optional, server-side key)* | Online subtitle search, proxied by the GO-IM server when its operator enables it |
@@ -102,8 +104,8 @@ It does **not** license or redistribute commercial film/TV catalogs. Reviewer de
 
 ## Additional clarifications (common Guideline 2.1 / 1.2 items)
 
-- **Account creation:** Not offered in-app. Accounts are created by the administrator of the self-hosted server (GO-IM), who gives each friend the server address and an account. Login is account + password.
-- **Account deletion:** Me → Delete Account removes on-device account-related data as described above (Guideline 5.1.1(v) local deletion path for this invite-only model).
+- **Account creation:** In-app email sign-up (Login → Create Account), open by default. The operator of a self-hosted server may close registration; the button is then hidden and the operator creates accounts instead. The demo server keeps registration open with working email.
+- **Account deletion (Guideline 5.1.1(v)):** Me → Delete Account → enter password. The server permanently deletes the account record and revokes its sessions; the app then clears all on-device data.
 - **UGC / messaging:** Invite-only room chat; Block + Report available via long-press.
 - **IAP / paid features:** None.
 - **Business distribution:** Consumer App Store product for private friend groups, not exclusive B2B/employee tooling.

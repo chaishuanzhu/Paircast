@@ -20,6 +20,7 @@
   <h2>Information we process</h2>
   <ul>
     <li><strong>Account and nickname</strong>: The account and password you enter are sent only to the self-hosted GO-IM server you configured, to sign you in. Your nickname is shown to members of rooms you join.</li>
+    <li><strong>Email</strong>: If you sign up with your email, the address is sent to that GO-IM server to deliver a verification code and serve as your sign-in account. The server sends mail through the mail service its operator configured.</li>
     <li><strong>Avatar</strong>: If you choose a photo, it is compressed on-device and uploaded to that GO-IM server, which serves it to room members.</li>
     <li><strong>Chat messages</strong>: Messages are sent only to invite-only rooms you join and are delivered through your GO-IM server. Playback-sync signals are relayed in real time and are not stored.</li>
     <li><strong>Credentials</strong>: The app stores only the GO-IM server address and your session token, in on-device secure storage (iOS Keychain / Android encrypted storage). Storage keys and third-party tokens are kept on the GO-IM server, never on your device.</li>
@@ -36,7 +37,7 @@
   <p>The self-hosted GO-IM server operated by whoever invited you, together with the S3-compatible object storage, OpenSubtitles, and TMDB services that the server operator configures. Their processing is governed by their own terms. This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
 
   <h2>Deletion</h2>
-  <p>In the app, open Me → Delete Account to clear your avatar, on-device configuration, and session. GO-IM accounts are created by the server operator; ask them to disable or remove the account itself.</p>
+  <p>In the app, open Me → Delete Account and enter your current password. The GO-IM server permanently deletes your account record (email, nickname, avatar, password), and the app clears its on-device configuration, session, and caches. Chat messages already sent to rooms are held by the server operator; contact them to have those removed. Admin accounts are handled by the server operator.</p>
 
   <h2>Contact</h2>
   <p>Questions and reports: <a href="../support/">Support</a> or <a href="https://github.com/chaishuanzhu/Paircast/issues/new">GitHub Issues</a>.</p>

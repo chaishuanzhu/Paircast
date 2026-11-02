@@ -54,6 +54,7 @@ public extension AppError {
     static var avatarUploadFailed: AppError { AppError.AvatarUploadFailed.shared }
     static var passwordChangeFailed: AppError { AppError.PasswordChangeFailed.shared }
     static var subtitleUnavailable: AppError { AppError.SubtitleUnavailable.shared }
+    static var accountDeletionFailed: AppError { AppError.AccountDeletionFailed.shared }
 
     static func validation(_ key: String, _ args: [String: String] = [:]) -> AppError {
         AppError.Validation(key: key, args: args)

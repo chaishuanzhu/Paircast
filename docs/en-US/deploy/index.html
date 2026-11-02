@@ -66,7 +66,7 @@ im.example.com {
   <p>The server address in the app is then <code>im.example.com</code>. With nginx, forward the <code>Upgrade</code> / <code>Connection</code> headers. For LAN-only use you can skip this and enter <code>http://192.168.x.x:8080</code>.</p>
 
   <h2>3. Mail and the admin account</h2>
-  <p>Paircast has no sign-up: the admin creates accounts and the initial passwords are emailed, so SMTP comes first. Edit <code>config.minimal.json</code>:</p>
+  <p>In-app email sign-up sends verification codes, and admin-created accounts get their initial password by email, so SMTP comes first (without it the app hides sign-up). Edit <code>config.minimal.json</code>:</p>
 <pre><code>"gateway": {
     "mail": {
         "enabled": true,
@@ -82,7 +82,17 @@ im.example.com {
 <pre><code>MAIL_PASSWORD=your-smtp-password</code></pre>
   <p>After restarting the gateway, it creates an admin account for <code>admin_email</code> and mails it a random password (if mail fails, the password is in <code>docker compose -f docker-compose.minimal.yml logs gateway</code>). Sign in to the app with that email and password; you will be asked to change the password the first time.</p>
 
-  <h2>4. Create accounts for friends</h2>
+  <h2>4. User accounts</h2>
+  <h3>4.1 Self sign-up (open by default)</h3>
+  <p>Once SMTP works, friends tap Create Account on the app's login screen and sign up with an emailed code; no admin action needed. Code requests are rate-limited: one per email every 60 seconds, 10 per email per day, 20 per IP per hour.</p>
+  <p>Want to keep it private? Close registration in either of two ways:</p>
+  <ul>
+    <li>Config file: set <code>"disable_registration": true</code> under <code>gateway.auth</code> in <code>config.minimal.json</code>, then <code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code>.</li>
+    <li>At runtime: with an admin token, <code>curl -s -X POST $SERVER/admin/settings -d uid=ADMIN_UID -d token=TOKEN -d registration_open=false</code> (send <code>true</code> to reopen). Once changed this way, the database value wins over the config file.</li>
+  </ul>
+  <p>When closed, the app hides the sign-up button; admins can still create accounts as below. Users can delete their own account in the app under Me → Delete Account after entering their password (admin accounts excepted).</p>
+
+  <h3>4.2 Admin-created accounts</h3>
   <p>Exchange the admin credentials for a token, then create the account. The initial password is mailed to your friend, who changes it on first sign-in:</p>
 <pre><code>SERVER=https://im.example.com
 curl -s -X POST $SERVER/login -d account=you@example.com -d password='admin-password'

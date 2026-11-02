@@ -22,6 +22,7 @@ import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.PlaybackSyncRules
 import com.chaisz.paircast.core.rules.PlaybackSyncRules.ApplyResult
 import com.chaisz.paircast.core.rules.ProfileRules
+import com.chaisz.paircast.core.rules.RegisterRules
 import com.chaisz.paircast.core.rules.StringTemplate
 import com.chaisz.paircast.core.store.ChatSafetyStore
 import com.chaisz.paircast.core.store.InMemoryKeyValueStore
@@ -56,6 +57,34 @@ class LoginRulesTest {
         assertFailsWith<AppError.Validation> { LoginRules.validateNewPassword("old", "abcdefg", "abcdefx") }
         assertFailsWith<AppError.Validation> { LoginRules.validateNewPassword("abcdefg", "abcdefg", "abcdefg") }
         LoginRules.validateNewPassword("old", "abcdefg", "abcdefg")
+    }
+}
+
+class RegisterRulesTest {
+    @Test fun emailNormalizedAndValidated() {
+        assertEquals("dana@example.com", RegisterRules.normalizedEmail("  Dana@Example.COM "))
+        assertFailsWith<AppError.Validation> { RegisterRules.normalizedEmail("") }
+        assertFailsWith<AppError.Validation> { RegisterRules.normalizedEmail("dana@localhost") }
+        assertFailsWith<AppError.Validation> { RegisterRules.normalizedEmail("a b@c.de") }
+    }
+
+    @Test fun codeMustBeSixDigits() {
+        assertEquals("012345", RegisterRules.normalizedCode(" 012345 "))
+        assertFailsWith<AppError.Validation> { RegisterRules.normalizedCode("12345") }
+        assertFailsWith<AppError.Validation> { RegisterRules.normalizedCode("12a456") }
+    }
+
+    @Test fun chosenPasswordBounds() {
+        LoginRules.validateChosenPassword("secret", "secret")
+        assertFailsWith<AppError.Validation> { LoginRules.validateChosenPassword("short", "short") }
+        val long = "x".repeat(73)
+        assertFailsWith<AppError.Validation> { LoginRules.validateChosenPassword(long, long) }
+        assertFailsWith<AppError.Validation> { LoginRules.validateChosenPassword("secret1", "secret2") }
+    }
+
+    @Test fun blankNicknameIsOptional() {
+        assertNull(RegisterRules.normalizedNickname("   "))
+        assertEquals("Dana", RegisterRules.normalizedNickname(" Dana "))
     }
 }
 

@@ -174,6 +174,7 @@ object ProfileRules {
 
 object LoginRules {
     const val PASSWORD_MIN_LENGTH = 6
+    const val PASSWORD_MAX_LENGTH = 72
 
     @Throws(Exception::class)
     fun validateAccount(account: String) {
@@ -187,13 +188,56 @@ object LoginRules {
 
     @Throws(Exception::class)
     fun validateNewPassword(old: String, new: String, confirm: String) {
-        if (new.length < PASSWORD_MIN_LENGTH) {
+        validateChosenPassword(new, confirm)
+        if (new == old) throw AppError.Validation("New password must differ from the current one")
+    }
+
+    @Throws(Exception::class)
+    fun validateChosenPassword(password: String, confirm: String) {
+        if (password.length < PASSWORD_MIN_LENGTH) {
             throw AppError.Validation(
                 "Password must be at least {{count}} characters",
                 mapOf("count" to "$PASSWORD_MIN_LENGTH"),
             )
         }
-        if (new != confirm) throw AppError.Validation("Passwords do not match")
-        if (new == old) throw AppError.Validation("New password must differ from the current one")
+        if (password.length > PASSWORD_MAX_LENGTH) {
+            throw AppError.Validation(
+                "Password can be at most {{count}} characters",
+                mapOf("count" to "$PASSWORD_MAX_LENGTH"),
+            )
+        }
+        if (password != confirm) throw AppError.Validation("Passwords do not match")
     }
+}
+
+/** Email sign-up: the server mails a 6-digit code (`purpose=register`), then `/register` creates the account. */
+object RegisterRules {
+    const val CODE_LENGTH = 6
+    /** Matches the server's per-email cooldown between code requests. */
+    const val RESEND_COOLDOWN_SECONDS = 60
+
+    private val emailPattern = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+
+    /** Trimmed, lower-cased email; throws when it doesn't look like an address. */
+    @Throws(Exception::class)
+    fun normalizedEmail(raw: String): String {
+        val email = raw.trim().lowercase()
+        if (email.isEmpty()) throw AppError.Validation("Please enter your email")
+        if (email.length > 254 || !emailPattern.matches(email)) throw AppError.Validation("Please enter a valid email address")
+        return email
+    }
+
+    @Throws(Exception::class)
+    fun normalizedCode(raw: String): String {
+        val code = raw.trim()
+        if (code.length != CODE_LENGTH || !code.all { it in '0'..'9' }) {
+            throw AppError.Validation("Enter the {{count}}-digit code from the email", mapOf("count" to "$CODE_LENGTH"))
+        }
+        return code
+    }
+
+    /** Optional nickname: blank → null (the server derives one from the email). */
+    @Throws(Exception::class)
+    fun normalizedNickname(raw: String): String? =
+        raw.trim().takeIf { it.isNotEmpty() }?.let(ProfileRules::validatedNickname)
 }

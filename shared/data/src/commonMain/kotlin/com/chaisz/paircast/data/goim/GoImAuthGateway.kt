@@ -5,9 +5,11 @@ import com.chaisz.paircast.core.gateway.ConfigGateway
 import com.chaisz.paircast.core.gateway.ConnectionState
 import com.chaisz.paircast.core.gateway.SessionEvent
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.rules.ConfigValidation
+import com.chaisz.paircast.core.rules.RegisterRules
 import com.chaisz.paircast.data.secure.GoImSession
 import com.chaisz.paircast.data.secure.SessionStore
 import kotlinx.coroutines.CancellationException
@@ -39,9 +41,7 @@ class GoImAuthGateway(
         private set
 
     override suspend fun login(account: String, password: String): LoginResult {
-        val config = configGateway.load() ?: throw AppError.NotConfigured
-        val serverUrl = ConfigValidation.normalizedServerUrl(config.im.serverUrl)
-            ?: throw AppError.IncompleteConfig(listOf("Server"))
+        val serverUrl = configuredServerUrl()
         val dto = try {
             api.login(serverUrl, account, password)
         } catch (e: GoImHttpException) {
@@ -49,9 +49,61 @@ class GoImAuthGateway(
                 400, 401 -> AppError.InvalidCredentials
                 403 -> AppError.AccountUnavailable
                 404 -> AppError.ServerUnreachable
-                else -> AppError.Unknown("Server error {{code}}", mapOf("code" to e.status.toString()))
+                else -> serverError(e)
             }
         }
+        return startSession(serverUrl, dto)
+    }
+
+    override suspend fun authOptions(): AuthOptions {
+        val dto = api.authConfig(configuredServerUrl())
+        return AuthOptions(registrationOpen = dto.registrationOpen, emailVerification = dto.emailVerification)
+    }
+
+    override suspend fun sendRegisterCode(email: String): Int {
+        val dto = try {
+            api.sendEmailCode(configuredServerUrl(), email, "register")
+        } catch (e: GoImHttpException) {
+            throw registrationError(e)
+        }
+        return dto.retryAfter.takeIf { it > 0 } ?: RegisterRules.RESEND_COOLDOWN_SECONDS
+    }
+
+    override suspend fun register(email: String, code: String, password: String, nickname: String?): LoginResult {
+        val serverUrl = configuredServerUrl()
+        val dto = try {
+            api.register(serverUrl, email, code, password, nickname)
+        } catch (e: GoImHttpException) {
+            throw registrationError(e)
+        }
+        return startSession(serverUrl, dto)
+    }
+
+    private suspend fun configuredServerUrl(): String {
+        val config = configGateway.load() ?: throw AppError.NotConfigured
+        return ConfigValidation.normalizedServerUrl(config.im.serverUrl)
+            ?: throw AppError.IncompleteConfig(listOf("Server"))
+    }
+
+    private fun registrationError(e: GoImHttpException): AppError = when (e.status) {
+        400 -> when {
+            e.body.contains("verification code") -> AppError.InvalidVerificationCode
+            e.body.contains("email") -> AppError.Validation("Please enter a valid email address")
+            else -> serverError(e)
+        }
+        403 -> AppError.RegistrationClosed
+        404 -> AppError.ServerUnreachable
+        409 -> AppError.EmailAlreadyRegistered
+        429 -> AppError.TooManyCodeRequests(e.retryAfterSeconds)
+        502 -> AppError.EmailSendFailed
+        503 -> AppError.EmailVerificationUnavailable
+        else -> serverError(e)
+    }
+
+    private fun serverError(e: GoImHttpException) =
+        AppError.Unknown("Server error {{code}}", mapOf("code" to e.status.toString()))
+
+    private suspend fun startSession(serverUrl: String, dto: LoginResponseDto): LoginResult {
         val newSession = GoImSession(serverUrl = serverUrl, uid = dto.uid, token = dto.token)
         sessions.save(newSession)
         session = newSession
@@ -160,9 +212,21 @@ class GoImAuthGateway(
     suspend fun nickname(uid: String): String =
         runCatching { fetchUsers(listOf(uid)).firstOrNull()?.nickname }.getOrNull() ?: uid
 
-    override suspend fun deleteAccount() {
-        session?.let { s ->
-            runCatching { api.updateProfile(s, s.uid, "0") }
+    override suspend fun deleteAccount(password: String) {
+        val s = requireSession()
+        try {
+            api.deleteAccount(s, password)
+        } catch (e: GoImHttpException) {
+            throw when (e.status) {
+                401 -> if (e.body.contains("invalid password")) {
+                    AppError.Validation("Current password is incorrect")
+                } else {
+                    AppError.SessionExpired
+                }
+                403 -> AppError.AdminAccountDeletion
+                404 -> AppError.SessionExpired
+                else -> AppError.AccountDeletionFailed
+            }
         }
         logout()
         configGateway.clearAll()
