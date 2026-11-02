@@ -41,6 +41,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToLong
 import kotlin.random.Random
+import kotlin.time.Clock
 
 /** GO-IM command numbers (`api/proto/message.go`). */
 object Cmd {
@@ -135,7 +136,14 @@ class GoImConnection(
         }
     }
 
-    fun nextSeq(): Long = ++seq
+    /**
+     * Client seq. The gateway dedups chat by `uid/device_id + seq` for minutes, so a counter that
+     * restarts at 1 after relaunch would get fresh messages acked but silently dropped.
+     */
+    fun nextSeq(): Long {
+        seq = max(Clock.System.now().toEpochMilliseconds(), seq + 1)
+        return seq
+    }
 
     /** Sends a frame; throws [AppError.Network] when the link is down. */
     suspend fun send(message: Message): Unit = withContext(serial) { sendFrame(message) }

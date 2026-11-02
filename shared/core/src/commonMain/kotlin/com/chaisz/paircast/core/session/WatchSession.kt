@@ -56,6 +56,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import kotlin.time.Clock
 
 /** Gateways and local stores a [WatchSession] needs (assembled by the platform graph). */
 class WatchDependencies(
@@ -134,6 +135,7 @@ class WatchSession(
     private val initialMovieId: String?,
     private val initialHostUserId: String?,
     dispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val _state = MutableStateFlow(WatchUiState(selfId = deps.authGateway.currentUser.value?.id))
@@ -148,7 +150,11 @@ class WatchSession(
     private val listTracks = ListSubtitleTracksUseCase(deps.configGateway, deps.subtitleGateway)
     private val searchSubtitles = SearchOnlineSubtitlesUseCase(deps.configGateway, deps.subtitleGateway)
 
-    private var seq: Long = 1
+    /**
+     * Signal sequence. Clock-seeded so a host that re-opens the room (new session, app relaunch)
+     * still emits above what members already applied; [nextSeq] keeps it strictly increasing.
+     */
+    private var seq: Long = 0
     private var listenJobs: List<Job> = emptyList()
     private var heartbeatJob: Job? = null
     private var memberProfileJob: Job? = null
@@ -216,9 +222,9 @@ class WatchSession(
             val room = current.room
             val user = me
             if (room != null && user != null) {
-                seq += 1
+                val transferSeq = nextSeq()
                 runCatching {
-                    leaveRoom(room, user.id, player.currentPositionMs, seq)
+                    leaveRoom(room, user.id, player.currentPositionMs, transferSeq)
                 }
             }
             stop()
@@ -303,7 +309,8 @@ class WatchSession(
             scope.launch { deps.chatGateway.messages(room).collect { ingestChat(it) } },
             scope.launch {
                 deps.roomGateway.observeRoom(room.id).collect { updated ->
-                    val membersChanged = updated.memberIds != current.room?.memberIds
+                    val previousMembers = current.room?.memberIds.orEmpty()
+                    val membersChanged = updated.memberIds != previousMembers
                     _state.update {
                         it.copy(
                             room = updated.copy(groupId = updated.groupId ?: it.room?.groupId),
@@ -311,6 +318,7 @@ class WatchSession(
                         )
                     }
                     if (membersChanged) refreshMemberProfiles()
+                    if (updated.memberIds.any { it !in previousMembers }) emitSnapshotForNewMembers()
                 }
             },
         )
@@ -333,13 +341,41 @@ class WatchSession(
         val room = current.room ?: return
         val user = me ?: return
         if (!current.isHost || player.isPaused) return
-        seq += 1
         val position = player.currentPositionMs
-        val currentSeq = seq
+        val currentSeq = nextSeq()
         scope.launch {
             runCatching { emitHost(room, user.id, PlaybackAction.HEARTBEAT, position, currentSeq) }
             _state.update { it.copy(playback = it.playback.copy(positionMs = position, lastSeq = currentSeq)) }
         }
+    }
+
+    /** Newcomers only hear heartbeats while playing; tell them the host's state right away. */
+    private fun emitSnapshotForNewMembers() {
+        val room = current.room ?: return
+        val user = me ?: return
+        if (!current.isHost) return
+        val action = if (player.isPaused) PlaybackAction.PAUSE else PlaybackAction.PLAY
+        val position = player.currentPositionMs
+        val currentSeq = nextSeq()
+        scope.launch {
+            runCatching { emitHost(room, user.id, action, position, currentSeq) }
+            _state.update { it.copy(playback = it.playback.copy(lastSeq = currentSeq)) }
+        }
+    }
+
+    private suspend fun emitHostReporting(room: WatchRoom, hostUserId: String, action: PlaybackAction, positionMs: Long, seq: Long) {
+        try {
+            emitHost(room, hostUserId, action, positionMs, seq)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            toast("Playback sync failed — check your connection")
+        }
+    }
+
+    private fun nextSeq(): Long {
+        seq = maxOf(nowMs(), seq + 1)
+        return seq
     }
 
     internal fun applyRemote(signal: PlaybackSyncSignal) {
@@ -404,10 +440,9 @@ class WatchSession(
         if (!current.isHost) return
         val action = if (player.isPaused) PlaybackAction.PLAY else PlaybackAction.PAUSE
         val position = player.currentPositionMs
-        seq += 1
-        val currentSeq = seq
+        val currentSeq = nextSeq()
         scope.launch {
-            runCatching { emitHost(room, user.id, action, position, currentSeq) }
+            emitHostReporting(room, user.id, action, position, currentSeq)
             if (action == PlaybackAction.PLAY) player.play() else player.pause()
             _state.update {
                 it.copy(
@@ -427,13 +462,12 @@ class WatchSession(
         val user = me ?: return
         if (!current.isHost) return
         val clamped = positionMs.coerceIn(0, maxOf(player.durationMs, 1))
-        seq += 1
-        val currentSeq = seq
+        val currentSeq = nextSeq()
         val wasPaused = player.isPaused
         player.seek(clamped)
         _state.update { it.copy(playback = it.playback.copy(positionMs = clamped, lastSeq = currentSeq)) }
         scope.launch {
-            runCatching { emitHost(room, user.id, PlaybackAction.SEEK, clamped, currentSeq) }
+            emitHostReporting(room, user.id, PlaybackAction.SEEK, clamped, currentSeq)
             if (!wasPaused) player.play()
         }
     }
@@ -465,8 +499,7 @@ class WatchSession(
         val user = me ?: return
         if (current.isSwitchingMovie) return
         _state.update { it.copy(isSwitchingMovie = true) }
-        seq += 1
-        val currentSeq = seq
+        val currentSeq = nextSeq()
         scope.launch {
             try {
                 val result = changeMovie(room, user.id, target, currentSeq)
@@ -505,13 +538,13 @@ class WatchSession(
         val user = me ?: return
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return
-        scope.launch { runCatching { deps.chatGateway.send(room, trimmed, user) } }
+        scope.launch { runCatching { deps.chatGateway.send(room, trimmed, user) }.onFailure(::reportChatFailure) }
     }
 
     fun sendSticker(sticker: StickerRef) {
         val room = current.room ?: return
         val user = me ?: return
-        scope.launch { runCatching { deps.chatGateway.sendSticker(room, sticker, user) } }
+        scope.launch { runCatching { deps.chatGateway.sendSticker(room, sticker, user) }.onFailure(::reportChatFailure) }
     }
 
     fun blockSender(message: ChatMessage) {
@@ -527,6 +560,11 @@ class WatchSession(
         val senderId = message.senderId ?: return
         deps.chatSafety.recordReport(senderId, ownerId, message.text)
         toast("Report recorded — opening feedback")
+    }
+
+    private fun reportChatFailure(e: Throwable) {
+        if (e is CancellationException) throw e
+        toast("Message failed to send")
     }
 
     private fun ingestChat(message: ChatMessage) {
@@ -691,8 +729,7 @@ class WatchSession(
         val room = current.room ?: return
         val user = me ?: return
         if (!current.isHost) return
-        seq += 1
-        val currentSeq = seq
+        val currentSeq = nextSeq()
         runCatching {
             emitHost(
                 room = room,

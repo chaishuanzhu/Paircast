@@ -19,6 +19,7 @@ import com.chaisz.paircast.core.usecase.ImportConfigUseCase
 import com.chaisz.paircast.core.usecase.LeaveRoomUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -130,7 +131,7 @@ class RoomUseCaseTest {
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WatchSessionTest {
-    private class Harness(scope: TestScope, self: User, roomHost: String) {
+    private class Harness(scope: TestScope, self: User, roomHost: String, nowMs: () -> Long = { 0L }) {
         val auth = FakeAuthGateway(self)
         val rooms = FakeRoomGateway().apply {
             rooms["room1"] = roomFixture(roomHost).copy(movieId = "m1", memberIds = listOf(roomHost), joinOrder = listOf(roomHost))
@@ -159,6 +160,7 @@ class WatchSessionTest {
             initialMovieId = "m1",
             initialHostUserId = roomHost,
             dispatcher = StandardTestDispatcher(scope.testScheduler),
+            nowMs = nowMs,
         )
     }
 
@@ -205,6 +207,43 @@ class WatchSessionTest {
         h.session.togglePlay()
         runCurrent()
         assertTrue(h.sync.sent.last().seq > 41)
+        h.session.close()
+    }
+
+    @Test fun reopenedHostEmitsAboveClockSoMembersDoNotDropAsStale() = runTest {
+        val h = Harness(this, User("host", "Host"), roomHost = "host", nowMs = { 1_700_000_000_000L })
+        h.session.start()
+        runCurrent()
+        h.session.togglePlay()
+        runCurrent()
+        h.session.togglePlay()
+        runCurrent()
+        val seqs = h.sync.sent.map { it.seq }
+        assertTrue(seqs.first() >= 1_700_000_000_000L)
+        assertTrue(seqs.zipWithNext().all { (a, b) -> b > a })
+        h.session.close()
+    }
+
+    @Test fun hostPushesStateWhenMemberJoins() = runTest {
+        val h = Harness(this, User("host", "Host"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        val room = h.session.state.value.room!!
+        h.rooms.updates.emit(room.copy(memberIds = room.memberIds + "member", joinOrder = room.joinOrder + "member"))
+        runCurrent()
+        assertEquals(PlaybackAction.PAUSE, h.sync.sent.last().action)
+        h.session.close()
+    }
+
+    @Test fun failedChatSendShowsToast() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.chat.failSend = true
+        val toast = backgroundScope.async { h.session.events.first { it is WatchEvent.Toast } }
+        h.session.sendChat("hi")
+        runCurrent()
+        assertEquals("Message failed to send", (toast.await() as WatchEvent.Toast).text.key)
         h.session.close()
     }
 

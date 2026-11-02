@@ -104,8 +104,9 @@ internal class FakeSyncGateway : PlaybackSyncGateway {
 internal class FakeChatGateway : ChatGateway {
     val systemTexts = mutableListOf<String>()
     val incoming = MutableSharedFlow<ChatMessage>(extraBufferCapacity = 8)
+    var failSend = false
     override suspend fun send(room: WatchRoom, text: String, sender: User) =
-        ChatMessage(id = "c", roomId = room.id, senderId = sender.id, senderNickname = sender.nickname, text = text)
+        if (failSend) throw AppError.Network else ChatMessage(id = "c", roomId = room.id, senderId = sender.id, senderNickname = sender.nickname, text = text)
     override suspend fun sendSticker(room: WatchRoom, sticker: StickerRef, sender: User) =
         ChatMessage(id = "s", roomId = room.id, senderId = sender.id, senderNickname = sender.nickname, text = "", kind = ChatMessageKind.STICKER, sticker = sticker)
     override fun messages(room: WatchRoom): Flow<ChatMessage> = incoming

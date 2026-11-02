@@ -12,6 +12,9 @@ import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.ChatStickerCodec
 import com.chaisz.paircast.core.support.PaircastJson
 import im.Message
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.filter
@@ -66,7 +69,7 @@ class GoImChatGateway(
     }
 
     private suspend fun map(roomId: String, m: Message): ChatMessage? {
-        if (m.content.isEmpty()) return null
+        if (m.content.isEmpty() || isGroupNotification(m)) return null
         val id = if (m.msg_id != 0L) m.msg_id.toString() else "${m.from}-${m.seq}"
         val sticker = if (m.msg_type == MsgType.STICKER || ChatStickerCodec.isStickerPayload(m.content)) {
             ChatStickerCodec.decode(m.content)
@@ -106,6 +109,15 @@ class GoImChatGateway(
 
     companion object {
         const val SYSTEM_PREFIX = "[sys]"
+        private val NOTIFICATION_TYPES = setOf("member_joined", "member_left", "member_kicked", "group_renamed", "owner_transferred")
+
+        /** REST group join/leave makes the gateway push `{"type":"member_joined","group_id":…}` as group chat. */
+        internal fun isGroupNotification(m: Message): Boolean {
+            if (m.msg_type != MsgType.TEXT || !m.content.startsWith("{")) return false
+            val obj = runCatching { PaircastJson.default.parseToJsonElement(m.content).jsonObject }.getOrNull() ?: return false
+            val type = (obj["type"] as? JsonPrimitive)?.contentOrNull ?: return false
+            return type in NOTIFICATION_TYPES && obj["group_id"] != null
+        }
     }
 }
 

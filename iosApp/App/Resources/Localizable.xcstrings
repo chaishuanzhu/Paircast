@@ -4420,6 +4420,40 @@
           }
         }
       }
+    },
+    "Message failed to send": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message failed to send"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消息发送失败，请检查网络"
+          }
+        }
+      }
+    },
+    "Playback sync failed — check your connection": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback sync failed — check your connection"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放同步失败，请检查网络"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
