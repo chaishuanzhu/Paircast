@@ -2,7 +2,7 @@
 
 | 文档 | 用途 |
 |------|------|
-| [PRD.md](./PRD.md) | 产品需求（当前 **v1.5**） |
+| [PRD.md](./PRD.md) | 产品需求（当前 **v2.0**） |
 | [TECH.md](./TECH.md) | 技术说明 / 架构 / 信令 |
 | [DESIGN.md](./DESIGN.md) | 设计约定 |
 | [designtoken.md](./designtoken.md) | 设计 Token（色板 / 主题） |

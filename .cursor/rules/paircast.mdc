@@ -5,8 +5,8 @@ alwaysApply: true
 
 # Paircast
 
-- 依赖方向：`App → Presentation/Data → Domain`。Domain 保持纯 Swift，不引入 UIKit / IM / VLC。
-- 用 Tuist 生成工程；不要提交生成的 `*.xcodeproj` / `*.xcworkspace`，也不要提交 `.asc/` IPA、描述文件、真实密钥。
+- 依赖方向：`App / androidApp → Presentation → shared:umbrella → shared:data → shared:core`。`shared:core` 保持纯 Kotlin，不引入 Ktor / 平台 SDK / VLC；业务规则放 shared，两端 UI 只渲染。
+- iOS 用 Tuist 生成工程，改 `shared/` 后 `make shared`；不要提交生成的 `*.xcodeproj` / `*.xcworkspace`，也不要提交 `.asc/` IPA、描述文件、keystore、真实密钥或 GO-IM 账号密码。
 - 公开文档与邀请页域名使用 `https://paircast.chaisz.com/`（无 `/Paircast/` 路径前缀）。
 - 改产品行为时同步 `docs/PRD.md` / `docs/TECH.md`（版本号对齐）及需要的 `metadata/`、公开 HTML。
 - 完整说明见仓库根目录 `AGENTS.md`。

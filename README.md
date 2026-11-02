@@ -1,52 +1,53 @@
 # Paircast
 
-异地好友同步观影 + 实时聊天的 iOS App（SwiftUI · Clean Architecture · Tuist）。Bundle ID 仍为 `com.chaisz.tandem`。
+异地好友同步观影 + 实时聊天，iOS（SwiftUI）+ Android（Jetpack Compose），业务逻辑用 Kotlin Multiplatform 共享，IM 使用自托管 [GO-IM](https://github.com/chaishuanzhu/GO-IM)。iOS Bundle ID 仍为 `com.chaisz.tandem`，Android applicationId 为 `com.chaisz.paircast`。
+
+> v1.x（腾讯云 IM、纯 Swift）归档在分支 `archive/ios-tencent-im`。
 
 ## 要求
 
-- Xcode 26+ / iOS 26.0+
-- [Tuist](https://tuist.dev) 4.x（`brew install tuist`）
+- Xcode 26+ / iOS 26.0+；[Tuist](https://tuist.dev) 4.x（`brew install tuist`）
+- JDK 17（Android Studio 自带 JBR 即可）+ Android SDK（compileSdk 36，minSdk 26）
+- 一台 GO-IM 服务（需包含 `CmdGroupSignal=25` 瞬时群信令）
 
 ## 快速开始
 
 ```bash
-make setup    # 下载 VLCKit + ImSDK（首次）+ tuist install/generate
-make test     # 跑各模块单测
-make open     # 打开生成的 workspace
+make setup         # 下载 VLCKit + 构建 PaircastShared.xcframework + tuist install/generate
+make test          # Kotlin 单测 + iOS Presentation 测试
+make open          # 打开生成的 workspace
+make android       # Android Debug APK
 ```
 
-或手动：
-
-```bash
-./Scripts/download-vlckit.sh   # 约 740MB，首次需要
-./Scripts/download-imsdk.sh    # 约 12MB，腾讯云 IM XCFramework
-tuist install
-tuist generate
-```
+改了 `shared/` 下的 Kotlin 代码后，iOS 需要重新 `make shared`（xcframework 不会自动重建）。
 
 ## 模块
 
 | 模块 | 职责 |
 |------|------|
-| Domain | Entities / UseCases / Gateway 协议 / 纯规则 |
-| Data | Keychain、UserSig、七牛、元数据、**腾讯云 IM**（登录/群聊/播控信令）、字幕、播放器适配 |
-| Presentation | SwiftUI Scenes + ViewModels（对照 `docs/design-preview`） |
-| App | 组装与 Deep Link `paircast://` |
+| `shared/core` | 纯 Kotlin：实体、规则、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
+| `shared/data` | GO-IM（WebSocket protobuf + REST）、S3 兼容存储、元数据、字幕、贴纸 |
+| `shared/umbrella` | `PaircastGraph` 组装；导出 `PaircastShared.xcframework`（SKIE） |
+| `Projects/Presentation` | iOS SwiftUI 场景、VLCKit 播放器、Keychain |
+| `Projects/App` | iOS 入口与 Deep Link `paircast://` |
+| `androidApp` | Android Compose 场景、libVLC 播放器、加密存储 |
 
-依赖方向：`App → Presentation/Data → Domain`。
+依赖方向：`App / androidApp → Presentation → shared:umbrella → shared:data → shared:core`。
 
-## 双端冒烟（IM）
+## 双端冒烟
 
-控制台预置两个 userID，App 内配置同一 SDKAppID / SecretKey 与七牛：
+管理员在 GO-IM 建两个账号（`/admin/users/create`），两台设备配置同一 GO-IM 地址与对象存储：
 
 1. A 登录 → 开片建房 → 分享邀请链接  
-2. B 登录 → 打开邀请 → 加入成功（不应再提示「已结束」）  
-3. A 播放/暂停 → B 跟随；双方发聊天可见  
-4. A 播放中约 5s 内心跳可对齐 B 进度  
+2. B 登录 → 打开邀请 → 加入成功  
+3. A 播放/暂停/拖动 → B 跟随；双方聊天、贴纸互通  
+4. A 播放中约 5s 心跳对齐 B 进度；A 离开后 B 成为房主  
+5. iOS ↔ Android 各做一次房主
 
-## 安全说明（MVP）
+## 安全说明
 
-持有配置中的 IM `SecretKey` 即可为任意 `userID` 签发 UserSig；登录密码仅为非空弱校验，真实成败以 IM login 为准。配置请存 Keychain；分享链接 `paircast://config?args=…` 含加密后的密钥，勿公开传播。
+- 账号密码由 GO-IM 校验；会话 token 存 Keychain / EncryptedSharedPreferences
+- 配置只含 GO-IM 地址与对象存储凭证；分享链接 `paircast://config?args=…` 含加密后的存储密钥，勿公开传播
 
 ## 文档
 

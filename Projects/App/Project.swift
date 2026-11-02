@@ -62,8 +62,8 @@ let project = Project(
                 "EXCLUDED_ARCHS[sdk=iphoneos*]": "armv7 armv7s",
                 // PaircastShared.xcframework ships arm64 simulator only.
                 "EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64",
-                "MARKETING_VERSION": "1.1.1",
-                "CURRENT_PROJECT_VERSION": "13",
+                "MARKETING_VERSION": "2.0.0",
+                "CURRENT_PROJECT_VERSION": "14",
             ])
         ),
         .target(

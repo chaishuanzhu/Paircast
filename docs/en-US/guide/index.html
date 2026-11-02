@@ -23,16 +23,16 @@
 <body>
   <p class="lang"><a href="./">English</a><a href="../../zh-Hans/guide/">简体中文</a></p>
   <h1>Paircast User Guide</h1>
-  <p>Paircast is an <strong>invite-only</strong> private cloud sync player. Videos come from <strong>your own</strong> object storage. Accounts are provisioned in Tencent Cloud IM by an admin — there is <strong>no in-app sign-up</strong>.</p>
+  <p>Paircast is an <strong>invite-only</strong> private cloud sync player. Videos come from <strong>your own</strong> object storage. Accounts are created by the admin of your self-hosted <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> server — there is <strong>no in-app sign-up</strong>. Available on iOS and Android; both can join the same room.</p>
 
   <div class="note">
-    Fast path: get a <code>paircast://config?…</code> link from your admin → Login → Service Configuration → Paste to Import → sign in with your assigned User ID.
+    Fast path: get a <code>paircast://config?…</code> link from your admin → Login → Service Configuration → Paste to Import → sign in with your assigned account and password.
   </div>
 
   <h2>1. Typical flow</h2>
   <ol>
     <li>Finish <strong>Service Configuration</strong> (import a link or fill fields manually).</li>
-    <li>Sign in with an admin-assigned <strong>User ID</strong> (no password; UserSig is generated on-device from the IM SecretKey).</li>
+    <li>Sign in with the <strong>account and password</strong> your admin gave you. If the admin requires it, you must set a new password on first sign-in.</li>
     <li>Browse <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files in your bucket on the <strong>Library</strong> screen.</li>
     <li>Open a title to create/join a <strong>room</strong> for synced playback and chat.</li>
     <li>Share an invite link so friends can join the same room.</li>
@@ -41,33 +41,28 @@
   <h2>2. Where each configuration value comes from</h2>
   <p>Open <strong>Service Configuration</strong> from the login screen or <strong>Me</strong>.</p>
   <div class="warn">
-    Shared config links contain IM and object-storage secrets. Share only with trusted friends. After a successful import, <strong>sign in again</strong>.
+    Shared config links contain the IM server address and object-storage secrets. Share only with trusted friends. After a successful import, <strong>sign in again</strong>.
   </div>
 
-  <h3>2.1 Tencent Cloud IM (required)</h3>
+  <h3>2.1 IM server (required)</h3>
   <table>
     <thead>
       <tr><th>Field in App</th><th>Where to get it</th><th>Notes</th></tr>
     </thead>
     <tbody>
       <tr>
-        <td><code>SDKAppID</code></td>
-        <td><a href="https://console.cloud.tencent.com/im">Tencent Cloud IM console</a> → your app</td>
-        <td>Numeric application ID</td>
+        <td>IM Server address</td>
+        <td>The admin who runs your GO-IM server</td>
+        <td>e.g. <code>im.example.com</code>; HTTPS is assumed unless you type <code>http://</code> (LAN only)</td>
       </tr>
       <tr>
-        <td><code>SecretKey</code></td>
-        <td>Same app → key management (UserSig signing key)</td>
-        <td>Stored in Keychain; UserSig is generated locally — users never paste a UserSig</td>
-      </tr>
-      <tr>
-        <td>Login <code>User ID</code></td>
-        <td>IM console → account management (or your import tooling)</td>
-        <td>Must be <strong>created by an admin</strong> first</td>
+        <td>Login account / password</td>
+        <td>Created by the admin (GO-IM <code>/admin/users/create</code>)</td>
+        <td>Account is your UID or email. Change your password any time in Me → Change Password</td>
       </tr>
     </tbody>
   </table>
-  <p>Docs: <a href="https://www.tencentcloud.com/document/product/1047">Tencent Cloud IM</a>.</p>
+  <p>The server must run a GO-IM build that supports transient group signals (used for playback sync).</p>
 
   <h3>2.2 Object storage (required)</h3>
   <p>Providers: Qiniu (S3), Alibaba Cloud OSS, Tencent Cloud COS, MinIO. Required: AccessKey, SecretKey, Bucket, Endpoint.</p>
@@ -176,40 +171,41 @@
 
   <h2>3. Import / share configuration</h2>
   <ol>
-    <li><strong>Import:</strong> Service Configuration → Paste to Import → confirm overwrite → sign in again.</li>
+    <li><strong>Import:</strong> Service Configuration → Paste to Import or Scan QR Code → confirm overwrite → sign in again.</li>
     <li>Or open a <code>paircast://config?args=…</code> deep link.</li>
-    <li><strong>Share:</strong> Share Configuration creates an encrypted link (contains secrets).</li>
+    <li>Links created by Paircast 1.x (Tencent Cloud IM) still import storage settings; enter the IM server address afterwards.</li>
+    <li><strong>Share:</strong> Share Configuration creates an encrypted link and QR code (contains secrets).</li>
   </ol>
 
   <h2>4. Login and library</h2>
   <ul>
-    <li>Enter only the assigned <strong>User ID</strong>.</li>
-    <li>If config is incomplete, finish IM + storage first.</li>
+    <li>Enter the assigned <strong>account and password</strong>.</li>
+    <li>If config is incomplete, finish the IM server + storage first.</li>
     <li>Empty library: confirm the bucket (and prefix) has <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code> and the key can list/get objects.</li>
   </ul>
 
   <h2>5. Watch together and invites</h2>
   <ol>
     <li>Tap a title → room (host can drive sync).</li>
-    <li><strong>Invite:</strong> system share or copy<br /><code>paircast://watch?roomId=…&amp;movieId=…&amp;hostUserId=…</code></li>
-    <li>Friends need the same cloud config and a valid User ID before opening the invite.</li>
+    <li><strong>Invite:</strong> system share or copy the invite link (<code>https://paircast.chaisz.com/invite/?roomId=…</code>); it opens Paircast on iOS or Android.</li>
+    <li>Friends need the same cloud config and an account on the same GO-IM server before opening the invite.</li>
     <li>Long-press a chat message to <strong>Block</strong> (local) or <strong>Report</strong>.</li>
   </ol>
 
   <h2>6. Me</h2>
   <ul>
-    <li>Avatar, nickname, theme, language</li>
+    <li>Avatar, nickname, change password, theme, language</li>
     <li>Service Configuration, Acknowledgements, privacy/support links</li>
     <li><strong>Sign out</strong> keeps local cloud config</li>
-    <li><strong>Delete Account</strong> clears on-device config/session/avatar; console IM users must be disabled by an admin</li>
+    <li><strong>Delete Account</strong> clears your avatar and on-device config/session; the GO-IM account itself must be disabled by an admin</li>
   </ul>
 
   <h2>7. Troubleshooting</h2>
   <ul>
-    <li><strong>Invalid config link:</strong> copy the full URL; failed imports do not overwrite existing Keychain config.</li>
+    <li><strong>Invalid config link:</strong> copy the full URL; failed imports do not overwrite existing config.</li>
     <li><strong>Import looks OK but nothing changed:</strong> sign in again; do not Save empty SecureFields right after import.</li>
     <li><strong>Endpoint errors:</strong> use the API regional host (table above), not a CDN domain.</li>
-    <li><strong>Login fails:</strong> User ID must exist in the same IM app as SDKAppID/SecretKey.</li>
+    <li><strong>Login fails:</strong> check the IM server address and that the account exists on that server; “Cannot reach the IM server” means the address or network is wrong.</li>
   </ul>
 
   <h2>8. More</h2>

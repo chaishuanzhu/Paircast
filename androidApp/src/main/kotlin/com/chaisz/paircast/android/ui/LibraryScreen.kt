@@ -292,8 +292,8 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(t("Delete Account")) },
-            text = { Text(t("Your account will be deleted from the IM server and local data cleared. This cannot be undone.")) },
+            title = { Text(t("Delete account?")) },
+            text = { Text(t("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin.")) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
@@ -302,13 +302,14 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
                             app.graph.authGateway.deleteAccount()
                             user?.id?.let { app.graph.chatSafety.clear(it) }
                             app.graph.clearLocalCaches()
+                            app.config = null
                             onDismiss()
                             app.logout()
                         } catch (e: Exception) {
                             error = L10n.message(e)
                         }
                     }
-                }) { Text(t("Delete"), color = MaterialTheme.colorScheme.error) }
+                }) { Text(t("Delete Account"), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(t("Cancel")) } },
         )

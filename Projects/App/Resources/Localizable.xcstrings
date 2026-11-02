@@ -4387,23 +4387,6 @@
         }
       }
     },
-    "Delete": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除"
-          }
-        }
-      }
-    },
     "Library": {
       "extractionState": "manual",
       "localizations": {
@@ -4519,23 +4502,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "这将覆盖本机的云服务配置"
-          }
-        }
-      }
-    },
-    "Your account will be deleted from the IM server and local data cleared. This cannot be undone.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your account will be deleted from the IM server and local data cleared. This cannot be undone."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的账号将从 IM 服务器删除，本地数据也会清除。此操作无法撤销。"
           }
         }
       }

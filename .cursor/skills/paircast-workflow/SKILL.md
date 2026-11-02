@@ -1,6 +1,6 @@
 ---
 name: paircast-workflow
-description: Paircast iOS project workflow — Tuist modules, docs/Pages on paircast.chaisz.com, metadata, release tags, and secret-handling rules. Use when changing architecture, docs, store metadata, invite/privacy pages, or release/TestFlight flows.
+description: Paircast iOS + Android project workflow — KMP shared layer, Tuist modules, docs/Pages on paircast.chaisz.com, metadata, release tags, and secret-handling rules. Use when changing architecture, docs, store metadata, invite/privacy pages, or release/TestFlight flows.
 ---
 
 # Paircast Workflow
@@ -9,9 +9,9 @@ Read `AGENTS.md` first for module boundaries and hard rules.
 
 ## When editing code
 
-1. Keep Clean Architecture: Domain has no UI/SDK; Data implements gateways; Presentation is SwiftUI.
-2. After adding Swift files under `Projects/*/Sources`, run `tuist generate` if the Xcode project must pick them up.
-3. Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `Projects/App/Project.swift` when cutting a user-facing release.
+1. Keep Clean Architecture: business logic lives in Kotlin Multiplatform (`shared/core` is pure Kotlin, `shared/data` implements gateways); iOS Presentation is SwiftUI, Android is Compose — both only render shared state.
+2. After changing `shared/`, run `make shared` so iOS picks up a fresh `PaircastShared.xcframework`; after adding Swift files under `Projects/*/Sources`, run `tuist generate`.
+3. Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `Projects/App/Project.swift` and `paircast.versionName` / `paircast.versionCode` in `gradle.properties` together when cutting a user-facing release.
 
 ## When editing docs or store copy
 

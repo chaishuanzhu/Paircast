@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export redacted Swift sources for China software-copyright identification pages.
+"""Export redacted Swift / Kotlin sources for China software-copyright identification pages.
 
 Produces front (30 pages) + back (30 pages) text under docs/soft-copyright/generated/.
 Each page targets >= 50 lines. Secrets-like string literals are scrubbed.
@@ -21,13 +21,13 @@ PAGES = 30
 FRONT_FILES = [
     "Projects/App/Sources/PaircastApp.swift",
     "Projects/App/Sources/AppDelegate.swift",
-    "Projects/Domain/Sources/Entities/AppCloudConfig.swift",
-    "Projects/Domain/Sources/Rules/ConfigQRCodec.swift",
-    "Projects/Domain/Sources/Rules/ConfigShareLink.swift",
-    "Projects/Domain/Sources/Rules/ValidationRules.swift",
-    "Projects/Domain/Sources/UseCases/Room/RoomUseCases.swift",
-    "Projects/Domain/Sources/Gateways/GatewayProtocols.swift",
-    "Projects/Data/Sources/Storage/KeychainConfigStore.swift",
+    "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/model/AppCloudConfig.kt",
+    "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/rules/ConfigQRCodec.kt",
+    "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/config/ConfigShareLink.kt",
+    "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/rules/ConfigValidation.kt",
+    "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/rules/Rules.kt",
+    "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/gateway/Gateways.kt",
+    "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/usecase/UseCases.kt",
     "Projects/Presentation/Sources/Navigation/AppSession.swift",
     "Projects/Presentation/Sources/Scenes/Login/LoginView.swift",
     "Projects/Presentation/Sources/Scenes/Config/ServiceConfigView.swift",
@@ -36,11 +36,12 @@ FRONT_FILES = [
 BACK_FILES = [
     "Projects/Presentation/Sources/Player/VLCPlayerController.swift",
     "Projects/Presentation/Sources/Scenes/Watch/WatchView.swift",
-    "Projects/Data/Sources/IM/TencentIMClient.swift",
-    "Projects/Data/Sources/OSS/OSSRoomGateway.swift",
-    "Projects/Data/Sources/OSS/OSSMovieCatalogGateway.swift",
-    "Projects/Data/Sources/OSS/AWSV4Signer.swift",
-    "Projects/Data/Sources/Metadata/CascadingMetadataGateway.swift",
+    "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/session/WatchSession.kt",
+    "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/goim/GoImConnection.kt",
+    "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/goim/GoImRoomMessaging.kt",
+    "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/rooms/OssRoomStore.kt",
+    "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/s3/SigV4.kt",
+    "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/metadata/Metadata.kt",
 ]
 
 SECRETISH = re.compile(
@@ -100,8 +101,8 @@ def main() -> None:
         raise SystemExit(f"back sources need {need} lines, have {len(back_all)}")
     back = back_all[-need:]
 
-    write_pages(front, OUT / "源程序-前30页.txt", "Paircast V1.1.1 源程序鉴别材料（前 30 页）")
-    write_pages(back, OUT / "源程序-后30页.txt", "Paircast V1.1.1 源程序鉴别材料（后 30 页）")
+    write_pages(front, OUT / "源程序-前30页.txt", "Paircast V2.0.0 源程序鉴别材料（前 30 页）")
+    write_pages(back, OUT / "源程序-后30页.txt", "Paircast V2.0.0 源程序鉴别材料（后 30 页）")
 
     # also emit continuous plain dumps for Word/Pages import
     (OUT / "源程序-前30页-连续.txt").write_text("\n".join(front) + "\n", encoding="utf-8")
