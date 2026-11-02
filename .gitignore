@@ -4,8 +4,8 @@ DerivedData/
 *.xcuserstate
 *.xcuserdata/
 .tuist/
-Tuist/.build/
-Tuist/Package.resolved
+iosApp/Tuist/.build/
+iosApp/Tuist/Package.resolved
 graph.png
 *.xcodeproj
 *.xcworkspace
@@ -14,13 +14,12 @@ graph.png
 .swiftpm/
 docs/.DS_Store
 stickers-dist/
-Vendor/VLCKitSPM/VLCKit-all.xcframework/
-Vendor/VLCKitSPM/VLCKit-all.xcframework.zip
+iosApp/Vendor/VLCKitSPM/VLCKit-all.xcframework/
+iosApp/Vendor/VLCKitSPM/VLCKit-all.xcframework.zip
 # Gradle / Kotlin Multiplatform / Android
 .gradle/
 .kotlin/
 build/
-!Projects/**/build/
 local.properties
 *.iml
 .idea/
@@ -29,12 +28,13 @@ captures/
 *.jks
 
 # Fastlane / Ruby
-vendor/bundle/
+iosApp/Vendor/bundle/
+iosApp/vendor/bundle/
 .bundle/
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/README.md
-fastlane/test_output/
+iosApp/fastlane/report.xml
+iosApp/fastlane/Preview.html
+iosApp/fastlane/README.md
+iosApp/fastlane/test_output/
 
 # Local release / agent artifacts (do not commit)
 .asc/

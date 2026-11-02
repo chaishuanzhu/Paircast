@@ -60,7 +60,7 @@ android {
 
 /** Both apps share one string catalog (keys = English templates, also used by shared `UiText`). */
 val copyStringCatalog by tasks.registering(Copy::class) {
-    from(rootProject.file("Projects/App/Resources/Localizable.xcstrings"))
+    from(rootProject.file("iosApp/App/Resources/Localizable.xcstrings"))
     into(layout.buildDirectory.dir("generated/l10n"))
 }
 tasks.named("preBuild") { dependsOn(copyStringCatalog) }

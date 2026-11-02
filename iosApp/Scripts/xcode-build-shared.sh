@@ -7,7 +7,7 @@ if [ "${OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED:-}" = "YES" ]; then
   exit 0
 fi
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 # Gradle / Kotlin need JDK 17–21; Xcode does not inherit the shell's JAVA_HOME.
 jdk_supported() {

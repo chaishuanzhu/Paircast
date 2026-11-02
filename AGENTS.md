@@ -20,10 +20,10 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 
 ## 工程约定
 
-- iOS 用 **Tuist** 生成工程：`make setup` / `tuist generate`；不要手改生成的 `*.xcodeproj` / `*.xcworkspace`（已 gitignore）
-- iOS 构建时由 `Presentation` 的 “Compile Kotlin Framework” 阶段（`Scripts/xcode-build-shared.sh` → `embedAndSignAppleFrameworkForXcode`）自动编译 Kotlin，无需手动重建；Gradle 用根目录 `./gradlew`（JDK 17–21）
-- 版本号：iOS 在 `Projects/App/Project.swift`（`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`），Android 在 `gradle.properties`（`paircast.versionName` / `paircast.versionCode`），两边保持一致
-- 文案：两端共用 `Projects/App/Resources/Localizable.xcstrings`（key = 英文模板）
+- iOS 全部放在 `iosApp/`（对齐 GO-IM 的 `kmp/iosApp`）：单个 Tuist 清单 `iosApp/Project.swift`（Paircast app + Presentation 静态框架），`make setup` / `cd iosApp && tuist generate`；fastlane / Gemfile / VLCKit 也在 `iosApp/` 下；不要手改生成的 `*.xcodeproj` / `*.xcworkspace`（已 gitignore）
+- iOS 构建时由 `Presentation` 的 “Compile Kotlin Framework” 阶段（`iosApp/Scripts/xcode-build-shared.sh` → `embedAndSignAppleFrameworkForXcode`）自动编译 Kotlin，无需手动重建；Gradle 用根目录 `./gradlew`（JDK 17–21）
+- 版本号：iOS 在 `iosApp/Project.swift`（`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`），Android 在 `gradle.properties`（`paircast.versionName` / `paircast.versionCode`），两边保持一致
+- 文案：两端共用 `iosApp/App/Resources/Localizable.xcstrings`（key = 英文模板）
 - 商店文案在 `metadata/`；公开隐私/支持/邀请页在 `docs/`（GitHub Pages → `paircast.chaisz.com`）
 - 最低系统：**iOS 26.0**、**Android 8.0（API 26）**
 

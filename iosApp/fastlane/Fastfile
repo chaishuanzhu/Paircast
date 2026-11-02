@@ -29,9 +29,14 @@ platform :ios do
   TEAM_ID = "8PHCHYD8X3"
   PROFILE_NAME = "Tandem AppStore"
 
-  # Always resolve against the repo root (parent of ./fastlane), not Dir.pwd.
-  def project_root
+  # Always resolve against iosApp/ (parent of ./fastlane), not Dir.pwd.
+  def ios_root
     File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+  end
+
+  # Repo root: CI config (.github/) and release artifacts (.asc/) live here.
+  def repo_root
+    File.expand_path("..", ios_root)
   end
 
   def login_keychain_path
@@ -95,13 +100,13 @@ platform :ios do
     begin
       unlock_ios_dev_keychain
 
-      root = project_root
+      root = ios_root
       Dir.chdir(root)
 
       workspace_path = File.join(root, "Paircast.xcworkspace")
-      project_path = File.join(root, "Projects/App/Paircast.xcodeproj")
-      export_options = File.join(root, ".github/ci/ExportOptions.plist")
-      artifacts = File.join(root, ".asc", "artifacts")
+      project_path = File.join(root, "Paircast.xcodeproj")
+      export_options = File.join(repo_root, ".github/ci/ExportOptions.plist")
+      artifacts = File.join(repo_root, ".asc", "artifacts")
       archive_path = File.join(artifacts, "Paircast.xcarchive")
 
       unless Dir.exist?(workspace_path)

@@ -14,12 +14,14 @@
 
 ```bash
 make setup         # 下载 VLCKit + tuist install/generate
-make test          # Kotlin 单测 + iOS Presentation 测试
-make open          # 打开生成的 workspace
+make test          # Kotlin 单测 + iOS 测试（Paircast scheme）
+make open          # 生成并打开 iosApp/Paircast.xcworkspace
 make android       # Android Debug APK
 ```
 
 iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Framework” 构建阶段会调用 Gradle `embedAndSignAppleFrameworkForXcode`，按当前配置 / SDK 编译 `PaircastShared.framework`，改了 `shared/` 直接在 Xcode 里构建即可（需要 JDK 17–21，脚本会自动找 Android Studio 自带 JBR）。
+
+目录结构对齐 GO-IM（`kmp/iosApp`）：Gradle 工程在仓库根目录，iOS 相关全部在 `iosApp/`（`Project.swift` / `Tuist.swift`、`App/`、`Presentation/`、`Scripts/`、`Vendor/VLCKitSPM`、`fastlane/` + `Gemfile`）。Tuist 命令需在 `iosApp/` 下执行（或用 `make generate`）。
 
 ## 模块
 
@@ -28,8 +30,8 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 | `shared/core` | 纯 Kotlin：实体、规则、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
 | `shared/data` | GO-IM（WebSocket protobuf + REST）、S3 兼容存储、元数据、字幕、贴纸 |
 | `shared/umbrella` | `PaircastGraph` 组装（两端共用）；iOS 导出 `PaircastShared` 框架（SKIE） |
-| `Projects/Presentation` | iOS SwiftUI 场景、VLCKit 播放器、Keychain |
-| `Projects/App` | iOS 入口与 Deep Link `paircast://` |
+| `iosApp/Presentation` | iOS SwiftUI 场景、VLCKit 播放器、Keychain |
+| `iosApp/App` | iOS 入口与 Deep Link `paircast://` |
 | `androidApp` | Android Compose 场景、libVLC 播放器、加密存储 |
 
 依赖方向：`App / androidApp → Presentation → shared:umbrella → shared:data → shared:core`。

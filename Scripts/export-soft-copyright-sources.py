@@ -19,8 +19,8 @@ LINES_PER_PAGE = 50
 PAGES = 30
 
 FRONT_FILES = [
-    "Projects/App/Sources/PaircastApp.swift",
-    "Projects/App/Sources/AppDelegate.swift",
+    "iosApp/App/Sources/PaircastApp.swift",
+    "iosApp/App/Sources/AppDelegate.swift",
     "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/model/AppCloudConfig.kt",
     "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/rules/ConfigQRCodec.kt",
     "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/config/ConfigShareLink.kt",
@@ -28,14 +28,14 @@ FRONT_FILES = [
     "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/rules/Rules.kt",
     "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/gateway/Gateways.kt",
     "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/usecase/UseCases.kt",
-    "Projects/Presentation/Sources/Navigation/AppSession.swift",
-    "Projects/Presentation/Sources/Scenes/Login/LoginView.swift",
-    "Projects/Presentation/Sources/Scenes/Config/ServiceConfigView.swift",
+    "iosApp/Presentation/Sources/Navigation/AppSession.swift",
+    "iosApp/Presentation/Sources/Scenes/Login/LoginView.swift",
+    "iosApp/Presentation/Sources/Scenes/Config/ServiceConfigView.swift",
 ]
 
 BACK_FILES = [
-    "Projects/Presentation/Sources/Player/VLCPlayerController.swift",
-    "Projects/Presentation/Sources/Scenes/Watch/WatchView.swift",
+    "iosApp/Presentation/Sources/Player/VLCPlayerController.swift",
+    "iosApp/Presentation/Sources/Scenes/Watch/WatchView.swift",
     "shared/core/src/commonMain/kotlin/com/chaisz/paircast/core/session/WatchSession.kt",
     "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/goim/GoImConnection.kt",
     "shared/data/src/commonMain/kotlin/com/chaisz/paircast/data/goim/GoImRoomMessaging.kt",

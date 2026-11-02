@@ -1,5 +1,5 @@
 # Build a signed App Store IPA on tag push and attach it to the GitHub Release.
-# Xcode compiles the Kotlin Multiplatform framework during the archive (Scripts/xcode-build-shared.sh).
+# Xcode compiles the Kotlin Multiplatform framework during the archive (iosApp/Scripts/xcode-build-shared.sh).
 # Intentionally has NO pull_request trigger — fork PRs never run this on the self-hosted Mac.
 name: Release IPA
 
@@ -39,7 +39,7 @@ jobs:
           # inputs.tag is only for the GitHub Release name, not the source tree.
 
       - name: Ensure vendor SDKs
-        run: ./Scripts/download-vlckit.sh
+        run: ./iosApp/Scripts/download-vlckit.sh
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -54,11 +54,13 @@ jobs:
           ./gradlew --no-daemon :shared:core:allTests
 
       - name: Install Ruby gems
+        working-directory: iosApp
         run: |
           bundle config set --local path 'vendor/bundle'
           bundle install --jobs 4 --retry 3
 
       - name: Generate Xcode project
+        working-directory: iosApp
         run: |
           # Avoid stale absolute paths from a previous machine/clone layout
           rm -rf Tuist/.build
@@ -73,6 +75,7 @@ jobs:
           # https://docs.fastlane.tools/best-practices/continuous-integration/
           LANG: en_US.UTF-8
           LC_ALL: en_US.UTF-8
+        working-directory: iosApp
         run: bundle exec fastlane archive_appstore
 
       - name: Publish GitHub Release asset
