@@ -1,5 +1,5 @@
 import Foundation
-import Domain
+import PaircastShared
 
 @MainActor
 public final class AppSession: ObservableObject {
@@ -9,69 +9,43 @@ public final class AppSession: ObservableObject {
     @Published public var config: AppCloudConfig?
     @Published public var currentUser: User?
     @Published public var toast: String?
+    /// Set after a login that requires a password change before entering the library.
+    @Published public var mustChangePassword = false
 
-    public let configGateway: ConfigGateway
-    public let authGateway: AuthGateway
-    public let userSigGateway: UserSigGateway
-    public let catalogGateway: MovieCatalogGateway
-    public let metadataGateway: MetadataGateway
-    public let roomGateway: RoomGateway
-    public let chatGateway: ChatGateway
-    public let syncGateway: PlaybackSyncGateway
-    public let subtitleGateway: SubtitleGateway
-    public let sharedSubtitleStorage: SharedSubtitleStorageGateway
-    public let stickerCatalog: StickerCatalogGateway
+    public let graph: PaircastGraph
+    public var configGateway: ConfigGateway { graph.configGateway }
+    public var authGateway: AuthGateway { graph.authGateway }
+    public var catalogGateway: MovieCatalogGateway { graph.catalogGateway }
+    public var roomGateway: RoomGateway { graph.roomGateway }
+    public var subtitleGateway: SubtitleGateway { graph.subtitleGateway }
+    public var stickerCatalog: StickerCatalogGateway { graph.stickerCatalog }
 
     /// Deep-link invite kept until the user finishes login.
     private(set) var pendingInvite: RoomInvite?
     /// Config share link (`paircast://config?args=…`) awaiting confirm-import on the config screen.
     private(set) var pendingConfigImportRaw: String?
+    private var sessionEventsTask: Task<Void, Never>?
 
-    public init(
-        configGateway: ConfigGateway,
-        authGateway: AuthGateway,
-        userSigGateway: UserSigGateway,
-        catalogGateway: MovieCatalogGateway,
-        metadataGateway: MetadataGateway,
-        roomGateway: RoomGateway,
-        chatGateway: ChatGateway,
-        syncGateway: PlaybackSyncGateway,
-        subtitleGateway: SubtitleGateway,
-        sharedSubtitleStorage: SharedSubtitleStorageGateway,
-        stickerCatalog: StickerCatalogGateway
-    ) {
-        self.configGateway = configGateway
-        self.authGateway = authGateway
-        self.userSigGateway = userSigGateway
-        self.catalogGateway = catalogGateway
-        self.metadataGateway = metadataGateway
-        self.roomGateway = roomGateway
-        self.chatGateway = chatGateway
-        self.syncGateway = syncGateway
-        self.subtitleGateway = subtitleGateway
-        self.sharedSubtitleStorage = sharedSubtitleStorage
-        self.stickerCatalog = stickerCatalog
+    public init(graph: PaircastGraph) {
+        self.graph = graph
         self.route = .splash
-        installIMSessionObservers()
+        observeSessionEvents()
+    }
+
+    deinit {
+        sessionEventsTask?.cancel()
     }
 
     public func bootstrap() async {
         let started = ContinuousClock.now
+        await LegacyConfigMigration.migrateIfNeeded(into: configGateway)
         config = try? await configGateway.load()
 
         var next: AppRoute = .login
         var nextLibraryPath: [LibraryRoute] = []
-        if let userId = try? await configGateway.loadSessionUserId(),
-           let config,
-           config.isComplete {
-            do {
-                let sig = try userSigGateway.generateUserSig(userId: userId, config: config)
-                try await authGateway.login(userId: userId, userSig: sig)
-                currentUser = try await authGateway.fetchProfile()
-                next = .library
-            } catch {
-                next = .login
-            }
+        if config?.isComplete == true, let user = try? await authGateway.restoreSession() {
+            currentUser = user
+            next = .library
         }
 
         // Deep links received during splash win over the default destination.
@@ -119,8 +93,48 @@ public final class AppSession: ObservableObject {
         toast = message
     }
 
+    /// Password login. Routes into the library unless the server requires a password change first.
+    public func login(account: String, password: String) async throws {
+        let result = try await graph.login.invoke(account: account, password: password)
+        currentUser = result.user
+        if result.mustChangePassword {
+            mustChangePassword = true
+            return
+        }
+        finishLogin()
+    }
+
+    public func changePassword(old: String, new: String, confirm: String) async throws {
+        try await graph.changePassword.invoke(oldPassword: old, newPassword: new, confirm: confirm)
+        if mustChangePassword {
+            mustChangePassword = false
+            finishLogin()
+        } else {
+            showToast(TandemL10n.string("Password updated"))
+        }
+    }
+
+    /// Abandons a forced password change and returns to the sign-in form.
+    public func cancelForcedPasswordChange() async {
+        mustChangePassword = false
+        await logout()
+    }
+
+    public func logout() async {
+        try? await authGateway.logout()
+        currentUser = nil
+        pendingInvite = nil
+        resetToLogin()
+    }
+
+    private func finishLogin() {
+        route = .library
+        libraryPath = []
+        consumePendingInviteIfPossible()
+    }
+
     public func handleDeepLink(_ url: URL) {
-        if ConfigShareLink.isConfigShareURL(url) {
+        if Self.isConfigShareURL(url) {
             pendingConfigImportRaw = url.absoluteString
             if route != .splash {
                 openConfig(fromLogin: currentUser == nil)
@@ -139,6 +153,10 @@ public final class AppSession: ObservableObject {
             pendingInvite = nil
             openWatch(roomId: invite.roomId, movieId: invite.movieId, hostUserId: invite.hostUserId)
         }
+    }
+
+    static func isConfigShareURL(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "paircast" && url.host?.lowercased() == "config"
     }
 
     /// Consumes a pending config share once the config screen is ready to preview it.
@@ -183,42 +201,38 @@ public final class AppSession: ObservableObject {
         route = .login
     }
 
-    /// After a successful config import: keep Keychain payload, drop IM session, return to login.
+    /// After a config import / server change: keep the new config, drop the IM session, return to login.
     public func applyImportedCloudConfig(_ config: AppCloudConfig) async {
         self.config = config
         if currentUser != nil {
             try? await authGateway.logout()
             currentUser = nil
         }
-        try? await configGateway.clearSessionUserId()
         pendingInvite = nil
+        try? await graph.clearMetadataCache()
         resetToLogin()
         showToast(TandemL10n.string("Configuration imported. Please sign in again"))
     }
 
-    public func installIMSessionObservers() {
-        NotificationCenter.default.addObserver(
-            forName: .paircastIMKickedOffline,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.handleForcedLogout(message: TandemL10n.format(AppError.kickedOffline))
-            }
-        }
-        NotificationCenter.default.addObserver(
-            forName: .paircastIMUserSigExpired,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.handleForcedLogout(message: TandemL10n.format(AppError.userSigExpired))
+    private func observeSessionEvents() {
+        let events = authGateway.events
+        sessionEventsTask = Task { [weak self] in
+            for await event in events {
+                guard let self else { return }
+                switch onEnum(of: event) {
+                case .kickedOffline:
+                    self.handleForcedLogout(message: TandemL10n.format(AppError.kickedOffline))
+                case .tokenExpired:
+                    self.handleForcedLogout(message: TandemL10n.format(AppError.sessionExpired))
+                }
             }
         }
     }
 
     private func handleForcedLogout(message: String) {
+        guard currentUser != nil else { return }
         currentUser = nil
+        mustChangePassword = false
         pendingInvite = nil
         resetToLogin()
         showToast(message)

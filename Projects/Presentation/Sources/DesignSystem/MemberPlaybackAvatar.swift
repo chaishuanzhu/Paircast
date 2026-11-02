@@ -1,5 +1,4 @@
 import SwiftUI
-import Domain
 
 /// Member avatar with an outer circular playback progress ring.
 /// Track uses opacity 0.3; progress maps `position / duration` for that member.

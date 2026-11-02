@@ -1,5 +1,5 @@
 import SwiftUI
-import Domain
+import PaircastShared
 
 // MARK: - Subtitle panel (design 08)
 
@@ -208,12 +208,6 @@ struct SubtitlePanelView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .contentShape(Rectangle())
-    }
-}
-
-private extension SubtitleTrack {
-    static var offTrack: SubtitleTrack {
-        SubtitleTrack(id: "off", label: "Off", source: .off)
     }
 }
 

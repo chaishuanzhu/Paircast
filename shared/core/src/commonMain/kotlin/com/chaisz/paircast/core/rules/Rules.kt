@@ -169,6 +169,7 @@ object ProfileRules {
     const val NICKNAME_MAX_LENGTH = 16
     const val AVATAR_MAX_BYTES = 1_048_576
 
+    @Throws(Exception::class)
     fun validatedNickname(raw: String): String {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) throw AppError.Validation("Nickname cannot be empty")
@@ -181,6 +182,7 @@ object ProfileRules {
         return trimmed
     }
 
+    @Throws(Exception::class)
     fun validatedAvatarData(data: ByteArray): ByteArray {
         if (data.isEmpty()) throw AppError.Validation("Please choose a profile photo")
         if (data.size > AVATAR_MAX_BYTES) throw AppError.Validation("Avatar must be under 1 MB after compression")
@@ -201,14 +203,17 @@ object ProfileRules {
 object LoginRules {
     const val PASSWORD_MIN_LENGTH = 6
 
+    @Throws(Exception::class)
     fun validateAccount(account: String) {
         if (account.isBlank()) throw AppError.Validation("Please enter your account")
     }
 
+    @Throws(Exception::class)
     fun validatePassword(password: String) {
         if (password.isEmpty()) throw AppError.Validation("Please enter your password")
     }
 
+    @Throws(Exception::class)
     fun validateNewPassword(old: String, new: String, confirm: String) {
         if (new.length < PASSWORD_MIN_LENGTH) {
             throw AppError.Validation(

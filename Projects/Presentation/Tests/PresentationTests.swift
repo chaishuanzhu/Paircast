@@ -1,6 +1,6 @@
 import XCTest
 @testable import Presentation
-import Domain
+import PaircastShared
 
 @MainActor
 final class WaterfallLayoutTests: XCTestCase {
@@ -81,17 +81,17 @@ final class LanguageStoreTests: XCTestCase {
 @MainActor
 final class InviteUseCasePresentationTests: XCTestCase {
     func test_inviteURLFormat() {
-        let url = InviteHarness().inviteURL(
+        let url = URL(string: InviteLinks.shared.inviteUrl(
             roomId: "abc",
             movieId: "film.mkv",
             hostUserId: "alice",
             inviterName: "小明",
             movieTitle: "流浪地球"
-        )
+        ))!
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         XCTAssertEqual(url.scheme, "https")
         XCTAssertEqual(url.host, "paircast.chaisz.com")
-        XCTAssertEqual(url.path, "/invite/")
+        XCTAssertEqual(url.path(percentEncoded: false), "/invite/")
         XCTAssertEqual(items.first(where: { $0.name == "roomId" })?.value, "abc")
         XCTAssertEqual(items.first(where: { $0.name == "movieId" })?.value, "film.mkv")
         XCTAssertEqual(items.first(where: { $0.name == "hostUserId" })?.value, "alice")
@@ -99,8 +99,6 @@ final class InviteUseCasePresentationTests: XCTestCase {
         XCTAssertEqual(items.first(where: { $0.name == "title" })?.value, "流浪地球")
     }
 }
-
-private struct InviteHarness: InviteToRoomUseCase {}
 
 @MainActor
 final class AppRouteDeepLinkTests: XCTestCase {
@@ -130,7 +128,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
 
     func test_watchDeepLinkOpensWatchWhenLoggedIn() async {
         let session = makeSession()
-        session.currentUser = User(id: "bob", nickname: "bob")
+        session.currentUser = User(id: "bob", nickname: "bob", avatarUrl: nil, username: nil, email: nil)
         session.handleDeepLink(URL(string: "paircast://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         XCTAssertEqual(session.route, .library)
         XCTAssertEqual(
@@ -152,7 +150,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
     func test_consumePendingInvitePushesLibraryWatch() {
         let session = makeSession()
         session.handleDeepLink(URL(string: "paircast://watch?roomId=r1&movieId=m1&hostUserId=host")!)
-        session.currentUser = User(id: "bob", nickname: "bob")
+        session.currentUser = User(id: "bob", nickname: "bob", avatarUrl: nil, username: nil, email: nil)
         session.consumePendingInviteIfPossible()
         XCTAssertEqual(session.route, .library)
         XCTAssertEqual(
@@ -164,7 +162,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
 
     func test_configShareDeepLinkOpensConfigAfterSplash() async throws {
         let session = makeSession()
-        let share = try ConfigShareLink.shareURL(for: .fixture())
+        let share = URL(string: try session.graph.configLinkCodec.shareUrl(config: .fixture()))!
         session.handleDeepLink(share)
         XCTAssertEqual(session.route, .splash)
 
@@ -183,138 +181,69 @@ final class AppRouteDeepLinkTests: XCTestCase {
     }
 
     private func makeSession() -> AppSession {
-        AppSession(
-            configGateway: FakeConfig(),
-            authGateway: FakeAuth(),
-            userSigGateway: FakeSig(),
-            catalogGateway: FakeCatalog(),
-            metadataGateway: FakeMeta(),
-            roomGateway: FakeRoom(),
-            chatGateway: FakeChat(),
-            syncGateway: FakeSync(),
-            subtitleGateway: FakeSubtitle(),
-            sharedSubtitleStorage: FakeSharedSubtitle(),
-            stickerCatalog: FakeStickers()
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("paircast-tests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let graph = PaircastGraph(
+            secureStore: InMemorySecureStore(),
+            keyValueStore: InMemoryKeyValueStore(),
+            cacheDirectory: root.appendingPathComponent("cache").path,
+            supportDirectory: root.appendingPathComponent("support").path,
+            preferredLanguage: "en",
+            appVersion: "test"
         )
-    }
-}
-
-private final class FakeConfig: ConfigGateway, @unchecked Sendable {
-    func load() async throws -> AppCloudConfig? { nil }
-    func save(_ config: AppCloudConfig) async throws {}
-    func clearSessionUserId() async throws {}
-    func saveSessionUserId(_ userId: String) async throws {}
-    func loadSessionUserId() async throws -> String? { nil }
-    func clearAll() async throws {}
-}
-private final class FakeAuth: AuthGateway, @unchecked Sendable {
-    func login(userId: String, userSig: String) async throws {}
-    func logout() async throws {}
-    func currentUserId() async -> String? { nil }
-    func updateProfile(nickname: String, avatarData: Data?) async throws -> User { User(id: "u", nickname: nickname) }
-    func fetchProfile() async throws -> User { User(id: "u", nickname: "n") }
-    func fetchUsers(userIds: [String]) async throws -> [User] {
-        userIds.map { User(id: $0, nickname: $0) }
-    }
-    func deleteAccount() async throws {}
-}
-private final class FakeSig: UserSigGateway, @unchecked Sendable {
-    func generateUserSig(userId: String, config: AppCloudConfig) throws -> String { "sig" }
-}
-private final class FakeCatalog: MovieCatalogGateway, @unchecked Sendable {
-    func listMovies(config: AppCloudConfig) async throws -> [Movie] { [] }
-    func playURL(for movie: Movie, config: AppCloudConfig) async throws -> URL { URL(string: "https://example.com")! }
-}
-private final class FakeMeta: MetadataGateway, @unchecked Sendable {
-    func enrich(_ movie: Movie, config: AppCloudConfig) async -> Movie { movie }
-}
-private final class FakeRoom: RoomGateway, @unchecked Sendable {
-    func createRoom(movieId: String, hostUserId: String) async throws -> WatchRoom {
-        WatchRoom(id: "r", movieId: movieId, hostUserId: hostUserId)
-    }
-    func joinRoom(
-        roomId: String,
-        userId: String,
-        movieId: String?,
-        hostUserId: String?
-    ) async throws -> WatchRoom {
-        WatchRoom(
-            id: roomId,
-            movieId: movieId ?? "m",
-            hostUserId: hostUserId ?? userId
-        )
-    }
-    func leaveRoom(roomId: String, userId: String) async throws -> WatchRoom? { nil }
-    func updateRoom(_ room: WatchRoom) async throws {}
-    func observeRoom(roomId: String) -> AsyncStream<WatchRoom> { AsyncStream { $0.finish() } }
-}
-private final class FakeChat: ChatGateway, @unchecked Sendable {
-    func send(roomId: String, text: String, sender: User) async throws -> ChatMessage {
-        ChatMessage(id: "1", roomId: roomId, senderNickname: sender.nickname, text: text)
-    }
-    func sendSticker(roomId: String, sticker: StickerRef, sender: User) async throws -> ChatMessage {
-        ChatMessage(
-            id: "1",
-            roomId: roomId,
-            senderNickname: sender.nickname,
-            text: ChatStickerCodec.fallbackText,
-            kind: .sticker,
-            sticker: sticker
-        )
-    }
-    func messages(roomId: String) -> AsyncStream<ChatMessage> { AsyncStream { $0.finish() } }
-    func postSystemMessage(roomId: String, text: String) async throws -> ChatMessage {
-        ChatMessage(id: "1", roomId: roomId, senderNickname: "System", text: text, kind: .system)
-    }
-}
-private final class FakeStickers: StickerCatalogGateway, @unchecked Sendable {
-    func loadCatalog(config: AppCloudConfig) async throws -> [StickerPackSummary] { [] }
-    func loadPack(packId: String, config: AppCloudConfig) async throws -> StickerPack {
-        StickerPack(packId: packId, name: packId, version: 1)
-    }
-    func imageData(packId: String, fileName: String, config: AppCloudConfig) async throws -> Data { Data() }
-    func imageData(for ref: StickerRef, config: AppCloudConfig) async throws -> Data { Data() }
-    func imageURL(for ref: StickerRef, config: AppCloudConfig) async throws -> URL {
-        URL(string: "https://example.com/\(ref.bindKey).gif")!
-    }
-}
-private final class FakeSync: PlaybackSyncGateway, @unchecked Sendable {
-    func send(roomId: String, signal: PlaybackSyncSignal) async throws {}
-    func signals(roomId: String) -> AsyncStream<PlaybackSyncSignal> { AsyncStream { $0.finish() } }
-}
-private final class FakeSubtitle: SubtitleGateway, @unchecked Sendable {
-    func listEmbedded(for movie: Movie) async throws -> [SubtitleTrack] { [] }
-    func listOSSSidecars(for movie: Movie, config: AppCloudConfig) async throws -> [SubtitleTrack] { [] }
-    func searchOnline(query: String, year: String?, apiKey: String?) async throws -> [SubtitleTrack] { [] }
-    func download(_ track: SubtitleTrack, config: AppCloudConfig?) async throws -> URL {
-        URL(string: "https://example.com")!
-    }
-}
-private final class FakeSharedSubtitle: SharedSubtitleStorageGateway, @unchecked Sendable {
-    func upload(
-        fileURL: URL,
-        roomId: String,
-        movieId: String,
-        config: AppCloudConfig
-    ) async throws -> String {
-        SharedSubtitleObjectKey.sidecarKey(movieObjectKey: movieId, fileExtension: "srt")
-            ?? "\(movieId).srt"
-    }
-    func download(objectKey: String, config: AppCloudConfig) async throws -> URL {
-        URL(fileURLWithPath: "/tmp/fake.srt")
+        return AppSession(graph: graph)
     }
 }
 
 private extension AppCloudConfig {
     static func fixture() -> AppCloudConfig {
         AppCloudConfig(
-            im: .init(sdkAppId: 123456789, secretKey: "im-secret"),
-            storage: .init(
+            im: IMConfig(serverUrl: "https://im.example.com"),
+            storage: ObjectStorageConfig(
+                provider: .qiniu,
                 accessKey: "ak",
                 secretKey: "sk",
                 bucket: "movies",
-                endpoint: "s3-cn-east-1.qiniucs.com"
-            )
+                endpoint: "s3-cn-east-1.qiniucs.com",
+                region: nil,
+                prefix: nil,
+                useSSL: true,
+                forcePathStyle: true
+            ),
+            subtitleApiKey: nil,
+            tmdbAccessToken: nil,
+            updatedAtMs: 0,
+            configVersion: AppCloudConfig.companion.CURRENT_VERSION
         )
+    }
+}
+
+@MainActor
+final class SharedBridgeTests: XCTestCase {
+    func test_kotlinAppErrorSurvivesSwiftThrow() async {
+        let graph = PaircastGraph(
+            secureStore: InMemorySecureStore(),
+            keyValueStore: InMemoryKeyValueStore(),
+            cacheDirectory: NSTemporaryDirectory(),
+            supportDirectory: NSTemporaryDirectory(),
+            preferredLanguage: "en",
+            appVersion: "test"
+        )
+        do {
+            _ = try await graph.login.invoke(account: "alice", password: "secret")
+            XCTFail("expected NotConfigured")
+        } catch {
+            XCTAssertTrue(AppErrors.from(error) is AppError.NotConfigured)
+        }
+    }
+
+    func test_keyValueStoreReadsLegacyIntOffsets() {
+        let suite = "paircast.kv.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(1500, forKey: "tandem.subtitle.offset.m1")
+        let offsets = SubtitleOffsetStore(store: UserDefaultsKeyValueStore(defaults: defaults))
+        XCTAssertEqual(offsets.load(movieId: "m1"), 1500)
     }
 }

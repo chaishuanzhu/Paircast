@@ -11,6 +11,7 @@ kotlin {
         target.binaries.framework {
             baseName = "PaircastShared"
             isStatic = true
+            binaryOption("bundleId", "com.chaisz.paircast.shared")
             export(projects.shared.core)
             xcf.add(this)
         }

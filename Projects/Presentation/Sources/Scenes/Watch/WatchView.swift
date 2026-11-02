@@ -1,13 +1,15 @@
 import SwiftUI
 import UIKit
-import Domain
+import PaircastShared
 
+/// SwiftUI adapter over the shared `WatchSession` (join, sync, chat, subtitles live in Kotlin).
+/// Only presentation state (sheets, drafts, queries) is owned here.
 @MainActor
 public final class WatchViewModel: ObservableObject {
-    @Published public var room: WatchRoom?
-    @Published public var movie: Movie?
-    @Published public var playback = PlaybackState(movieId: "")
-    @Published public var messages: [ChatMessage] = []
+    @Published public private(set) var room: WatchRoom?
+    @Published public private(set) var movie: Movie?
+    @Published public private(set) var playback = PlaybackState(positionMs: 0, isPaused: true, movieId: "", lastSeq: 0)
+    @Published public private(set) var messages: [ChatMessage] = []
     @Published public var draft = ""
     @Published public var showSwitchMovie = false
     @Published public var showSwitchConfirm = false
@@ -15,48 +17,41 @@ public final class WatchViewModel: ObservableObject {
     @Published public var showSubtitlePanel = false
     @Published public var showSubtitleSync = false
     @Published public var showInvite = false
-    @Published public var subtitleTracks: [SubtitleTrack] = []
-    @Published public var subtitleState = SubtitleState(movieId: "")
+    @Published public private(set) var subtitleTracks: [SubtitleTrack] = []
+    @Published public private(set) var subtitleState = SubtitleState.companion.create(movieId: "", offsetMs: 0)
     @Published public var onlineQuery = ""
-    @Published public var onlineResults: [SubtitleTrack] = []
-    @Published public var isSearchingOnline = false
-    @Published public var didSearchOnline = false
-    @Published public var onlineSearchError: String?
-    @Published public var isApplyingSubtitle = false
+    @Published public private(set) var onlineResults: [SubtitleTrack] = []
+    @Published public private(set) var isSearchingOnline = false
+    @Published public private(set) var didSearchOnline = false
+    @Published public private(set) var onlineSearchError: String?
+    @Published public private(set) var isApplyingSubtitle = false
     @Published public var errorMessage: String?
-    @Published public var libraryMovies: [Movie] = []
+    @Published public private(set) var libraryMovies: [Movie] = []
     @Published public var switchQuery = ""
-    @Published public var isSwitchingMovie = false
-    @Published public var isLoadingLibraryForSwitch = false
-    /// Profiles for room members (nickname + resolved avatarURL).
-    @Published public var memberProfiles: [String: User] = [:]
+    @Published public private(set) var isSwitchingMovie = false
+    @Published public private(set) var isLoadingLibraryForSwitch = false
+    @Published public private(set) var memberProfiles: [String: User] = [:]
+    @Published private var uiState: WatchUiState?
 
     let session: AppSession
-    let initialRoomId: String?
-    let initialMovieId: String?
-    let initialHostUserId: String?
-    private var seq: UInt64 = 1
     let player = VLCPlayerController()
-    private var signalTask: Task<Void, Never>?
-    private var chatTask: Task<Void, Never>?
-    private var roomTask: Task<Void, Never>?
-    private var heartbeatTask: Task<Void, Never>?
-    private var memberProfileTask: Task<Void, Never>?
-    /// Last object key the host successfully shared this session; used to clear members only when needed.
-    private var lastHostSharedSubtitleKey: String?
-    private let chatSafety = ChatSafetyStore()
+    private let watch: WatchSession
+    private var stateTask: Task<Void, Never>?
+    private var eventTask: Task<Void, Never>?
+    private var lastStateError: UiText?
+    private var lastSuggestedQuery = ""
 
     public init(session: AppSession, roomId: String?, movieId: String?, hostUserId: String? = nil) {
         self.session = session
-        self.initialRoomId = roomId
-        self.initialMovieId = movieId
-        self.initialHostUserId = hostUserId
+        self.watch = session.graph.watchSession(
+            player: player,
+            roomId: roomId,
+            movieId: movieId,
+            hostUserId: hostUserId
+        )
     }
 
-    public var isHost: Bool {
-        guard let room, let user = session.currentUser else { return false }
-        return room.hostUserId == user.id
-    }
+    public var isHost: Bool { uiState?.isHost ?? false }
 
     public var filteredLibraryMovies: [Movie] {
         let query = switchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -67,364 +62,101 @@ public final class WatchViewModel: ObservableObject {
         }
     }
 
-    public var selectedSubtitleTrack: SubtitleTrack? {
-        guard let trackId = subtitleState.trackId, trackId != "off" else { return nil }
-        return subtitleTracks.first(where: { $0.id == trackId })
-            ?? onlineResults.first(where: { $0.id == trackId })
-    }
+    public var selectedSubtitleTrack: SubtitleTrack? { uiState?.selectedSubtitleTrack }
 
     public func start() async {
-        do {
-            if let roomId = initialRoomId, let user = session.currentUser {
-                let joined = try await session.roomGateway.joinRoom(
-                    roomId: roomId,
-                    userId: user.id,
-                    movieId: initialMovieId,
-                    hostUserId: initialHostUserId
-                )
-                room = joined
-                // Prefer live room movie over invite snapshot (host may have switched).
-                await loadMovie(id: joined.movieId)
+        guard stateTask == nil else { return }
+        let stateFlow = watch.state
+        stateTask = Task { [weak self] in
+            for await state in stateFlow {
+                self?.apply(state)
             }
-            guard let room, let movie else { return }
-            playback = PlaybackState(movieId: movie.id, lastSeq: room.lastAppliedSeq)
-            seq = max(seq, room.lastAppliedSeq + 1)
-            subtitleState = SubtitleState(
-                movieId: movie.id,
-                offsetMs: SubtitleOffsetStore.load(movieId: movie.id)
-            )
-            onlineQuery = [movie.title, movie.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
-            await preparePlayer()
-            listen()
-            startHeartbeatIfNeeded()
-            await refreshMemberProfiles()
-            await refreshSubtitles(autoSelectChinese: true)
-        } catch let error as AppError {
-            errorMessage = TandemL10n.format(error)
-        } catch {
-            errorMessage = TandemL10n.format(AppError.playbackFailed)
         }
+        let events = watch.events
+        eventTask = Task { [weak self] in
+            for await event in events {
+                self?.handle(event)
+            }
+        }
+        watch.start()
     }
 
     public func stop() {
-        signalTask?.cancel()
-        chatTask?.cancel()
-        roomTask?.cancel()
-        heartbeatTask?.cancel()
-        memberProfileTask?.cancel()
-        signalTask = nil
-        chatTask = nil
-        roomTask = nil
-        heartbeatTask = nil
-        memberProfileTask = nil
-        player.stop()
+        stateTask?.cancel()
+        eventTask?.cancel()
+        stateTask = nil
+        eventTask = nil
+        watch.close()
+    }
+
+    private func apply(_ state: WatchUiState) {
+        uiState = state
+        room = state.room
+        movie = state.movie
+        playback = state.playback
+        messages = state.messages
+        subtitleTracks = state.subtitleTracks
+        subtitleState = state.subtitleState
+        onlineResults = state.onlineResults
+        isSearchingOnline = state.isSearchingOnline
+        didSearchOnline = state.didSearchOnline
+        onlineSearchError = state.onlineSearchError.map { TandemL10n.format($0) }
+        isApplyingSubtitle = state.isApplyingSubtitle
+        libraryMovies = state.libraryMovies
+        isSwitchingMovie = state.isSwitchingMovie
+        isLoadingLibraryForSwitch = state.isLoadingLibraryForSwitch
+        memberProfiles = state.memberProfiles
+        if state.suggestedOnlineQuery != lastSuggestedQuery {
+            lastSuggestedQuery = state.suggestedOnlineQuery
+            onlineQuery = state.suggestedOnlineQuery
+        }
+        if state.error != lastStateError {
+            lastStateError = state.error
+            if let error = state.error {
+                errorMessage = TandemL10n.format(error)
+            }
+        }
+    }
+
+    private func handle(_ event: WatchEvent) {
+        switch onEnum(of: event) {
+        case .toast(let toast):
+            session.showToast(TandemL10n.format(toast.text))
+        case .left:
+            session.popLibraryToRoot()
+        }
     }
 
     /// Playback fraction 0...1 for a member's progress ring.
     /// Self uses the local player; others use last applied sync position (follow model).
     public func memberPlaybackProgress(for memberId: String) -> Double {
-        let duration = max(player.durationMs, 1)
-        let position: Int64
-        if memberId == session.currentUser?.id {
-            position = player.positionMs
-        } else {
-            position = playback.positionMs > 0 ? playback.positionMs : player.positionMs
-        }
-        return min(1, max(0, Double(position) / Double(duration)))
+        watch.memberPlaybackProgress(memberId: memberId)
     }
 
     public func memberDisplayName(for memberId: String) -> String {
-        if let nick = memberProfiles[memberId]?.nickname, !nick.isEmpty {
-            return nick
-        }
         if memberId == session.currentUser?.id, let nick = session.currentUser?.nickname, !nick.isEmpty {
             return nick
         }
-        return memberId
+        return uiState?.memberDisplayName(memberId: memberId) ?? memberId
     }
 
     public func memberAvatarURL(for memberId: String) -> URL? {
-        if memberId == session.currentUser?.id {
-            return session.currentUser?.avatarURL ?? memberProfiles[memberId]?.avatarURL
+        if memberId == session.currentUser?.id, let url = session.currentUser?.avatarURL {
+            return url
         }
-        return memberProfiles[memberId]?.avatarURL
-    }
-
-    public func refreshMemberProfiles() async {
-        guard let ids = room?.memberIds, !ids.isEmpty else {
-            memberProfiles = [:]
-            return
-        }
-        memberProfileTask?.cancel()
-        let snapshot = ids
-        let authGateway = session.authGateway
-        let currentUser = session.currentUser
-        memberProfileTask = Task { @concurrent in
-            let users = (try? await authGateway.fetchUsers(userIds: snapshot)) ?? []
-            guard !Task.isCancelled else { return }
-            var map: [String: User] = [:]
-            for user in users {
-                map[user.id] = user
-            }
-            if let me = currentUser {
-                map[me.id] = me
-            }
-            let profileMap = map
-            await MainActor.run {
-                self.memberProfiles = profileMap
-            }
-        }
-        await memberProfileTask?.value
-    }
-
-    private func loadMovie(id: String) async {
-        let harness = LibraryHarness(
-            catalogGateway: session.catalogGateway,
-            metadataGateway: session.metadataGateway,
-            configGateway: session.configGateway
-        )
-        let movies = (try? await harness.listMovies(enrichMetadata: false)) ?? []
-        libraryMovies = movies
-        var current = movies.first(where: { $0.id == id }) ?? Movie(
-            id: id,
-            objectKey: id,
-            title: id,
-            format: VideoFormat(filename: id) ?? .mp4
-        )
-        // Stage cover uses OSS/TMDB art — enrich this title before prepare.
-        if let config = try? await session.configGateway.load() {
-            current = await session.metadataGateway.enrich(current, config: config)
-            if let index = libraryMovies.firstIndex(where: { $0.id == current.id }) {
-                libraryMovies[index] = current
-            }
-        }
-        movie = current
-    }
-
-    private func preparePlayer() async {
-        guard let movie else { return }
-        PaircastLog.playback.info(
-            "preparePlayer movie=\(movie.objectKey, privacy: .public) format=\(movie.format.rawValue, privacy: .public)"
-        )
-        player.stop()
-        do {
-            let config = try await session.configGateway.load() ?? AppCloudConfig(
-                im: .init(sdkAppId: 0, secretKey: ""),
-                storage: .init(accessKey: "", secretKey: "", bucket: "", endpoint: "")
-            )
-            let url = try await session.catalogGateway.playURL(for: movie, config: config)
-            try await player.prepare(url: url, format: movie.format)
-            player.prebuffer()
-            if let playerError = player.lastError {
-                PaircastLog.playback.error("preparePlayer playerError=\(playerError, privacy: .public)")
-                errorMessage = playerError
-            }
-        } catch let error as AppError {
-            PaircastLog.playback.error("preparePlayer AppError=\(error.userMessage, privacy: .public)")
-            errorMessage = TandemL10n.format(error)
-        } catch {
-            PaircastLog.playback.error("preparePlayer error=\(String(describing: error), privacy: .public)")
-            errorMessage = TandemL10n.format(AppError.playbackFailed)
-        }
-    }
-
-    private func listen() {
-        guard let room else { return }
-        signalTask?.cancel()
-        chatTask?.cancel()
-        roomTask?.cancel()
-
-        let roomId = room.id
-        let syncGateway = session.syncGateway
-        let chatGateway = session.chatGateway
-        let roomGateway = session.roomGateway
-        signalTask = Task { @concurrent in
-            for await signal in syncGateway.signals(roomId: roomId) {
-                await MainActor.run {
-                    applyRemote(signal)
-                }
-            }
-        }
-        chatTask = Task { @concurrent in
-            for await message in chatGateway.messages(roomId: roomId) {
-                await MainActor.run {
-                    ingestChat(message)
-                }
-            }
-        }
-        roomTask = Task { @concurrent in
-            for await updated in roomGateway.observeRoom(roomId: roomId) {
-                let membersChanged = await MainActor.run {
-                    let changed = updated.memberIds != self.room?.memberIds
-                    self.room = updated
-                    if updated.status == .ended {
-                        errorMessage = TandemL10n.format(AppError.roomEnded)
-                    }
-                    return changed
-                }
-                if membersChanged {
-                    await refreshMemberProfiles()
-                }
-            }
-        }
-    }
-
-    private func startHeartbeatIfNeeded() {
-        heartbeatTask?.cancel()
-        guard isHost else { return }
-        let heartbeat: @MainActor @Sendable () -> Void = { [weak self] in
-            self?.emitHeartbeat()
-        }
-        heartbeatTask = Task { @concurrent in
-            let interval = UInt64(PlaybackSyncRules.foregroundHeartbeatSeconds * 1_000_000_000)
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: interval)
-                guard !Task.isCancelled else { return }
-                await heartbeat()
-            }
-        }
-    }
-
-    private func emitHeartbeat() {
-        // Avoid resume-via-heartbeat while paused (rules force isPaused=false on heartbeat).
-        guard isHost, let room, let user = session.currentUser, !player.isPaused else { return }
-        seq += 1
-        let position = player.currentPositionMs
-        let currentSeq = seq
-        Task {
-            let harness = SyncHarness(syncGateway: session.syncGateway)
-            _ = try? await harness.emitHostSignal(
-                room: room,
-                hostUserId: user.id,
-                action: .heartbeat,
-                positionMs: position,
-                seq: currentSeq
-            )
-            playback.positionMs = position
-            playback.lastSeq = currentSeq
-        }
-    }
-
-    private func applyRemote(_ signal: PlaybackSyncSignal) {
-        guard var room else { return }
-        let result = PlaybackSyncRules.shouldAccept(
-            signal: signal,
-            room: room,
-            current: playback,
-            localPositionMs: player.currentPositionMs
-        )
-        switch result {
-        case .ignored:
-            return
-        case .applied(let state, let shouldSeek):
-            playback = state
-            if signal.action == .hostTransfer, let newHost = signal.hostUserId {
-                room.hostUserId = newHost
-                room.hostTransferSeq = signal.seq
-                self.room = room
-                session.showToast(TandemL10n.format(
-                    "Host is now {{name}}",
-                    ["name": memberDisplayName(for: newHost)]
-                ))
-                startHeartbeatIfNeeded()
-            }
-            if signal.action == .movieChange, let movieId = signal.movieId {
-                // Host already applied locally in confirmSwitch; members follow here.
-                if movie?.id != movieId {
-                    if !isHost {
-                        session.showToast(TandemL10n.string("Host switched the movie…"))
-                    }
-                    Task {
-                        await loadMovie(id: movieId)
-                        let offset = SubtitleOffsetStore.load(movieId: movieId)
-                        subtitleState = SubtitleState(movieId: movieId, offsetMs: offset)
-                        await preparePlayer()
-                        await refreshSubtitles(autoSelectChinese: true)
-                    }
-                }
-            }
-            if signal.action == .subtitleChange {
-                // Host already loaded locally before broadcasting; skip self-echo.
-                if signal.senderId != session.currentUser?.id {
-                    Task { await applyHostSharedSubtitle(signal) }
-                }
-            }
-            if shouldSeek {
-                player.seek(toMs: state.positionMs)
-            }
-            // Avoid pause↔play thrash on heartbeat when already in the right state.
-            if state.isPaused {
-                if !player.isPaused { player.pause() }
-            } else if player.isPaused {
-                // Host must not auto-start from a stray heartbeat/echo while still on the poster.
-                // Members joining a live room still start via host play/heartbeat.
-                if signal.action == .heartbeat,
-                   isHost,
-                   !player.hasStartedPlayback {
-                    PaircastLog.playback.info("ignore host heartbeat auto-play before first play")
-                } else {
-                    player.play()
-                }
-            }
-        }
+        return uiState?.memberAvatarUrl(memberId: memberId).flatMap(URL.init(string:))
     }
 
     public func togglePlay() {
-        guard isHost, let room, let user = session.currentUser else { return }
-        let action: PlaybackAction = player.isPaused ? .play : .pause
-        let position = player.currentPositionMs
-        seq += 1
-        Task {
-            let harness = SyncHarness(syncGateway: session.syncGateway)
-            _ = try? await harness.emitHostSignal(
-                room: room,
-                hostUserId: user.id,
-                action: action,
-                positionMs: position,
-                seq: seq
-            )
-            if action == .play {
-                player.play()
-                playback.isPaused = false
-            } else {
-                player.pause()
-                playback.isPaused = true
-            }
-            playback.positionMs = position
-            playback.lastSeq = seq
-        }
+        watch.togglePlay()
     }
 
-    /// Host scrub / seek — updates local player immediately and broadcasts `.seek`.
     public func seekTo(ms: Int64) {
-        guard isHost, let room, let user = session.currentUser else { return }
-        let duration = max(player.durationMs, 1)
-        let clamped = min(max(0, ms), duration)
-        seq += 1
-        let currentSeq = seq
-        let wasPaused = player.isPaused
-        player.seek(toMs: clamped)
-        playback.positionMs = clamped
-        playback.lastSeq = currentSeq
-        Task {
-            let harness = SyncHarness(syncGateway: session.syncGateway)
-            _ = try? await harness.emitHostSignal(
-                room: room,
-                hostUserId: user.id,
-                action: .seek,
-                positionMs: clamped,
-                seq: currentSeq
-            )
-            if !wasPaused {
-                player.play()
-            }
-        }
+        watch.seekTo(positionMs: ms)
     }
 
     public func seekToProgress(_ progress: Double) {
-        let duration = max(player.durationMs, 1)
-        let ms = Int64(Double(duration) * min(1, max(0, progress)))
-        seekTo(ms: ms)
+        watch.seekToProgress(progress: progress)
     }
 
     public func requestSwitch(_ movie: Movie) {
@@ -440,13 +172,10 @@ public final class WatchViewModel: ObservableObject {
         pendingMovie = movie
         showSwitchMovie = false
         // Dismiss sheet first so the confirm alert isn't buried under it.
-        let revealConfirmation: @MainActor @Sendable () -> Void = { [weak self] in
-            self?.showSwitchConfirm = true
-        }
-        Task { @concurrent in
+        Task { [weak self] in
             try? await Task.sleep(nanoseconds: 280_000_000)
             guard !Task.isCancelled else { return }
-            await revealConfirmation()
+            self?.showSwitchConfirm = true
         }
     }
 
@@ -456,437 +185,69 @@ public final class WatchViewModel: ObservableObject {
     }
 
     public func loadLibraryForSwitch() async {
-        isLoadingLibraryForSwitch = true
-        defer { isLoadingLibraryForSwitch = false }
         switchQuery = ""
-        let harness = LibraryHarness(
-            catalogGateway: session.catalogGateway,
-            metadataGateway: session.metadataGateway,
-            configGateway: session.configGateway
-        )
-        let movies = (try? await harness.listMovies(enrichMetadata: false)) ?? []
-        if !movies.isEmpty {
-            libraryMovies = movies
-        }
-        // Enrich posters in background for the switch list thumbs.
-        let configGateway = session.configGateway
-        let metadataGateway = session.metadataGateway
-        let snapshot = libraryMovies
-        Task { @concurrent in
-            guard let config = try? await configGateway.load() else { return }
-            var enriched = snapshot
-            let concurrency = 4
-            for lowerBound in stride(from: 0, to: snapshot.count, by: concurrency) {
-                let upperBound = min(lowerBound + concurrency, snapshot.count)
-                await withTaskGroup(of: (Int, Movie).self) { group in
-                    for index in lowerBound..<upperBound {
-                        let movie = snapshot[index]
-                        group.addTask {
-                            (index, await metadataGateway.enrich(movie, config: config))
-                        }
-                    }
-                    for await (index, movie) in group {
-                        enriched[index] = movie
-                    }
-                }
-            }
-            let result = enriched
-            await MainActor.run {
-                // Keep list if user already refreshed to a different set.
-                if self.libraryMovies.map(\.id) == snapshot.map(\.id) {
-                    self.libraryMovies = result
-                }
-            }
-        }
+        watch.loadLibraryForSwitch()
     }
 
     public func confirmSwitch() async {
         // Snapshot before the alert dismisses — do not clear pendingMovie on alert close,
         // or this guard fails and the switch silently no-ops.
-        guard let room, let user = session.currentUser else { return }
-        guard let target = pendingMovie else { return }
-        guard !isSwitchingMovie else { return }
-        isSwitchingMovie = true
+        guard let target = pendingMovie, !isSwitchingMovie else { return }
         showSwitchConfirm = false
-        defer { isSwitchingMovie = false }
-        seq += 1
-        do {
-            let harness = RoomHarness(
-                roomGateway: session.roomGateway,
-                syncGateway: session.syncGateway,
-                chatGateway: session.chatGateway
-            )
-            let (updated, _) = try await harness.changeMovie(
-                room: room,
-                actorUserId: user.id,
-                newMovie: target,
-                seq: seq
-            )
-            self.room = updated
-            var next = target
-            if let config = try? await session.configGateway.load() {
-                next = await session.metadataGateway.enrich(next, config: config)
-            }
-            movie = next
-            onlineQuery = [next.title, next.year].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
-            playback = PlaybackState(positionMs: 0, isPaused: true, movieId: next.id, lastSeq: seq)
-            let offset = SubtitleOffsetStore.load(movieId: next.id)
-            subtitleState = SubtitleState(movieId: next.id, offsetMs: offset)
-            player.pause()
-            await preparePlayer()
-            pendingMovie = nil
-            showSwitchMovie = false
-            await refreshSubtitles(autoSelectChinese: true)
-        } catch let error as AppError {
-            errorMessage = TandemL10n.format(error)
-            session.showToast(TandemL10n.format(error))
-        } catch {
-            errorMessage = TandemL10n.format(AppError.movieChangeFailed)
-            session.showToast(TandemL10n.format(AppError.movieChangeFailed))
-        }
+        pendingMovie = nil
+        showSwitchMovie = false
+        watch.confirmSwitch(target: target)
     }
 
     public func sendChat() async {
-        guard let room, let user = session.currentUser else { return }
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         draft = ""
-        _ = try? await session.chatGateway.send(roomId: room.id, text: text, sender: user)
+        watch.sendChat(text: text)
     }
 
     public func sendSticker(_ sticker: StickerRef) async {
-        guard let room, let user = session.currentUser else { return }
-        _ = try? await session.chatGateway.sendSticker(roomId: room.id, sticker: sticker, sender: user)
+        watch.sendSticker(sticker: sticker)
     }
 
     public func canModerate(_ message: ChatMessage) -> Bool {
-        guard message.kind != .system else { return false }
-        guard let senderId = message.senderId, let me = session.currentUser?.id else { return false }
-        return senderId != me
+        uiState?.canModerate(message: message) ?? false
     }
 
     public func blockSender(of message: ChatMessage) {
-        guard let ownerId = session.currentUser?.id, let senderId = message.senderId else { return }
-        chatSafety.block(senderId, ownerId: ownerId)
-        messages = chatSafety.visibleMessages(messages, ownerId: ownerId)
-        session.showToast(TandemL10n.format("Blocked {{name}}", [
-            "name": message.senderNickname.isEmpty ? senderId : message.senderNickname
-        ]))
+        watch.blockSender(message: message)
     }
 
     public func report(_ message: ChatMessage) {
-        guard let ownerId = session.currentUser?.id, let senderId = message.senderId else { return }
-        chatSafety.recordReport(targetUserId: senderId, ownerId: ownerId, snippet: message.text)
-        session.showToast(TandemL10n.string("Report recorded — opening feedback"))
+        watch.report(message: message)
     }
 
-    public var chatReportURL: URL { ChatSafetyStore.reportURL }
-
-    private func ingestChat(_ message: ChatMessage) {
-        if let ownerId = session.currentUser?.id {
-            messages = chatSafety.visibleMessages(messages + [message], ownerId: ownerId)
-        } else {
-            messages.append(message)
-        }
+    public var chatReportURL: URL {
+        URL(string: ChatSafetyStore.companion.REPORT_URL)!
     }
 
     public func refreshSubtitles(autoSelectChinese: Bool = false) async {
-        guard let movie else { return }
-        let harness = SubtitleHarness(
-            subtitleGateway: session.subtitleGateway,
-            configGateway: session.configGateway
-        )
-        let listed = (try? await harness.listSubtitleTracks(for: movie)) ?? [
-            SubtitleTrack(id: "off", label: "Off", source: .off),
-        ]
-        // Give VLC a moment to parse embedded tracks after prepare.
-        if player.embeddedSubtitleTracks().isEmpty {
-            try? await Task.sleep(nanoseconds: 400_000_000)
-        }
-        let embedded = player.embeddedSubtitleTracks()
-        let off = listed.filter { $0.source == .off }
-        let ossTracks = listed.filter { $0.source == .oss }
-        // Keep host-shared / online selections that aren't in the fresh OSS sidecar list.
-        let preserved = subtitleTracks.filter { track in
-            guard track.source != .off, track.source != .embedded else { return false }
-            if ossTracks.contains(where: { $0.id == track.id }) { return false }
-            if track.id.hasPrefix("shared:") { return true }
-            if track.source == .online, track.id == subtitleState.trackId { return true }
-            return false
-        }
-        subtitleTracks = off + embedded + ossTracks + preserved
-
-        if autoSelectChinese,
-           subtitleState.source == .off || subtitleState.trackId == nil || subtitleState.trackId == "off",
-           let preferred = subtitleTracks.first(where: { $0.source != .off && $0.isChinesePreferred }) {
-            await selectTrack(preferred)
-        } else if subtitleState.source != .off {
-            player.applySubtitleOffsetMs(subtitleState.offsetMs)
-        }
+        watch.refreshSubtitles(autoSelectChinese: autoSelectChinese)
     }
 
     public func selectTrack(_ track: SubtitleTrack) async {
-        guard !isApplyingSubtitle else { return }
-        isApplyingSubtitle = true
-        defer { isApplyingSubtitle = false }
-
-        let movieId = movie?.id ?? subtitleState.movieId
-        let retainedOffset = subtitleState.offsetMs
-
-        if track.source == .off {
-            player.disableSubtitles()
-            subtitleState = SubtitleState(
-                movieId: movieId,
-                source: .off,
-                trackId: "off",
-                offsetMs: retainedOffset
-            )
-            showSubtitlePanel = false
-            // Only clear members if this host previously shared a file-based subtitle.
-            if isHost, lastHostSharedSubtitleKey != nil {
-                lastHostSharedSubtitleKey = nil
-                await broadcastHostSubtitleShare(objectKey: nil, label: nil, movieId: movieId)
-            }
-            return
-        }
-
-        do {
-            var sharedLocalURL: URL?
-            switch track.source {
-            case .embedded:
-                guard let index = track.embeddedIndex else {
-                    throw AppError.subtitleUnavailable
-                }
-                player.selectEmbeddedSubtitle(index: index)
-                // Re-apply after index change; some VLC builds reset delay on track switch.
-                player.applySubtitleOffsetMs(retainedOffset)
-            case .oss, .online:
-                let config = try? await session.configGateway.load()
-                let localURL = try await session.subtitleGateway.download(
-                    track,
-                    config: config
-                )
-                guard player.loadExternalSubtitle(fileURL: localURL) else {
-                    throw AppError.subtitleUnavailable
-                }
-                sharedLocalURL = localURL
-            case .off:
-                break
-            }
-
-            subtitleState = SubtitleState(
-                movieId: movieId,
-                source: track.source,
-                trackId: track.id,
-                url: track.url,
-                embeddedIndex: track.embeddedIndex,
-                offsetMs: retainedOffset
-            )
-            player.applySubtitleOffsetMs(retainedOffset)
-
-            if track.source == .online, !subtitleTracks.contains(where: { $0.id == track.id }) {
-                // Keep selected online track visible under Current.
-                subtitleTracks.insert(track, at: min(1, subtitleTracks.count))
-            }
-            showSubtitlePanel = false
-
-            // Host: upload downloaded file to object storage and instruct members to load it.
-            // Member downloads remain local-only (no upload / no signal).
-            // Embedded tracks have no portable file — host-only, not shared.
-            if isHost, let localURL = sharedLocalURL {
-                await shareDownloadedSubtitleWithRoom(
-                    localURL: localURL,
-                    track: track,
-                    movieId: movieId
-                )
-            }
-        } catch let error as AppError {
-            session.showToast(TandemL10n.format(error))
-        } catch {
-            session.showToast(TandemL10n.format(AppError.subtitleUnavailable))
-        }
-    }
-
-    /// Host uploads a downloaded subtitle and broadcasts `subtitle_change`.
-    private func shareDownloadedSubtitleWithRoom(
-        localURL: URL,
-        track: SubtitleTrack,
-        movieId: String
-    ) async {
-        guard let room, session.currentUser != nil, isHost else { return }
-        guard let config = try? await session.configGateway.load(), config.storage.isComplete else {
-            session.showToast(TandemL10n.string("Subtitles loaded (library not configured — cannot sync to members)"))
-            return
-        }
-        do {
-            let movieObjectKey = movie?.objectKey ?? movieId
-            let key = try await session.sharedSubtitleStorage.upload(
-                fileURL: localURL,
-                roomId: room.id,
-                movieId: movieObjectKey,
-                config: config
-            )
-            await broadcastHostSubtitleShare(
-                objectKey: key,
-                label: track.label,
-                movieId: movieObjectKey
-            )
-            lastHostSharedSubtitleKey = key
-            _ = try? await session.chatGateway.postSystemMessage(
-                roomId: room.id,
-                text: "Host shared subtitles: \(track.label)"
-            )
-            // Sidecar now lives beside the movie — refresh Library sidecars and mark it current.
-            await refreshSubtitles()
-            if let sidecar = subtitleTracks.first(where: { $0.id == "oss:\(key)" }) {
-                subtitleState = SubtitleState(
-                    movieId: movieObjectKey,
-                    source: .oss,
-                    trackId: sidecar.id,
-                    url: sidecar.url,
-                    offsetMs: subtitleState.offsetMs
-                )
-            }
-        } catch {
-            session.showToast(TandemL10n.format(AppError.subtitleShareFailed))
-        }
-    }
-
-    private func broadcastHostSubtitleShare(
-        objectKey: String?,
-        label: String?,
-        movieId: String
-    ) async {
-        guard let room, let user = session.currentUser, isHost else { return }
-        seq += 1
-        let harness = SyncHarness(syncGateway: session.syncGateway)
-        _ = try? await harness.emitHostSignal(
-            room: room,
-            hostUserId: user.id,
-            action: .subtitleChange,
-            positionMs: player.currentPositionMs,
-            seq: seq,
-            movieId: movieId,
-            subtitleObjectKey: objectKey,
-            subtitleLabel: label
-        )
-        playback.lastSeq = seq
-    }
-
-    /// Member follows host-shared subtitle from object storage (local offset retained).
-    private func applyHostSharedSubtitle(_ signal: PlaybackSyncSignal) async {
-        if let signalMovie = signal.movieId, let current = movie?.id, !signalMovie.isEmpty, signalMovie != current {
-            return
-        }
-        let movieId = signal.movieId ?? movie?.id ?? subtitleState.movieId
-        let retainedOffset = subtitleState.offsetMs
-
-        guard let key = signal.subtitleObjectKey, !key.isEmpty else {
-            player.disableSubtitles()
-            subtitleState = SubtitleState(
-                movieId: movieId,
-                source: .off,
-                trackId: "off",
-                offsetMs: retainedOffset
-            )
-            return
-        }
-
-        guard let config = try? await session.configGateway.load(), config.storage.isComplete else {
-            session.showToast(TandemL10n.format(AppError.subtitleUnavailable))
-            return
-        }
-
-        do {
-            let localURL = try await session.sharedSubtitleStorage.download(
-                objectKey: key,
-                config: config
-            )
-            guard player.loadExternalSubtitle(fileURL: localURL) else {
-                throw AppError.subtitleUnavailable
-            }
-            let label = (signal.subtitleLabel?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
-                $0.isEmpty ? nil : $0
-            } ?? "Host shared"
-            let track = SubtitleTrack(
-                id: "shared:\(key)",
-                label: label,
-                language: nil,
-                source: .oss,
-                detail: "Host shared",
-                languageBadge: nil,
-                format: (key as NSString).pathExtension.uppercased()
-            )
-            subtitleState = SubtitleState(
-                movieId: movieId,
-                source: .oss,
-                trackId: track.id,
-                offsetMs: retainedOffset
-            )
-            player.applySubtitleOffsetMs(retainedOffset)
-            if !subtitleTracks.contains(where: { $0.id == track.id }) {
-                subtitleTracks.insert(track, at: min(1, subtitleTracks.count))
-            }
-            session.showToast(TandemL10n.string("Loaded host-shared subtitles"))
-        } catch let error as AppError {
-            session.showToast(TandemL10n.format(error))
-        } catch {
-            session.showToast(TandemL10n.format(AppError.subtitleUnavailable))
-        }
+        watch.selectTrack(track: track)
     }
 
     public func adjustSubtitle(deltaMs: Int) {
-        let harness = OffsetHarness()
-        subtitleState = harness.applyOffset(state: subtitleState, deltaMs: deltaMs)
-        persistAndApplyOffset()
+        watch.adjustSubtitle(deltaMs: Int32(deltaMs))
     }
 
     public func resetSubtitleOffset() {
-        var next = subtitleState
-        next.resetOffset()
-        subtitleState = next
-        persistAndApplyOffset()
-    }
-
-    private func persistAndApplyOffset() {
-        if let movieId = movie?.id ?? Optional(subtitleState.movieId), !movieId.isEmpty {
-            SubtitleOffsetStore.save(movieId: movieId, offsetMs: subtitleState.offsetMs)
-        }
-        if subtitleState.source != .off {
-            player.applySubtitleOffsetMs(subtitleState.offsetMs)
-        }
+        watch.resetSubtitleOffset()
     }
 
     public func searchOnline() async {
-        isSearchingOnline = true
-        onlineSearchError = nil
-        defer { isSearchingOnline = false }
-        let harness = SubtitleHarness(
-            subtitleGateway: session.subtitleGateway,
-            configGateway: session.configGateway
-        )
-        do {
-            onlineResults = try await harness.searchOnlineSubtitles(query: onlineQuery, year: movie?.year)
-            didSearchOnline = true
-        } catch let error as AppError {
-            onlineResults = []
-            didSearchOnline = true
-            onlineSearchError = TandemL10n.format(error)
-        } catch {
-            onlineResults = []
-            didSearchOnline = true
-            onlineSearchError = TandemL10n.format(AppError.subtitleUnavailable)
-        }
+        watch.searchOnline(query: onlineQuery)
     }
 
     public func inviteURL() -> URL {
-        InviteHarness().inviteURL(
-            roomId: room?.id ?? "",
-            movieId: room?.movieId ?? movie?.id ?? "",
-            hostUserId: room?.hostUserId ?? "",
-            inviterName: session.currentUser?.nickname ?? session.currentUser?.id ?? "",
-            movieTitle: movie?.title ?? ""
-        )
+        URL(string: watch.inviteUrl()) ?? URL(string: InviteLinks.shared.INVITE_BASE)!
     }
 
     public func inviteMessage() -> String {
@@ -901,57 +262,18 @@ public final class WatchViewModel: ObservableObject {
     }
 
     public func leave() async {
-        guard let room, let user = session.currentUser else {
+        guard room != nil else {
+            stop()
             session.popLibraryToRoot()
             return
         }
-        seq += 1
-        let harness = LeaveHarness(
-            roomGateway: session.roomGateway,
-            chatGateway: session.chatGateway,
-            syncGateway: session.syncGateway
-        )
-        let position = player.currentPositionMs
-        _ = try? await harness.leaveRoom(
-            room: room,
-            leavingUserId: user.id,
-            positionMs: position,
-            nextTransferSeq: seq
-        )
-        stop()
-        session.popLibraryToRoot()
+        watch.leave()
     }
 }
 
-private struct LibraryHarness: ListMoviesUseCase {
-    let catalogGateway: MovieCatalogGateway
-    let metadataGateway: MetadataGateway
-    let configGateway: ConfigGateway
+public extension SubtitleTrack {
+    static var offTrack: SubtitleTrack { SubtitleTrack.companion.OFF }
 }
-
-private struct SyncHarness: EmitHostPlaybackUseCase {
-    let syncGateway: PlaybackSyncGateway
-}
-
-private struct RoomHarness: ChangeMovieUseCase {
-    let roomGateway: RoomGateway
-    let syncGateway: PlaybackSyncGateway
-    let chatGateway: ChatGateway
-}
-
-private struct LeaveHarness: LeaveRoomUseCase {
-    let roomGateway: RoomGateway
-    let chatGateway: ChatGateway
-    let syncGateway: PlaybackSyncGateway
-}
-
-private struct SubtitleHarness: ListSubtitleTracksUseCase, SearchOnlineSubtitlesUseCase {
-    let subtitleGateway: SubtitleGateway
-    let configGateway: ConfigGateway
-}
-
-private struct OffsetHarness: ApplySubtitleOffsetUseCase {}
-private struct InviteHarness: InviteToRoomUseCase {}
 
 public struct WatchView: View {
     @ObservedObject var session: AppSession

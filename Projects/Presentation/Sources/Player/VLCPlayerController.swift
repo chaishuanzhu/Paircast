@@ -3,7 +3,7 @@ import CoreText
 import Foundation
 import UIKit
 import VLCKitSPM // re-exports MobileVLCKit
-import Domain
+import PaircastShared
 
 /// MobileVLCKit player for the watch scene — streams a remote URL directly (no local download/proxy).
 @MainActor
@@ -72,7 +72,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         applySubtitleTextRendererFont()
     }
 
-    public func prepare(url: URL, format: VideoFormat) async throws {
+    public func load(url: URL, format: VideoFormat) {
         lastError = nil
         isReady = false
         hasStartedPlayback = false
@@ -252,8 +252,11 @@ public final class VLCPlayerController: NSObject, ObservableObject {
                     label: label,
                     language: lang.code,
                     source: .embedded,
-                    embeddedIndex: rawIndex,
-                    languageBadge: lang.badge
+                    url: nil,
+                    embeddedIndex: KotlinInt(int: Int32(rawIndex)),
+                    detail: nil,
+                    languageBadge: lang.badge,
+                    format: nil
                 )
             )
         }
@@ -265,8 +268,8 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.currentVideoSubTitleDelay = 0
     }
 
-    public func selectEmbeddedSubtitle(index: Int) {
-        mediaPlayer.currentVideoSubTitleIndex = Int32(index)
+    public func selectEmbeddedSubtitle(index: Int32) {
+        mediaPlayer.currentVideoSubTitleIndex = index
         applySubtitleTextRendererFont()
     }
 
@@ -283,9 +286,9 @@ public final class VLCPlayerController: NSObject, ObservableObject {
     }
 
     /// VLC delay is in microseconds. Positive = subtitles delayed (shown later).
-    public func applySubtitleOffsetMs(_ offsetMs: Int) {
-        let clamped = SubtitleState.clamped(offsetMs)
-        mediaPlayer.currentVideoSubTitleDelay = clamped * 1000
+    public func applySubtitleOffsetMs(offsetMs: Int32) {
+        let clamped = SubtitleState.companion.clamped(value: offsetMs)
+        mediaPlayer.currentVideoSubTitleDelay = Int(clamped) * 1000
     }
 
     /// Point VLC's text renderer at a CJK-capable font (fixes □□□ on iOS 18+).
@@ -394,6 +397,27 @@ public final class VLCPlayerController: NSObject, ObservableObject {
                 "audio session failed error=\(String(describing: error), privacy: .public)"
             )
         }
+    }
+}
+
+/// Bridge for the shared `WatchSession`; Kotlin calls these on the main thread.
+extension VLCPlayerController: @preconcurrency PlayerPort {
+    public func prepare(url: String, format: VideoFormat, completion: @escaping (String?) -> Void) {
+        guard let streamURL = URL(string: url) else {
+            completion(TandemL10n.format(AppError.playbackFailed))
+            return
+        }
+        load(url: streamURL, format: format)
+        prebuffer()
+        completion(lastError)
+    }
+
+    public func seek(positionMs: Int64) {
+        seek(toMs: positionMs)
+    }
+
+    public func loadExternalSubtitle(filePath: String) -> Bool {
+        loadExternalSubtitle(fileURL: URL(fileURLWithPath: filePath))
     }
 }
 

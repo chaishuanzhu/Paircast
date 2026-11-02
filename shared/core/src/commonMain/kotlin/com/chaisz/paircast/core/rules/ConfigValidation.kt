@@ -16,12 +16,14 @@ object ConfigValidation {
         if (config.storage.endpoint.isEmpty()) add("$label Endpoint")
     }
 
+    @Throws(Exception::class)
     fun validate(config: AppCloudConfig) {
         val missing = missingFields(config)
         if (missing.isNotEmpty()) throw AppError.IncompleteConfig(missing)
         normalizedStorage(config.storage)
     }
 
+    @Throws(Exception::class)
     fun normalized(config: AppCloudConfig): AppCloudConfig {
         validate(config)
         return config.copy(
@@ -54,6 +56,7 @@ object ConfigValidation {
         return "$scheme://$host"
     }
 
+    @Throws(Exception::class)
     fun normalizedStorage(storage: ObjectStorageConfig): ObjectStorageConfig {
         val endpoint = validatedEndpoint(storage.endpoint, storage.provider)
         val region = storage.region?.trim()
@@ -88,6 +91,7 @@ object ConfigValidation {
         }
     }
 
+    @Throws(Exception::class)
     fun validatedEndpoint(raw: String, provider: ObjectStorageProvider): String {
         val host = normalizedHost(raw)
         if (host.isEmpty()) throw AppError.IncompleteConfig(listOf("${provider.displayName} Endpoint"))

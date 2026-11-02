@@ -14,8 +14,6 @@ let package = Package(
     dependencies: [
         // Local wrapper around pre-downloaded VLCKit binary (see Scripts/download-vlckit.sh).
         .package(path: "../Vendor/VLCKitSPM"),
-        // Local wrapper around pre-downloaded ImSDK_Plus (see Scripts/download-imsdk.sh).
-        .package(path: "../Vendor/ImSDKSPM"),
         .package(url: "https://github.com/onevcat/Kingfisher.git", from: "8.0.0"),
     ]
 )

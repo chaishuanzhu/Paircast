@@ -1,6 +1,5 @@
 import SwiftUI
 import UIKit
-import Domain
 
 /// Renders plain text with Twemoji PNG replacements for emoji graphemes.
 public struct TwemojiText: View {

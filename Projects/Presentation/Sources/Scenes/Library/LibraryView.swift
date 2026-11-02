@@ -1,5 +1,5 @@
 import SwiftUI
-import Domain
+import PaircastShared
 
 @MainActor
 public final class LibraryViewModel: ObservableObject {
@@ -19,34 +19,25 @@ public final class LibraryViewModel: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            let harness = LibraryHarness(
-                catalogGateway: session.catalogGateway,
-                metadataGateway: session.metadataGateway,
-                configGateway: session.configGateway
-            )
-            let listed = try await harness.listMovies(enrichMetadata: false)
+            let useCase = session.graph.listMovies
+            let listed = try await useCase.invoke(enrichMetadata: false)
             movies = listed
             errorMessage = nil
 
-            guard !listed.isEmpty, !Task.isCancelled else { return }
-            let enriched = await harness.enrich(listed)
+            guard !listed.isEmpty, !Task.isCancelled,
+                  let config = try? await session.configGateway.load() else { return }
+            let enriched = (try? await useCase.enrich(movies: listed, config: config)) ?? listed
             if !Task.isCancelled {
                 movies = enriched
             }
-        } catch is CancellationError {
-            // Pull-to-refresh / task cancellation: keep current movies.
-            return
-        } catch let error as AppError {
-            if movies.isEmpty {
-                errorMessage = TandemL10n.format(error)
-            } else {
-                session.showToast(TandemL10n.format(error))
-            }
         } catch {
+            // Pull-to-refresh / task cancellation: keep current movies.
+            if Task.isCancelled || AppErrors.isCancellation(error) { return }
+            let message = TandemL10n.message(for: error, fallback: .catalogUnauthorized)
             if movies.isEmpty {
-                errorMessage = TandemL10n.format(AppError.catalogUnauthorized)
+                errorMessage = message
             } else {
-                session.showToast(TandemL10n.format(AppError.catalogUnauthorized))
+                session.showToast(message)
             }
         }
     }
@@ -57,36 +48,8 @@ public final class LibraryViewModel: ObservableObject {
             let room = try await session.roomGateway.createRoom(movieId: movie.id, hostUserId: user.id)
             session.openWatch(roomId: room.id, movieId: movie.id, hostUserId: user.id)
         } catch {
-            session.showToast(TandemL10n.format(AppError.unknown("Failed to create room")))
+            session.showToast(TandemL10n.message(for: error, fallback: .unknown("Failed to create room")))
         }
-    }
-}
-
-private struct LibraryHarness: ListMoviesUseCase {
-    let catalogGateway: MovieCatalogGateway
-    let metadataGateway: MetadataGateway
-    let configGateway: ConfigGateway
-
-    func enrich(_ movies: [Movie]) async -> [Movie] {
-        guard let config = try? await configGateway.load() else { return movies }
-        let gateway = metadataGateway
-        var results = Array<Movie?>(repeating: nil, count: movies.count)
-        let concurrency = 4
-        for lowerBound in stride(from: 0, to: movies.count, by: concurrency) {
-            let upperBound = min(lowerBound + concurrency, movies.count)
-            await withTaskGroup(of: (Int, Movie).self) { group in
-                for index in lowerBound..<upperBound {
-                    let movie = movies[index]
-                    group.addTask {
-                        (index, await gateway.enrich(movie, config: config))
-                    }
-                }
-                for await (index, movie) in group {
-                    results[index] = movie
-                }
-            }
-        }
-        return results.enumerated().map { index, movie in movie ?? movies[index] }
     }
 }
 

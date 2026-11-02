@@ -2,7 +2,6 @@ import Foundation
 import ObjectiveC
 import QuartzCore
 import UIKit
-import Domain
 
 /// MobileVLCKit resets OpenGL ES buffers on its vout thread, which mutates the
 /// view's `CAEAGLLayer`. iOS 26's UIKit asserts in `-[UIView actionForLayer:forKey:]`

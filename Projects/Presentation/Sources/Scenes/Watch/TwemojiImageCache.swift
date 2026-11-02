@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Domain
 import Kingfisher
 
 /// Resolves Twemoji PNGs: bundled `Twemoji/{code}.png` first, then CDN via Kingfisher.

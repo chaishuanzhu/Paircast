@@ -1,8 +1,8 @@
 import UIKit
-import Domain
+import PaircastShared
 
 enum AvatarImageCompressor {
-    static func jpegData(from raw: Data, maxBytes: Int = ProfileRules.avatarMaxBytes) -> Data? {
+    static func jpegData(from raw: Data, maxBytes: Int = Int(ProfileRules.shared.AVATAR_MAX_BYTES)) -> Data? {
         guard var image = UIImage(data: raw) else { return nil }
         let maxSide: CGFloat = 1024
         let longest = max(image.size.width, image.size.height)

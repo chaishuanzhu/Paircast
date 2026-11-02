@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import Domain
+import PaircastShared
 
 /// In-app language preference. Default follows the system (Chinese → zh-Hans, otherwise English).
 public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
@@ -61,18 +61,29 @@ public enum TandemL10n {
 
     /// Localize a template key, then replace `{{name}}` placeholders.
     public static func format(_ key: String, _ args: [String: String] = [:]) -> String {
-        StringTemplate.apply(string(key), args)
+        args.reduce(string(key)) { result, entry in
+            result.replacingOccurrences(of: "{{\(entry.key)}}", with: entry.value)
+        }
     }
 
     public static func format(_ error: AppError) -> String {
-        if case .incompleteConfig(let missing) = error {
+        if let incomplete = error as? AppError.IncompleteConfig {
             let separator = locale.identifier.hasPrefix("zh") ? "、" : ", "
             return format(
                 error.localizationKey,
-                ["fields": missing.map(localizedConfigField).joined(separator: separator)]
+                ["fields": incomplete.missing.map(localizedConfigField).joined(separator: separator)]
             )
         }
         return format(error.localizationKey, error.localizationArguments)
+    }
+
+    public static func format(_ text: UiText) -> String {
+        format(text.key, text.args)
+    }
+
+    /// Localized message for any error thrown across the Kotlin boundary.
+    public static func message(for error: Error, fallback: AppError) -> String {
+        format(AppErrors.from(error) ?? fallback)
     }
 
     private static func localizedConfigField(_ field: String) -> String {

@@ -1,11 +1,10 @@
 import SwiftUI
 import UIKit
-import Domain
+import PaircastShared
 
 @MainActor
 public final class ServiceConfigViewModel: ObservableObject {
-    @Published public var sdkAppId = ""
-    @Published public var imSecretKey = ""
+    @Published public var serverUrl = ""
     @Published public var provider: ObjectStorageProvider = .qiniu
     @Published public var accessKey = ""
     @Published public var secretKey = ""
@@ -39,8 +38,9 @@ public final class ServiceConfigViewModel: ObservableObject {
     }
 
     private func apply(_ config: AppCloudConfig) {
-        sdkAppId = String(config.im.sdkAppId)
-        imSecretKey = config.im.secretKey
+        if !config.im.serverUrl.isEmpty {
+            serverUrl = config.im.serverUrl
+        }
         provider = config.storage.provider
         accessKey = config.storage.accessKey
         secretKey = config.storage.secretKey
@@ -73,17 +73,19 @@ public final class ServiceConfigViewModel: ObservableObject {
     @discardableResult
     public func save() async -> Bool {
         do {
-            let config = try buildConfig()
-            let harness = ConfigHarness(configGateway: session.configGateway)
-            try await harness.saveCloudConfig(config)
-            session.config = config
+            let previousServer = session.config?.im.serverUrl
+            let stored = try await session.graph.saveConfig.invoke(config: draftConfig())
+            if session.currentUser != nil, previousServer != stored.im.serverUrl {
+                // A different GO-IM server invalidates the current account session.
+                await session.applyImportedCloudConfig(stored)
+            } else {
+                session.config = stored
+                try? await session.graph.clearMetadataCache()
+            }
             statusMessage = TandemL10n.string("Saved")
             return true
-        } catch let error as AppError {
-            statusMessage = TandemL10n.format(error)
-            return false
         } catch {
-            statusMessage = TandemL10n.string("Unable to save configuration")
+            statusMessage = TandemL10n.message(for: error, fallback: .unknown("Unable to save configuration"))
             return false
         }
     }
@@ -95,53 +97,60 @@ public final class ServiceConfigViewModel: ObservableObject {
     public func confirmExport() async {
         do {
             // Persist current form first so export matches what the user sees.
-            let config = try buildConfig()
-            let harness = ConfigHarness(configGateway: session.configGateway)
-            try await harness.saveCloudConfig(config)
-            session.config = config
-            exportShareURL = try await harness.exportConfigQR()
+            let stored = try await session.graph.saveConfig.invoke(config: draftConfig())
+            session.config = stored
+            exportShareURL = try session.graph.configLinkCodec.shareUrl(config: stored)
             showExportSheet = true
             statusMessage = TandemL10n.string("Configuration link generated (contains secrets — do not share publicly)")
-        } catch let error as AppError {
-            statusMessage = TandemL10n.format(error)
         } catch {
-            statusMessage = TandemL10n.format(AppError.invalidConfigQR)
+            statusMessage = TandemL10n.message(for: error, fallback: .invalidConfigQR)
         }
     }
 
     public func prepareImport(raw: String) {
         do {
-            let config = try ConfigShareLink.decode(raw)
+            let config = try session.graph.configLinkCodec.decode(input: raw)
             pendingImportConfig = config
-            importPreview = ConfigQRCodec.maskedPreview(of: config)
+            importPreview = ConfigQRCodec.shared.maskedPreview(config: config)
             showImportPaste = false
             showImportConfirm = true
-        } catch let error as AppError {
-            statusMessage = TandemL10n.format(error)
         } catch {
-            statusMessage = TandemL10n.format(AppError.invalidConfigQR)
+            statusMessage = TandemL10n.message(for: error, fallback: .invalidConfigQR)
         }
     }
 
     public func confirmImport() async {
         guard let pendingImportConfig else { return }
+        showImportConfirm = false
+        self.pendingImportConfig = nil
+        var incoming = pendingImportConfig
+        if ConfigQRCodec.shared.needsServerUrl(config: incoming) {
+            // Pre-GO-IM links carry no server address: reuse the one in the form, if any.
+            let server = serverUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !server.isEmpty else {
+                apply(incoming)
+                formEpoch += 1
+                statusMessage = TandemL10n.string("Imported storage settings. Enter the IM server address, then Save")
+                return
+            }
+            incoming = incoming.doCopy(
+                im: IMConfig(serverUrl: server),
+                storage: incoming.storage,
+                subtitleApiKey: incoming.subtitleApiKey,
+                tmdbAccessToken: incoming.tmdbAccessToken,
+                updatedAtMs: incoming.updatedAtMs,
+                configVersion: incoming.configVersion
+            )
+        }
         do {
-            let harness = ConfigHarness(configGateway: session.configGateway)
             // Persist directly — avoid re-encrypt round-trip and SecureField clobbering via Save.
-            try await harness.saveCloudConfig(pendingImportConfig)
-            let saved = try await session.configGateway.load() ?? pendingImportConfig
+            let saved = try await session.graph.saveConfig.invoke(config: incoming)
             apply(saved)
             formEpoch += 1
-            self.pendingImportConfig = nil
-            showImportConfirm = false
             await session.applyImportedCloudConfig(saved)
             statusMessage = TandemL10n.string("Configuration imported. Please sign in again")
-        } catch let error as AppError {
-            statusMessage = TandemL10n.format(error)
-            showImportConfirm = false
         } catch {
-            statusMessage = TandemL10n.format(AppError.invalidConfigQR)
-            showImportConfirm = false
+            statusMessage = TandemL10n.message(for: error, fallback: .invalidConfigQR)
         }
     }
 
@@ -151,13 +160,10 @@ public final class ServiceConfigViewModel: ObservableObject {
         }
     }
 
-    private func buildConfig() throws -> AppCloudConfig {
-        guard let appId = Int(sdkAppId) else {
-            throw AppError.incompleteConfig(missing: ["IM SDKAppID"])
-        }
-        let draft = AppCloudConfig(
-            im: .init(sdkAppId: appId, secretKey: imSecretKey),
-            storage: .init(
+    private func draftConfig() -> AppCloudConfig {
+        AppCloudConfig(
+            im: IMConfig(serverUrl: serverUrl),
+            storage: ObjectStorageConfig(
                 provider: provider,
                 accessKey: accessKey,
                 secretKey: secretKey,
@@ -169,14 +175,11 @@ public final class ServiceConfigViewModel: ObservableObject {
                 forcePathStyle: forcePathStyle
             ),
             subtitleApiKey: subtitleApiKey.isEmpty ? nil : subtitleApiKey,
-            tmdbAccessToken: tmdbAccessToken.isEmpty ? nil : tmdbAccessToken
+            tmdbAccessToken: tmdbAccessToken.isEmpty ? nil : tmdbAccessToken,
+            updatedAtMs: 0,
+            configVersion: AppCloudConfig.companion.CURRENT_VERSION
         )
-        return try ConfigValidation.normalized(draft)
     }
-}
-
-private struct ConfigHarness: SaveCloudConfigUseCase, ImportConfigQRUseCase, ExportConfigQRUseCase {
-    let configGateway: ConfigGateway
 }
 
 public struct ServiceConfigView: View {
@@ -209,7 +212,7 @@ public struct ServiceConfigView: View {
                         Label("Configuration Guide", systemImage: "book.fill")
                     }
                 } footer: {
-                    Text("Where to get SDKAppID, SecretKey, Endpoint, and how to use Paircast")
+                    Text("Where to get the IM server address, storage keys, Endpoint, and how to use Paircast")
                 }
 
                 Section {
@@ -236,10 +239,16 @@ public struct ServiceConfigView: View {
                     Text("Links contain secrets — share only with trusted friends")
                 }
 
-                Section("Tencent Cloud IM") {
-                    TextField("SDKAppID", text: $viewModel.sdkAppId)
-                        .keyboardType(.numberPad)
-                    SecureField("SecretKey", text: $viewModel.imSecretKey)
+                Section {
+                    TextField("im.example.com", text: $viewModel.serverUrl)
+                        .keyboardType(.URL)
+                        .textContentType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("IM Server")
+                } footer: {
+                    Text("Your self-hosted GO-IM address. HTTPS is assumed unless you enter http:// (LAN only).")
                 }
                 Section {
                     Picker(
@@ -333,7 +342,7 @@ public struct ServiceConfigView: View {
                 Button("Continue Sharing") { Task { await viewModel.confirmExport() } }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends.")
+                Text("The link includes the IM server address and object storage credentials. Share only with trusted friends.")
             }
             .sheet(isPresented: $viewModel.showExportSheet) {
                 if let shareURL = viewModel.exportShareURL {
@@ -382,9 +391,9 @@ public struct ServiceConfigView: View {
         switch provider {
         case .qiniu:
             return "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint."
-        case .aliyunOSS:
+        case .aliyunOss:
             return "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
-        case .tencentCOS:
+        case .tencentCos:
             return "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint."
         case .minio:
             return "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1."
@@ -698,14 +707,15 @@ private struct ConfigImportConfirmView: View {
 
                     TandemWarningBanner("This will overwrite your local cloud service configuration")
 
-                    confirmSection(title: "Tencent Cloud IM", rows: [
-                        ("SDKAppID", ConfigQRCodec.maskedSDKAppId(config.im.sdkAppId)),
-                        ("SecretKey", ConfigQRCodec.maskSecret(config.im.secretKey)),
+                    confirmSection(title: "IM Server", rows: [
+                        ("Address", config.im.isComplete
+                            ? config.im.maskedSummary
+                            : TandemL10n.string("Not included — enter it in the form")),
                     ])
                     confirmSection(title: LocalizedStringKey(config.storage.provider.displayName), rows: [
-                        ("AccessKey", ConfigQRCodec.maskedAccessKey(config.storage.accessKey)),
+                        ("AccessKey", ConfigQRCodec.shared.maskedAccessKey(value: config.storage.accessKey)),
                         ("Bucket", config.storage.bucket),
-                        ("Endpoint", ConfigQRCodec.truncate(config.storage.endpoint, max: 22)),
+                        ("Endpoint", ConfigQRCodec.shared.truncate(value: config.storage.endpoint, max: 22)),
                         ("Region", config.storage.region ?? config.storage.signingRegion),
                     ])
 

@@ -1,7 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
-import Domain
+import PaircastShared
 
 @MainActor
 public final class MeViewModel: ObservableObject {
@@ -13,6 +13,7 @@ public final class MeViewModel: ObservableObject {
     @Published public var pendingAvatarPreview: UIImage?
     @Published public var isSaving = false
     @Published public var pickerItem: PhotosPickerItem?
+    @Published public var showChangePassword = false
 
     private let session: AppSession
 
@@ -23,6 +24,11 @@ public final class MeViewModel: ObservableObject {
 
     public var userId: String {
         session.currentUser?.id ?? ""
+    }
+
+    /// Login account name when the server returns it, otherwise the UID.
+    public var username: String {
+        session.currentUser?.username ?? userId
     }
 
     public var isConfigured: Bool {
@@ -57,66 +63,42 @@ public final class MeViewModel: ObservableObject {
         isSaving = true
         defer { isSaving = false }
         do {
-            let harness = MeHarness(
-                authGateway: session.authGateway,
-                configGateway: session.configGateway
-            )
-            let user = try await harness.updateProfile(
+            let user = try await session.graph.updateProfile.invoke(
                 nickname: nickname,
-                avatarData: pendingAvatarData
+                avatarJpeg: pendingAvatarData?.kotlinBytes
             )
             session.currentUser = user
             pendingAvatarData = nil
             pendingAvatarPreview = nil
             statusMessage = TandemL10n.string("Saved")
             return true
-        } catch let error as AppError {
-            statusMessage = TandemL10n.format(error)
-            return false
         } catch {
-            statusMessage = TandemL10n.format(AppError.network)
+            statusMessage = TandemL10n.message(for: error, fallback: .network)
             return false
         }
     }
 
     public func logout() async {
-        do {
-            let harness = MeHarness(
-                authGateway: session.authGateway,
-                configGateway: session.configGateway
-            )
-            try await harness.logout()
-            session.currentUser = nil
-            session.resetToLogin()
-        } catch {
-            statusMessage = TandemL10n.format(AppError.network)
-        }
+        await session.logout()
     }
 
     public func deleteAccount() async {
         isSaving = true
         defer { isSaving = false }
-        do {
-            let harness = MeHarness(
-                authGateway: session.authGateway,
-                configGateway: session.configGateway
-            )
-            if let userId = session.currentUser?.id {
-                ChatSafetyStore().clear(ownerId: userId)
-            }
-            try await harness.deleteAccount()
-            session.config = nil
-            session.currentUser = nil
-            session.resetToLogin()
-        } catch {
-            statusMessage = TandemL10n.format(AppError.network)
+        if let userId = session.currentUser?.id {
+            session.graph.chatSafety.clear(ownerId: userId)
         }
+        do {
+            try await session.authGateway.deleteAccount()
+        } catch {
+            statusMessage = TandemL10n.message(for: error, fallback: .network)
+            return
+        }
+        session.graph.clearLocalCaches()
+        session.config = nil
+        session.currentUser = nil
+        session.resetToLogin()
     }
-}
-
-private struct MeHarness: UpdateProfileUseCase, LogoutUseCase, DeleteAccountUseCase {
-    let authGateway: AuthGateway
-    let configGateway: ConfigGateway
 }
 
 @MainActor
@@ -172,10 +154,21 @@ public struct MeSheetView: View {
                         }
                         Divider().padding(.leading, 16)
                         meRow(title: "Username") {
-                            Text(viewModel.userId)
+                            Text(viewModel.username)
                                 .font(.system(size: 17))
                                 .foregroundStyle(TandemColors.secondaryLabel)
                         }
+                        Divider().padding(.leading, 16)
+                        Button {
+                            viewModel.showChangePassword = true
+                        } label: {
+                            meRow(title: "Change Password") {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(TandemColors.tertiaryLabel)
+                            }
+                        }
+                        .buttonStyle(.plain)
                         Divider().padding(.leading, 16)
                         Button {
                             dismiss()
@@ -303,7 +296,11 @@ public struct MeSheetView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin.")
+                Text("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin.")
+            }
+            .sheet(isPresented: $viewModel.showChangePassword) {
+                ChangePasswordView(session: session, isForced: false)
+                    .environment(\.locale, language.effectiveLocale)
             }
             .overlay {
                 if viewModel.isSaving {

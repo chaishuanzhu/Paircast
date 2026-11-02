@@ -1,6 +1,9 @@
 import ProjectDescription
 
 let deploymentTargets: DeploymentTargets = .iOS("26.0")
+let paircastShared = TargetDependency.xcframework(
+    path: "../../shared/umbrella/build/XCFrameworks/release/PaircastShared.xcframework"
+)
 
 let project = Project(
     name: "Paircast",
@@ -48,10 +51,8 @@ let project = Project(
             resources: ["Resources/**"],
             dependencies: [
                 .project(target: "Presentation", path: "../Presentation"),
-                .project(target: "Data", path: "../Data"),
-                .project(target: "Domain", path: "../Domain"),
+                paircastShared,
                 .external(name: "VLCKitSPM"),
-                .external(name: "ImSDKSPM"),
             ],
             settings: .settings(base: [
                 "CODE_SIGN_STYLE": "Manual",
@@ -59,6 +60,8 @@ let project = Project(
                 "CODE_SIGN_IDENTITY": "Apple Distribution",
                 "PROVISIONING_PROFILE_SPECIFIER": "Tandem AppStore",
                 "EXCLUDED_ARCHS[sdk=iphoneos*]": "armv7 armv7s",
+                // PaircastShared.xcframework ships arm64 simulator only.
+                "EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64",
                 "MARKETING_VERSION": "1.1.1",
                 "CURRENT_PROJECT_VERSION": "13",
             ])
@@ -71,7 +74,8 @@ let project = Project(
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/**"],
-            dependencies: [.target(name: "Paircast")]
+            dependencies: [.target(name: "Paircast")],
+            settings: .settings(base: ["EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64"])
         ),
     ]
 )

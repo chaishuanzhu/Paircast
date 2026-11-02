@@ -1,5 +1,5 @@
 import SwiftUI
-import Domain
+import PaircastShared
 import Kingfisher
 
 /// Loads a sticker from the user's OSS `stickers/` catalog via Kingfisher.
@@ -44,7 +44,7 @@ public struct StickerImageView: View {
     public var body: some View {
         Group {
             if failed {
-                Text(ChatStickerCodec.fallbackText)
+                Text(ChatStickerCodec.shared.FALLBACK_TEXT)
                     .font(.system(size: 14))
                     .foregroundStyle(TandemColors.secondaryLabel)
             } else if let url {
@@ -113,7 +113,7 @@ public struct StickerImageView: View {
             return
         }
         do {
-            url = try await catalog.imageURL(for: ref, config: config)
+            url = URL(string: try await catalog.imageUrl(ref: ref, config: config))
         } catch {
             failed = true
         }

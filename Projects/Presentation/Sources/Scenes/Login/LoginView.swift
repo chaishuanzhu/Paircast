@@ -1,9 +1,10 @@
 import SwiftUI
-import Domain
+import PaircastShared
 
 @MainActor
 public final class LoginViewModel: ObservableObject {
-    @Published public var userId = ""
+    @Published public var account = ""
+    @Published public var password = ""
     @Published public var isLoading = false
     @Published public var errorMessage: String?
     @Published public var showConfigAlert = false
@@ -15,7 +16,8 @@ public final class LoginViewModel: ObservableObject {
     }
 
     public var configSummary: String? {
-        session.config?.im.maskedSummary
+        guard let config = session.config, config.im.isComplete else { return nil }
+        return config.im.maskedSummary
     }
 
     public var isConfigured: Bool {
@@ -31,27 +33,12 @@ public final class LoginViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            let harness = LoginHarness(
-                configGateway: session.configGateway,
-                authGateway: session.authGateway,
-                userSigGateway: session.userSigGateway
-            )
-            try await harness.login(userId: userId)
-            session.currentUser = try await session.authGateway.fetchProfile()
-            session.consumePendingInviteIfPossible()
-            session.route = .library
-        } catch let error as AppError {
-            errorMessage = TandemL10n.format(error)
+            try await session.login(account: account, password: password)
+            password = ""
         } catch {
-            errorMessage = TandemL10n.format(AppError.network)
+            errorMessage = TandemL10n.message(for: error, fallback: .network)
         }
     }
-}
-
-private struct LoginHarness: LoginUseCase {
-    let configGateway: ConfigGateway
-    let authGateway: AuthGateway
-    let userSigGateway: UserSigGateway
 }
 
 public struct LoginView: View {
@@ -86,9 +73,11 @@ public struct LoginView: View {
                 .frame(maxWidth: .infinity)
 
                 VStack(spacing: 12) {
-                    TandemTextField("User ID", text: $viewModel.userId)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    TandemTextField("Account", text: $viewModel.account)
+                        .textContentType(.username)
+                    TandemTextField("Password", text: $viewModel.password, isSecure: true)
+                        .textContentType(.password)
+                        .onSubmit { Task { await viewModel.login() } }
                     if let summary = viewModel.configSummary {
                         Text(summary)
                             .font(.footnote)
@@ -140,6 +129,86 @@ public struct LoginView: View {
         .alert("Finish service configuration first", isPresented: $viewModel.showConfigAlert) {
             Button("Configure") { session.route = .config(fromLogin: true) }
             Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $session.mustChangePassword) {
+            ChangePasswordView(session: session, isForced: true)
+                .interactiveDismissDisabled()
+        }
+    }
+}
+
+/// Change password. `isForced` is used right after a login the server flagged `must_change_password`.
+public struct ChangePasswordView: View {
+    @ObservedObject var session: AppSession
+    let isForced: Bool
+    @Environment(\.dismiss) private var dismiss
+    @State private var oldPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    public init(session: AppSession, isForced: Bool) {
+        self.session = session
+        self.isForced = isForced
+    }
+
+    public var body: some View {
+        NavigationStack {
+            Form {
+                if isForced {
+                    Section {
+                        Text("Your administrator requires a new password before you continue.")
+                            .font(.footnote)
+                            .foregroundStyle(TandemColors.secondaryLabel)
+                    }
+                }
+                Section {
+                    SecureField("Current password", text: $oldPassword)
+                        .textContentType(.password)
+                    SecureField("New password", text: $newPassword)
+                        .textContentType(.newPassword)
+                    SecureField("Confirm new password", text: $confirmPassword)
+                        .textContentType(.newPassword)
+                } footer: {
+                    if let errorMessage {
+                        Text(errorMessage).foregroundStyle(TandemColors.danger)
+                    }
+                }
+            }
+            .navigationTitle("Change Password")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(isForced ? "Sign Out" : "Cancel") {
+                        if isForced {
+                            Task { await session.cancelForcedPasswordChange() }
+                        } else {
+                            dismiss()
+                        }
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") { Task { await save() } }
+                            .disabled(oldPassword.isEmpty || newPassword.isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        errorMessage = nil
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await session.changePassword(old: oldPassword, new: newPassword, confirm: confirmPassword)
+            if !isForced { dismiss() }
+        } catch {
+            errorMessage = TandemL10n.message(for: error, fallback: .passwordChangeFailed)
         }
     }
 }

@@ -1,6 +1,5 @@
 import SwiftUI
 import UIKit
-import Domain
 
 /// Chat composer that shows Twemoji images inline while storing Unicode in `text`.
 struct TwemojiComposerField: UIViewRepresentable {

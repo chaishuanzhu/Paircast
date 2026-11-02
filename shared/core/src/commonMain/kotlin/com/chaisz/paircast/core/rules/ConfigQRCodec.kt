@@ -49,6 +49,7 @@ object ConfigQRCodec {
         val forcePathStyle: Boolean,
     )
 
+    @Throws(Exception::class)
     fun encode(config: AppCloudConfig): String {
         val s = config.storage
         val payload = Payload(
@@ -72,6 +73,7 @@ object ConfigQRCodec {
         return json
     }
 
+    @Throws(Exception::class)
     fun decode(raw: String): AppCloudConfig {
         if (raw.encodeToByteArray().size > MAX_ENCODED_UTF8_BYTES) throw AppError.ConfigQRTooLarge
         val payload = try {

@@ -120,23 +120,6 @@
         }
       }
     },
-    "SDKAppID": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SDKAppID"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SDKAppID"
-          }
-        }
-      }
-    },
     "SecretKey": {
       "extractionState": "manual",
       "localizations": {
@@ -728,23 +711,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "配置说明"
-          }
-        }
-      }
-    },
-    "Where to get SDKAppID, SecretKey, Endpoint, and how to use Paircast": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Where to get SDKAppID, SecretKey, Endpoint, and how to use Paircast"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "各字段从哪里获取、如何使用 Paircast"
           }
         }
       }
@@ -1612,23 +1578,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "配置链接无效，未修改现有配置"
-          }
-        }
-      }
-    },
-    "Invalid IM configuration. Check SDKAppID and related settings": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid IM configuration. Check SDKAppID and related settings"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IM 配置无效，请检查 SDKAppID 等"
           }
         }
       }
@@ -3435,57 +3384,6 @@
         }
       }
     },
-    "Tencent Cloud IM": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tencent Cloud IM"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腾讯云 IM"
-          }
-        }
-      }
-    },
-    "Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腾讯云 IM SDK。使用受腾讯云服务协议约束。"
-          }
-        }
-      }
-    },
-    "The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The link includes Tencent Cloud IM and object storage credentials. Share only with trusted friends."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接内含腾讯云 IM 与对象存储凭证，仅发给可信好友。"
-          }
-        }
-      }
-    },
     "Title year": {
       "extractionState": "manual",
       "localizations": {
@@ -3550,23 +3448,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "对方打开链接或粘贴到「服务配置」即可写入同一套环境"
-          }
-        }
-      }
-    },
-    "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. Provisioned IM accounts must be disabled separately by an admin."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将清除本机云配置、登录会话、头像与昵称，并退出登录。IM 控制台中的预置账号需管理员另行停用。"
           }
         }
       }
@@ -3826,23 +3707,6 @@
         }
       }
     },
-    "User ID": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "User ID"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用户 ID"
-          }
-        }
-      }
-    },
     "Username": {
       "extractionState": "manual",
       "localizations": {
@@ -4026,6 +3890,499 @@
           "stringUnit": {
             "state": "translated",
             "value": "支持完整深链，或聊天消息中带有的 paircast://config?args=…"
+          }
+        }
+      }
+    },
+    "Account": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号"
+          }
+        }
+      }
+    },
+    "Address": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地址"
+          }
+        }
+      }
+    },
+    "Cannot reach the IM server. Check the server address": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cannot reach the IM server. Check the server address"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法连接 IM 服务器，请检查服务器地址"
+          }
+        }
+      }
+    },
+    "Change Password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改密码"
+          }
+        }
+      }
+    },
+    "Chat and playback sync use your self-hosted GO-IM server. Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization, Wire and cryptography-kotlin (Apache 2.0).": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat and playback sync use your self-hosted GO-IM server. Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization, Wire and cryptography-kotlin (Apache 2.0)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天和播放同步使用你自建的 GO-IM 服务器。共享逻辑基于 Kotlin Multiplatform、Ktor、kotlinx.serialization、Wire 和 cryptography-kotlin（Apache 2.0）构建。"
+          }
+        }
+      }
+    },
+    "Confirm new password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm new password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认新密码"
+          }
+        }
+      }
+    },
+    "Current password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前密码"
+          }
+        }
+      }
+    },
+    "Current password is incorrect": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current password is incorrect"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前密码不正确"
+          }
+        }
+      }
+    },
+    "Failed to change password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to change password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改密码失败"
+          }
+        }
+      }
+    },
+    "Failed to list objects (HTTP {{code}})": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to list objects (HTTP {{code}})"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列出对象失败（HTTP {{code}}）"
+          }
+        }
+      }
+    },
+    "IM Server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM Server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM 服务器"
+          }
+        }
+      }
+    },
+    "Imported storage settings. Enter the IM server address, then Save": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported storage settings. Enter the IM server address, then Save"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入存储设置，请填写 IM 服务器地址后保存"
+          }
+        }
+      }
+    },
+    "Incorrect account or password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incorrect account or password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号或密码错误"
+          }
+        }
+      }
+    },
+    "New password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新密码"
+          }
+        }
+      }
+    },
+    "New password must differ from the current one": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New password must differ from the current one"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新密码不能与当前密码相同"
+          }
+        }
+      }
+    },
+    "Not included — enter it in the form": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not included — enter it in the form"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未包含——请在表单中填写"
+          }
+        }
+      }
+    },
+    "Object storage: {{code}} — {{message}}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Object storage: {{code}} — {{message}}"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对象存储：{{code}} — {{message}}"
+          }
+        }
+      }
+    },
+    "Password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码"
+          }
+        }
+      }
+    },
+    "Password must be at least {{count}} characters": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password must be at least {{count}} characters"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码至少需要 {{count}} 个字符"
+          }
+        }
+      }
+    },
+    "Password updated": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password updated"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码已更新"
+          }
+        }
+      }
+    },
+    "Passwords do not match": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwords do not match"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两次输入的密码不一致"
+          }
+        }
+      }
+    },
+    "Please enter your account": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please enter your account"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入账号"
+          }
+        }
+      }
+    },
+    "Please enter your password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please enter your password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入密码"
+          }
+        }
+      }
+    },
+    "Server error {{code}}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server error {{code}}"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器错误 {{code}}"
+          }
+        }
+      }
+    },
+    "The link includes the IM server address and object storage credentials. Share only with trusted friends.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link includes the IM server address and object storage credentials. Share only with trusted friends."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接包含 IM 服务器地址和对象存储密钥，请只分享给信任的好友。"
+          }
+        }
+      }
+    },
+    "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这会清除本机云服务配置、登录会话、头像和昵称并退出登录。GO-IM 账号本身需由管理员另行停用。"
+          }
+        }
+      }
+    },
+    "Where to get the IM server address, storage keys, Endpoint, and how to use Paircast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where to get the IM server address, storage keys, Endpoint, and how to use Paircast"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM 服务器地址、存储密钥、Endpoint 从哪里获取，以及 Paircast 的使用方法"
+          }
+        }
+      }
+    },
+    "Your administrator requires a new password before you continue.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your administrator requires a new password before you continue."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理员要求你先设置新密码才能继续使用。"
+          }
+        }
+      }
+    },
+    "Your self-hosted GO-IM address. HTTPS is assumed unless you enter http:// (LAN only).": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your self-hosted GO-IM address. HTTPS is assumed unless you enter http:// (LAN only)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自建 GO-IM 服务地址。默认使用 HTTPS，局域网可显式填写 http://。"
           }
         }
       }

@@ -14,7 +14,7 @@ public struct AcknowledgementsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Messaging") {
-                Text("Tencent Cloud IM SDK. Use is subject to Tencent Cloud service agreements.")
+                Text("Chat and playback sync use your self-hosted GO-IM server. Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization, Wire and cryptography-kotlin (Apache 2.0).")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

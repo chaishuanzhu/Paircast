@@ -1,6 +1,13 @@
 import ProjectDescription
 
 let deploymentTargets: DeploymentTargets = .iOS("26.0")
+/// Built by `make shared` (Gradle `assemblePaircastSharedReleaseXCFramework`).
+let paircastShared = TargetDependency.xcframework(
+    path: "../../shared/umbrella/build/XCFrameworks/release/PaircastShared.xcframework"
+)
+
+/// PaircastShared.xcframework ships arm64 simulator only.
+let simulatorArm64Only: Settings = .settings(base: ["EXCLUDED_ARCHS[sdk=iphonesimulator*]": "x86_64"])
 
 let project = Project(
     name: "Presentation",
@@ -15,10 +22,11 @@ let project = Project(
             infoPlist: .default,
             sources: ["Sources/**"],
             dependencies: [
-                .project(target: "Domain", path: "../Domain"),
+                paircastShared,
                 .external(name: "VLCKitSPM"),
                 .external(name: "Kingfisher"),
-            ]
+            ],
+            settings: simulatorArm64Only
         ),
         .target(
             name: "PresentationTests",
@@ -28,7 +36,8 @@ let project = Project(
             deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/**"],
-            dependencies: [.target(name: "Presentation")]
+            dependencies: [.target(name: "Presentation"), paircastShared],
+            settings: simulatorArm64Only
         ),
     ],
     schemes: [

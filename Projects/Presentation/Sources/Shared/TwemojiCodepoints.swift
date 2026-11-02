@@ -3,7 +3,7 @@ import Foundation
 /// Twemoji helpers — wire format remains Unicode; display prefers bundled PNGs, then CDN.
 /// Assets: App `Resources/Twemoji/{codepoints}.png` (picker set) +
 /// CDN `https://raw.githubusercontent.com/jdecked/twemoji/v15.1.0/assets/72x72/{codepoints}.png`
-public enum Twemoji {
+enum Twemoji {
     public static let version = "15.1.0"
     public static let sizeFolder = "72x72"
     public static let cdnBase =
@@ -69,7 +69,7 @@ public enum Twemoji {
     }
 }
 
-public enum TwemojiRun: Equatable, Sendable {
+enum TwemojiRun: Equatable, Sendable {
     case text(String)
     /// CDN URL may be nil when codepoints are empty; UI still has the glyph for fallback.
     case emoji(String, URL?)

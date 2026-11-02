@@ -1,5 +1,5 @@
 import SwiftUI
-import Domain
+import PaircastShared
 
 /// Bottom accessory: Twemoji grid + OSS sticker packs.
 struct ChatEmojiStickerPanel: View {
@@ -26,7 +26,7 @@ struct ChatEmojiStickerPanel: View {
     @State private var loadFailed = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    private let recentKey = "paircast.stickers.recent"
+    private let recentKey = "paircast.stickers.recent.v2"
     /// Emoji / sticker cell size is derived from available width so rows fill edge-to-edge.
     private static let emojiTargetSide: CGFloat = 40
     private static let emojiMinSide: CGFloat = 32
@@ -410,16 +410,11 @@ struct ChatEmojiStickerPanel: View {
         next.insert(ref, at: 0)
         if next.count > 24 { next = Array(next.prefix(24)) }
         recent = next
-        if let data = try? JSONEncoder().encode(next) {
-            UserDefaults.standard.set(data, forKey: recentKey)
-        }
+        UserDefaults.standard.set(next.map { ChatStickerCodec.shared.encodeJson(ref: $0) }, forKey: recentKey)
     }
 
     private func loadRecent() -> [StickerRef] {
-        guard let data = UserDefaults.standard.data(forKey: recentKey),
-              let decoded = try? JSONDecoder().decode([StickerRef].self, from: data) else {
-            return []
-        }
-        return decoded
+        let stored = UserDefaults.standard.stringArray(forKey: recentKey) ?? []
+        return stored.compactMap { ChatStickerCodec.shared.decode(text: $0) }
     }
 }
