@@ -21,6 +21,11 @@ interface PlayerPort {
     fun seek(positionMs: Long)
     fun stop()
 
+    /** App left the foreground (already paused): release the render surface. */
+    fun enterBackground()
+    /** App is back: rebind the render surface. */
+    fun enterForeground()
+
     fun embeddedSubtitleTracks(): List<SubtitleTrack>
     fun selectEmbeddedSubtitle(index: Int)
     /** Adds a local subtitle file as the active track. */

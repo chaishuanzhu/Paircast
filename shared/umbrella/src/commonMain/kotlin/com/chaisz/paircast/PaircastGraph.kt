@@ -135,6 +135,9 @@ class PaircastGraph(
     fun watchSession(player: PlayerPort, roomId: String?, movieId: String?, hostUserId: String?): WatchSession =
         WatchSession(watchDependencies, player, roomId, movieId, hostUserId)
 
+    /** Call when the app returns to the foreground: re-verifies the GO-IM link right away. */
+    fun onAppForeground() = connection.probe()
+
     /** Drops cached scrape results (e.g. after the storage config changes). */
     suspend fun clearMetadataCache() = metadataCache.clear()
 

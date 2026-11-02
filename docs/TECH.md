@@ -79,6 +79,7 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 
 - WebSocket：`ws(s)://host/ws?token=&device_id=&platform=ios|android`，每帧一个 protobuf `im.Message`
 - 心跳 25s（`CmdHeartbeat=6`），连续 3 次无响应重连；指数退避重连；`CmdAck=2` 匹配本机发出的消息
+- 回前台 `PaircastGraph.onAppForeground()`：已连接则立即探活（5s 无 pong 断开重连），退避等待中则立即重连
 - 群生命周期：房主建房 `POST /group/create` → `groupId`（`g_…`）写入房间 JSON；成员读 JSON 后 `POST /group/join`；离开 `POST /group/leave`（最后一人离开服务端自动删群）
 - 聊天：`CmdChat=1`，`chat_type=2`（群）；文本 `msg_type=1`（系统消息前缀 `[sys]`）；贴纸 `msg_type=6` + JSON `StickerRef`；本人消息收到 Ack 后本地回显
 - 播控：`CmdGroupSignal=25` 瞬时群信令（服务端校验成员身份、跨网关转发，不落库、不计未读、不回显给发送者），`content` 为下方信令 JSON
@@ -106,6 +107,7 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 - `seq` 单调；旧序丢弃
 - 房主播放中约每 5s 发 heartbeat；成员用**本机播放器实时进度**与房主 `positionMs` 比较，> 1200ms 才 Seek
 - 房主离开按 joinOrder 转让（`host_transfer`）；最后一人结束房间
+- **前后台**：`WatchSession.onBackground()` 本机暂停（房主播放中发 `pause`），后台期间不执行远端播控；`onForeground()` 离开 ≥15s 或播放器报错则用新 URL 重新 prepare 并 seek 回原进度、恢复当前字幕。`PlayerPort.enterBackground/enterForeground` 由平台处理渲染面（Android 后台 `detachViews` + 关视频轨，回前台重新挂载）
 - **字幕共享**：房主下载外挂/在线字幕后上传到影片同目录同名文件，发 `subtitle_change`；成员按 key 拉取加载。成员自选字幕仅本机；时间轴偏移始终本机；内嵌轨不同步
 
 ## 头像与资料

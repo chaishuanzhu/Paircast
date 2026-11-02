@@ -81,6 +81,14 @@ public final class WatchViewModel: ObservableObject {
         watch.start()
     }
 
+    public func scenePhaseChanged(_ phase: ScenePhase) {
+        switch phase {
+        case .background: watch.onBackground()
+        case .active: watch.onForeground()
+        default: break
+        }
+    }
+
     public func stop() {
         stateTask?.cancel()
         eventTask?.cancel()
@@ -293,6 +301,7 @@ public struct WatchView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.openURL) private var openURL
     @Environment(\.locale) private var locale
+    @Environment(\.scenePhase) private var scenePhase
 
     private static let chromeAutoHideSeconds: UInt64 = 5_000_000_000
     private static let compactStageHeight: CGFloat = 248
@@ -385,6 +394,9 @@ public struct WatchView: View {
         .task {
             await viewModel.start()
             revealPlayerChrome()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            viewModel.scenePhaseChanged(phase)
         }
         .onDisappear {
             chromeHideTask?.cancel()

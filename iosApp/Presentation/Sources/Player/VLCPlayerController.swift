@@ -156,6 +156,14 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         PaircastLog.playback.info("drawable reattached positionMs=\(self.currentPositionMs, privacy: .public)")
     }
 
+    public func enterBackground() {
+        PaircastLog.playback.info("enter background positionMs=\(self.currentPositionMs, privacy: .public)")
+    }
+
+    public func enterForeground() {
+        mediaPlayer.drawable = videoView
+    }
+
     public func pause() {
         isPrebuffering = false
         playRequested = false

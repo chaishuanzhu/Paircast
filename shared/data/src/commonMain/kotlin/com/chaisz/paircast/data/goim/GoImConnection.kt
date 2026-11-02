@@ -23,7 +23,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -89,6 +91,7 @@ class GoImConnection(
     private val deviceId: String,
     private val platform: String,
     private val heartbeatIntervalMs: Long = 25_000,
+    private val probeTimeoutMs: Long = 5_000,
 ) {
     private val _state = MutableStateFlow(ConnectionState.DISCONNECTED)
     val state: StateFlow<ConnectionState> = _state.asStateFlow()
@@ -133,6 +136,36 @@ class GoImConnection(
             if (s != null) closeQuietly(s)
             failPendingAcks()
             _state.value = ConnectionState.DISCONNECTED
+        }
+    }
+
+    /**
+     * Call when the app returns to the foreground. Sockets die silently while the app is
+     * suspended, and the regular heartbeat needs ~75s to notice; probe now and reconnect within
+     * [probeTimeoutMs] instead. A pending backoff wait is skipped.
+     */
+    fun probe() {
+        scope.launch(serial) {
+            val current = session ?: return@launch
+            when (_state.value) {
+                ConnectionState.CONNECTED -> {
+                    val ws = socket ?: return@launch
+                    pongReceived = false
+                    if (runCatching { sendFrame(Message(cmd = Cmd.HEARTBEAT, seq = nextSeq())) }.isFailure) {
+                        ws.cancel()
+                        return@launch
+                    }
+                    scope.launch(serial) {
+                        delay(probeTimeoutMs)
+                        if (socket === ws && !pongReceived) ws.cancel()
+                    }
+                }
+                ConnectionState.RECONNECTING -> {
+                    loopJob?.cancel()
+                    loopJob = scope.launch(serial) { runLoop(current) }
+                }
+                else -> Unit
+            }
         }
     }
 
@@ -191,7 +224,9 @@ class GoImConnection(
                 runCatching { sendFrame(Message(cmd = Cmd.OFFLINE, seq = nextSeq())) }
                 kicked = readUntilClosed(ws)
             } catch (e: CancellationException) {
-                throw e
+                // Cancelling a dead socket (missed heartbeats / probe) surfaces here too; only our
+                // own cancellation may end the loop.
+                currentCoroutineContext().ensureActive()
             } catch (_: Exception) {
                 // Handshake / link failure — decide below whether it was auth.
             } finally {

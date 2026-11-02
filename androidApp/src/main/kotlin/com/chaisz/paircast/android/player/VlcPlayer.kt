@@ -52,6 +52,7 @@ class VlcPlayer(context: Context) : PlayerPort {
     private var prebufferGeneration = 0
     private var pausedSeekTargetMs: Long? = null
     private var attachedLayout: VLCVideoLayout? = null
+    private var detachedForBackground: VLCVideoLayout? = null
     private var released = false
 
     override val isPaused: Boolean get() = _paused.value
@@ -74,9 +75,31 @@ class VlcPlayer(context: Context) : PlayerPort {
     }
 
     fun detach(layout: VLCVideoLayout) {
+        if (detachedForBackground === layout) detachedForBackground = null
         if (released || attachedLayout !== layout) return
         player.detachViews()
         attachedLayout = null
+    }
+
+    /** libVLC stalls its vout when the surface is destroyed under it (ON_STOP); detach first. */
+    override fun enterBackground() {
+        if (released || detachedForBackground != null) return
+        val layout = attachedLayout ?: return
+        player.setVideoTrackEnabled(false)
+        player.detachViews()
+        attachedLayout = null
+        detachedForBackground = layout
+    }
+
+    override fun enterForeground() {
+        if (released) return
+        val layout = detachedForBackground ?: return
+        detachedForBackground = null
+        if (attachedLayout == null) {
+            player.attachViews(layout, null, true, false)
+            attachedLayout = layout
+        }
+        player.setVideoTrackEnabled(true)
     }
 
     override fun prepare(url: String, format: VideoFormat, completion: (String?) -> Unit) {

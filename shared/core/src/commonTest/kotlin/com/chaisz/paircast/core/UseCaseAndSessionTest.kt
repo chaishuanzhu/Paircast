@@ -236,6 +236,66 @@ class WatchSessionTest {
         h.session.close()
     }
 
+    @Test fun playingHostPausesRoomInBackgroundAndReloadsAfterLongAbsence() = runTest {
+        var now = 1_000_000L
+        val h = Harness(this, User("host", "Host"), roomHost = "host", nowMs = { now })
+        h.session.start()
+        runCurrent()
+        h.session.togglePlay()
+        runCurrent()
+        h.player.currentPositionMs = 42_000
+
+        h.session.onBackground()
+        runCurrent()
+        assertTrue(h.player.isPaused)
+        assertTrue(h.player.inBackground)
+        assertEquals(PlaybackAction.PAUSE, h.sync.sent.last().action)
+        assertEquals(42_000L, h.sync.sent.last().positionMs)
+
+        h.player.prepared = null
+        now += WatchSession.RELOAD_AFTER_BACKGROUND_MS
+        h.session.onForeground()
+        runCurrent()
+        assertFalse(h.player.inBackground)
+        assertEquals("https://cdn/m1.mp4", h.player.prepared)
+        assertEquals(42_000L, h.player.seeks.last())
+        assertTrue(h.player.isPaused)
+        h.session.close()
+    }
+
+    @Test fun shortBackgroundKeepsStream() = runTest {
+        var now = 1_000_000L
+        val h = Harness(this, User("host", "Host"), roomHost = "host", nowMs = { now })
+        h.session.start()
+        runCurrent()
+        h.session.onBackground()
+        runCurrent()
+        assertTrue(h.sync.sent.isEmpty(), "paused host has nothing to broadcast")
+        h.player.prepared = null
+        now += 2_000
+        h.session.onForeground()
+        runCurrent()
+        assertEquals(null, h.player.prepared)
+        h.session.close()
+    }
+
+    @Test fun backgroundedMemberIgnoresHostPlay() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.session.onBackground()
+        h.sync.incoming.emit(PlaybackSyncSignal(action = PlaybackAction.PLAY, positionMs = 5_000, senderId = "host", seq = 2))
+        runCurrent()
+        assertTrue(h.player.isPaused)
+        assertTrue(h.sync.sent.isEmpty())
+
+        h.session.onForeground()
+        h.sync.incoming.emit(PlaybackSyncSignal(action = PlaybackAction.HEARTBEAT, positionMs = 9_000, senderId = "host", seq = 3))
+        runCurrent()
+        assertFalse(h.player.isPaused)
+        h.session.close()
+    }
+
     @Test fun failedChatSendShowsToast() = runTest {
         val h = Harness(this, User("member", "Member"), roomHost = "host")
         h.session.start()

@@ -26,6 +26,11 @@ class MainActivity : ComponentActivity() {
         appState.bootstrap()
     }
 
+    override fun onStart() {
+        super.onStart()
+        appState.graph.onAppForeground()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handle(intent)

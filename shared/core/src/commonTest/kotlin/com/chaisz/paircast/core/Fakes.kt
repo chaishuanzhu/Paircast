@@ -147,6 +147,9 @@ internal class FakePlayer : PlayerPort {
     override fun pause() { isPaused = true }
     override fun seek(positionMs: Long) { seeks += positionMs; currentPositionMs = positionMs }
     override fun stop() {}
+    var inBackground = false
+    override fun enterBackground() { inBackground = true }
+    override fun enterForeground() { inBackground = false }
     override fun embeddedSubtitleTracks() = emptyList<SubtitleTrack>()
     override fun selectEmbeddedSubtitle(index: Int) {}
     override fun loadExternalSubtitle(filePath: String) = true

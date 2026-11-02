@@ -83,6 +83,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import coil3.compose.AsyncImage
 import com.chaisz.paircast.android.app.AppState
 import com.chaisz.paircast.android.app.L10n
@@ -125,6 +127,8 @@ fun WatchScreen(app: AppState, roomId: String?, movieId: String?, hostUserId: St
             activity?.let { setFullscreen(it, false) }
         }
     }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { session.onBackground() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { session.onForeground() }
     LaunchedEffect(session) {
         session.events.collect { event ->
             when (event) {

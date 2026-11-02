@@ -162,6 +162,9 @@ class WatchSession(
     private val requestedProfileIds = mutableSetOf<String>()
     /** Last object key the host shared this session; used to clear members only when needed. */
     private var lastHostSharedSubtitleKey: String? = null
+    /** Set while the app is in the background; see [onBackground]. */
+    private var backgroundedAtMs: Long? = null
+    private var backgroundPositionMs = 0L
 
     private val me: User? get() = deps.authGateway.currentUser.value
     private val current: WatchUiState get() = _state.value
@@ -217,6 +220,49 @@ class WatchSession(
     fun close() {
         stop()
         scope.cancel()
+    }
+
+    /**
+     * App left the foreground. iOS suspends the stream and Android tears down the surface, so
+     * playback stops here: a playing host pauses the whole room, a member pauses locally and
+     * ignores remote play/seek until [onForeground].
+     */
+    fun onBackground() {
+        if (backgroundedAtMs != null) return
+        backgroundedAtMs = nowMs()
+        backgroundPositionMs = player.currentPositionMs
+        val wasPlaying = !player.isPaused
+        player.pause()
+        player.enterBackground()
+        val room = current.room
+        val user = me
+        if (!wasPlaying || room == null || user == null || !current.isHost) return
+        val position = backgroundPositionMs
+        val currentSeq = nextSeq()
+        _state.update {
+            it.copy(playback = it.playback.copy(isPaused = true, positionMs = position, lastSeq = currentSeq))
+        }
+        scope.launch { runCatching { emitHost(room, user.id, PlaybackAction.PAUSE, position, currentSeq) } }
+    }
+
+    /**
+     * App is back. A long absence (or a player error) usually means a dead HTTP stream, so the
+     * movie is re-prepared with a fresh URL at the saved position. Everyone stays paused: the
+     * host resumes by hand, members follow the host's next heartbeat.
+     */
+    fun onForeground() {
+        val since = backgroundedAtMs ?: return
+        backgroundedAtMs = null
+        player.enterForeground()
+        if (current.movie == null) return
+        val away = nowMs() - since
+        if (away < RELOAD_AFTER_BACKGROUND_MS && player.lastError == null) return
+        val position = backgroundPositionMs
+        scope.launch {
+            preparePlayer()
+            if (position > 0) player.seek(position)
+            restoreSubtitleAfterReload()
+        }
     }
 
     fun leave() {
@@ -429,6 +475,8 @@ class WatchSession(
             // Host already loaded locally before broadcasting; skip self-echo.
             scope.launch { applyHostSharedSubtitle(signal) }
         }
+        // No playback while backgrounded; the host's next heartbeat realigns after return.
+        if (backgroundedAtMs != null) return
         if (result.seek) player.seek(state.positionMs)
         // Avoid pause↔play thrash on heartbeat when already in the right state.
         if (state.isPaused) {
@@ -809,6 +857,35 @@ class WatchSession(
         }
     }
 
+    /** Re-prepare drops the player's subtitle selection; load the current one again without re-sharing it. */
+    private suspend fun restoreSubtitleAfterReload() {
+        val state = current.subtitleState
+        val trackId = state.trackId
+        if (state.source == SubtitleSource.OFF || trackId == null) return
+        try {
+            when {
+                state.source == SubtitleSource.EMBEDDED -> {
+                    val index = state.embeddedIndex ?: return
+                    if (player.embeddedSubtitleTracks().isEmpty()) delay(400)
+                    player.selectEmbeddedSubtitle(index)
+                }
+                trackId.startsWith("shared:") -> {
+                    val config = deps.configGateway.load() ?: return
+                    player.loadExternalSubtitle(deps.sharedSubtitleStorage.download(trackId.removePrefix("shared:"), config))
+                }
+                else -> {
+                    val track = current.subtitleTracks.firstOrNull { it.id == trackId } ?: return
+                    player.loadExternalSubtitle(deps.subtitleGateway.download(track, deps.configGateway.load()))
+                }
+            }
+            player.applySubtitleOffsetMs(state.offsetMs)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _events.emit(WatchEvent.Toast(AppError.SubtitleUnavailable.toUiText()))
+        }
+    }
+
     fun adjustSubtitle(deltaMs: Int) {
         _state.update { it.copy(subtitleState = it.subtitleState.withOffsetDelta(deltaMs)) }
         persistAndApplyOffset()
@@ -867,4 +944,9 @@ class WatchSession(
 
     private fun onlineQueryFor(movie: Movie): String =
         listOfNotNull(movie.title, movie.year).filter { it.isNotEmpty() }.joinToString(" ")
+
+    internal companion object {
+        /** Away at least this long → the HTTP stream is assumed dead and re-prepared. */
+        const val RELOAD_AFTER_BACKGROUND_MS = 15_000L
+    }
 }
