@@ -1,4 +1,5 @@
 # Build a signed App Store IPA on tag push and attach it to the GitHub Release.
+# The app links PaircastShared.xcframework (Kotlin Multiplatform), built here before `tuist generate`.
 # Intentionally has NO pull_request trigger — fork PRs never run this on the self-hosted Mac.
 name: Release IPA
 
@@ -38,9 +39,19 @@ jobs:
           # inputs.tag is only for the GitHub Release name, not the source tree.
 
       - name: Ensure vendor SDKs
+        run: ./Scripts/download-vlckit.sh
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build PaircastShared.xcframework (KMP)
         run: |
-          ./Scripts/download-vlckit.sh
-          ./Scripts/download-imsdk.sh
+          # The KMP build also configures the Android targets; the runner keeps the SDK at the default path.
+          export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+          ./gradlew --no-daemon :shared:core:allTests :shared:umbrella:assemblePaircastSharedReleaseXCFramework
 
       - name: Install Ruby gems
         run: |

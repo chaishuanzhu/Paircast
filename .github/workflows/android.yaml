@@ -1,0 +1,78 @@
+# Shared Kotlin tests + Android APK. Runs on GitHub-hosted Linux (safe for fork PRs: no secrets on PRs).
+# On `v*` tags the signed release APK is attached to the GitHub Release.
+name: Android
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Shared tests
+        run: ./gradlew :shared:core:testDebugUnitTest :shared:data:testDebugUnitTest
+
+      - name: Debug APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: ./gradlew :androidApp:assembleDebug
+
+      - name: Release APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PAIRCAST_KEYSTORE_BASE64 }}
+          PAIRCAST_KEYSTORE_PASSWORD: ${{ secrets.PAIRCAST_KEYSTORE_PASSWORD }}
+          PAIRCAST_KEY_ALIAS: ${{ secrets.PAIRCAST_KEY_ALIAS }}
+          PAIRCAST_KEY_PASSWORD: ${{ secrets.PAIRCAST_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "${KEYSTORE_BASE64:-}" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/paircast.jks"
+            export PAIRCAST_KEYSTORE_FILE="$RUNNER_TEMP/paircast.jks"
+          else
+            echo "::warning::PAIRCAST_KEYSTORE_BASE64 not set — release APK is debug-signed"
+          fi
+          ./gradlew :androidApp:assembleRelease
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paircast-android
+          path: androidApp/build/outputs/apk/**/*.apk
+          retention-days: 14
+
+      - name: Attach APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'chaishuanzhu/Paircast'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VERSION_CODE="$(grep '^paircast.versionCode=' gradle.properties | cut -d= -f2)"
+          ASSET="Paircast-${TAG}-build${VERSION_CODE}.apk"
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "$ASSET"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ASSET" --clobber
+          else
+            gh release create "$TAG" "$ASSET" --title "$TAG" --notes "Paircast \`$TAG\` — Android APK." --target "$(git rev-parse HEAD)"
+          fi
