@@ -1116,7 +1116,7 @@ private struct SwitchMovieSheet: View {
                         ContentUnavailableView(
                             "No movies",
                             systemImage: "film",
-                            description: Text("Make sure your object storage bucket contains mp4/m4v/mkv files")
+                            description: Text("Ask your admin to add mp4/m4v/mkv files to the server media library")
                         )
                     } else {
                         ContentUnavailableView(

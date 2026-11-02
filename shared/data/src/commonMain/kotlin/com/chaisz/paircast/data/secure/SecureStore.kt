@@ -3,30 +3,20 @@ package com.chaisz.paircast.data.secure
 import com.chaisz.paircast.core.gateway.ConfigGateway
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.IMConfig
-import com.chaisz.paircast.core.model.ObjectStorageConfig
-import com.chaisz.paircast.core.model.ObjectStorageProvider
 import com.chaisz.paircast.core.store.SecureStore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 private val storeJson = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
 
-/** Cloud config in [SecureStore] (`paircast.cloud-config.v4`). */
+/**
+ * Cloud config in [SecureStore] (`paircast.cloud-config.v4` key kept for upgrades). Only the
+ * GO-IM server URL is stored; storage keys left by pre-2.1 builds are purged on first load.
+ */
 class SecureConfigStore(private val store: SecureStore) : ConfigGateway {
     @Serializable
     private data class StoredConfig(
         val serverUrl: String = "",
-        val provider: String = ObjectStorageProvider.QINIU.rawValue,
-        val accessKey: String,
-        val secretKey: String,
-        val bucket: String,
-        val endpoint: String,
-        val region: String? = null,
-        val prefix: String? = null,
-        val useSSL: Boolean = true,
-        val forcePathStyle: Boolean = true,
-        val subtitleApiKey: String? = null,
-        val tmdbAccessToken: String? = null,
         val updatedAtMs: Long = 0,
         val configVersion: Int = AppCloudConfig.CURRENT_VERSION,
     )
@@ -34,43 +24,20 @@ class SecureConfigStore(private val store: SecureStore) : ConfigGateway {
     override suspend fun load(): AppCloudConfig? {
         val raw = store.read(CONFIG_KEY) ?: return null
         val s = runCatching { storeJson.decodeFromString(StoredConfig.serializer(), raw) }.getOrNull() ?: return null
-        return AppCloudConfig(
+        val config = AppCloudConfig(
             im = IMConfig(s.serverUrl),
-            storage = ObjectStorageConfig(
-                provider = ObjectStorageProvider.fromRaw(s.provider) ?: ObjectStorageProvider.QINIU,
-                accessKey = s.accessKey,
-                secretKey = s.secretKey,
-                bucket = s.bucket,
-                endpoint = s.endpoint,
-                region = s.region,
-                prefix = s.prefix,
-                useSSL = s.useSSL,
-                forcePathStyle = s.forcePathStyle,
-            ),
-            subtitleApiKey = s.subtitleApiKey,
-            tmdbAccessToken = s.tmdbAccessToken,
             updatedAtMs = s.updatedAtMs,
-            configVersion = s.configVersion,
+            configVersion = AppCloudConfig.CURRENT_VERSION,
         )
+        if (LEGACY_SECRET_FIELDS.any { "\"$it\"" in raw } || s.configVersion < AppCloudConfig.CURRENT_VERSION) save(config)
+        return config
     }
 
     override suspend fun save(config: AppCloudConfig) {
-        val st = config.storage
         val stored = StoredConfig(
             serverUrl = config.im.serverUrl,
-            provider = st.provider.rawValue,
-            accessKey = st.accessKey,
-            secretKey = st.secretKey,
-            bucket = st.bucket,
-            endpoint = st.endpoint,
-            region = st.region,
-            prefix = st.prefix,
-            useSSL = st.useSSL,
-            forcePathStyle = st.forcePathStyle,
-            subtitleApiKey = config.subtitleApiKey,
-            tmdbAccessToken = config.tmdbAccessToken,
             updatedAtMs = config.updatedAtMs,
-            configVersion = config.configVersion,
+            configVersion = AppCloudConfig.CURRENT_VERSION,
         )
         store.write(CONFIG_KEY, storeJson.encodeToString(StoredConfig.serializer(), stored))
     }
@@ -82,6 +49,7 @@ class SecureConfigStore(private val store: SecureStore) : ConfigGateway {
 
     companion object {
         const val CONFIG_KEY = "paircast.cloud-config.v4"
+        private val LEGACY_SECRET_FIELDS = listOf("accessKey", "secretKey", "subtitleApiKey", "tmdbAccessToken")
     }
 }
 

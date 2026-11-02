@@ -23,7 +23,7 @@
 <body>
   <p class="lang"><a href="../../en-US/guide/">English</a><a href="./">简体中文</a></p>
   <h1>Paircast 使用说明</h1>
-  <p>Paircast 是<strong>邀请制</strong>私人云同步播放工具：影片来自你自己的对象存储，账号由自托管 <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> 服务器的管理员创建，应用内<strong>不提供注册</strong>。支持 iOS 与 Android，两端可以同房观影。</p>
+  <p>Paircast 是<strong>邀请制</strong>私人云同步播放工具：影片来自自托管 GO-IM 服务器管理员接入的片库（你们自己的存储），账号由自托管 <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> 服务器的管理员创建，应用内<strong>不提供注册</strong>。支持 iOS 与 Android，两端可以同房观影。</p>
 
   <div class="note">
     最快上手：让管理员发给你一条 <code>paircast://config?…</code> 配置链接 → 在登录页打开「服务配置」粘贴导入 → 用分配的账号和密码登录。
@@ -31,9 +31,9 @@
 
   <h2>1. 整体使用流程</h2>
   <ol>
-    <li>完成<strong>服务配置</strong>（导入链接或手动填写）。</li>
+    <li>完成<strong>服务配置</strong>（导入链接或填写 IM 服务器地址）。</li>
     <li>使用管理员分配的<strong>账号和密码</strong>登录；若管理员要求，首次登录需先设置新密码。</li>
-    <li>在<strong>片库</strong>浏览 Bucket 中的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>。</li>
+    <li>在<strong>片库</strong>浏览服务端片库中的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>。</li>
     <li>点开影片创建/加入<strong>房间</strong>，同步播放，并可边看边聊。</li>
     <li>通过邀请链接把好友拉进同一房间。</li>
   </ol>
@@ -41,7 +41,7 @@
   <h2>2. 服务配置从哪里填、值从哪里拿</h2>
   <p>入口：登录页右上角 / 「我的」→ <strong>服务配置</strong>。</p>
   <div class="warn">
-    「分享配置」生成的链接含 IM 服务器地址与对象存储密钥，只发给可信好友。导入成功后请<strong>重新登录</strong>。
+    2.1 版起 App 只需要 IM 服务器地址，「分享配置」生成的链接也只包含它，好友仍需用自己的账号登录。导入成功后请<strong>重新登录</strong>。
   </div>
 
   <h3>2.1 IM 服务器（必填）</h3>
@@ -64,131 +64,37 @@
   </table>
   <p>服务器需运行支持瞬时群信令的 GO-IM 版本（用于播放同步）。</p>
 
-  <h3>2.2 对象存储（必填）</h3>
-  <p>支持：七牛云（S3）、阿里云 OSS、腾讯云 COS、自建 MinIO。需填 AccessKey、SecretKey、Bucket、Endpoint；其余可选。</p>
-  <table>
-    <thead>
-      <tr><th>App 字段</th><th>从哪里获取</th><th>注意</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>提供商</td>
-        <td>按你实际使用的云选择</td>
-        <td>决定 Endpoint 校验规则</td>
-      </tr>
-      <tr>
-        <td><code>AccessKey</code> / <code>SecretKey</code></td>
-        <td>对应云厂商的密钥/访问密钥控制台</td>
-        <td>建议使用权限最小化的子账号密钥</td>
-      </tr>
-      <tr>
-        <td><code>Bucket</code></td>
-        <td>对象存储空间/桶名称</td>
-        <td>影片放在此桶内（可用 Prefix 限定目录）</td>
-      </tr>
-      <tr>
-        <td><code>Endpoint</code></td>
-        <td>该地域的 <strong>S3/OSS/COS API 域名</strong>（不要带 <code>https://</code> 和路径）</td>
-        <td><strong>不要</strong>把 CDN/自定义下载域名填到这里</td>
-      </tr>
-      <tr>
-        <td><code>Region</code>（可选）</td>
-        <td>控制台显示的地域 ID</td>
-        <td>常可留空，App 会从 Endpoint 推断</td>
-      </tr>
-      <tr>
-        <td><code>Prefix</code>（可选）</td>
-        <td>桶内目录前缀，如 <code>movies/</code></td>
-        <td>只列出该前缀下的影片</td>
-      </tr>
-      <tr>
-        <td>HTTPS / 路径风格 URL</td>
-        <td>—</td>
-        <td>公有云一般开 HTTPS；MinIO 常关 HTTPS、开 Path-Style</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h4>各厂商 Endpoint 示例</h4>
-  <table>
-    <thead>
-      <tr><th>提供商</th><th>控制台入口（示例）</th><th>Endpoint 示例</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>七牛云</td>
-        <td><a href="https://portal.qiniu.com/kodo">对象存储 Kodo</a>（使用 S3 兼容域名）</td>
-        <td><code>s3.cn-south-1.qiniucs.com</code></td>
-      </tr>
-      <tr>
-        <td>阿里云 OSS</td>
-        <td><a href="https://oss.console.aliyun.com/">OSS 控制台</a> → Bucket 概览中的外网 Endpoint</td>
-        <td><code>oss-cn-hangzhou.aliyuncs.com</code></td>
-      </tr>
-      <tr>
-        <td>腾讯云 COS</td>
-        <td><a href="https://console.cloud.tencent.com/cos">COS 控制台</a> → 桶配置中的访问域名（地域域名）</td>
-        <td><code>cos.ap-guangzhou.myqcloud.com</code></td>
-      </tr>
-      <tr>
-        <td>MinIO</td>
-        <td>自建服务地址</td>
-        <td><code>192.168.1.10:9000</code>（主机:端口）</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>2.2.1 聊天贴纸（可选）</h3>
-  <p>房间聊天的贴纸包从<strong>同一对象存储</strong>读取，目录约定：</p>
+  <h3>2.2 片库（在服务端配置）</h3>
+  <p>视频、外挂字幕、海报、在线字幕搜索和表情包都由 GO-IM 服务器提供，App 里不再填写存储密钥或第三方令牌。管理员在服务端一次性配置：</p>
   <ul>
-    <li><code>{Prefix?}stickers/catalog.json</code> — 包索引</li>
-    <li><code>{Prefix?}stickers/{pack_id}/pack.json</code> — 包清单</li>
-    <li><code>{Prefix?}stickers/{pack_id}/…</code> — 贴纸图片（png / gif 等）</li>
+    <li><strong>片源</strong>：在 <code>gateway.media.sources</code> 添加 S3 兼容存储（七牛、阿里云 OSS、腾讯云 COS、MinIO 等），密钥通过环境变量 <code>GOIM_MEDIA_&lt;ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code> 注入。只需只读权限：服务端签发短时效播放直链，视频流不经过网关。</li>
+    <li><strong>海报与简介</strong>：优先读取视频同目录的 <code>{主名}.nfo</code> / <code>{主名}-poster.jpg</code>；否则在配置了 <code>GOIM_TMDB_ACCESS_TOKEN</code> 时由服务端查询 TMDB。</li>
+    <li><strong>在线字幕</strong>：服务端配置 <code>GOIM_OPENSUBTITLES_API_KEY</code> 后开启。</li>
+    <li><strong>表情包</strong>：设置 <code>stickers_source</code> / <code>stickers_prefix</code>（默认 <code>stickers/</code>），目录下放 <code>catalog.json</code> 与 <code>{pack_id}/pack.json</code>。可用 <code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist</code> 把本地表情包整理成该结构。</li>
   </ul>
-  <p>管理员把贴纸包上传到 Bucket 的 <code>stickers/</code> 后，成员即可在聊天输入栏的表情面板中使用。普通 Unicode 表情使用 Twemoji 图集展示。</p>
-  <p>仓库提供转换脚本：把本地表情包目录整理为上述结构后上传：</p>
-  <pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
-# 将 stickers-dist/ 内容上传到 Bucket 的 stickers/ 前缀</code></pre>
-
-  <h3>2.3 扩展（可选）</h3>
-  <table>
-    <thead>
-      <tr><th>App 字段</th><th>从哪里获取</th><th>用途</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>OpenSubtitles API Key</td>
-        <td><a href="https://www.opensubtitles.com/en/consumers">OpenSubtitles Consumers</a> 申请</td>
-        <td>在线检索/下载字幕</td>
-      </tr>
-      <tr>
-        <td>TMDB API 读取访问令牌</td>
-        <td><a href="https://www.themoviedb.org/settings/api">TMDB API 设置</a></td>
-        <td>按文件名补全本地化片名、海报、背景图和简介</td>
-      </tr>
-    </tbody>
-  </table>
+  <p>完整步骤见 GO-IM <a href="https://github.com/chaishuanzhu/GO-IM/blob/main/deploy/README.md">部署说明</a>的「媒体库（Paircast）」一节。存储桶里旧的 <code>_paircast/</code> 目录不再使用：房间存在服务端 MySQL，共享字幕存在服务端文件存储。</p>
+  <p>服务端配置了多个片源时，片库页会出现片源切换。</p>
 
   <h2>3. 导入 / 分享配置</h2>
   <ol>
     <li><strong>导入</strong>：服务配置 → 粘贴导入或扫描二维码 → 确认覆盖 → 按提示重新登录。</li>
     <li>也可直接打开管理员发来的 <code>paircast://config?args=…</code> 深链。</li>
-    <li>Paircast 1.x（腾讯云 IM）生成的旧链接仍可导入存储配置，导入后补填 IM 服务器地址。</li>
-    <li><strong>分享</strong>：配置完整后点「分享配置」，生成加密链接与二维码（含密钥，勿公开张贴）。</li>
+    <li>旧版本生成的链接仍可导入，但其中的存储密钥和第三方令牌会被忽略（片库已改由服务端配置）；不含 IM 服务器地址的链接需要补填。</li>
+    <li><strong>分享</strong>：点「分享配置」，生成只含 IM 服务器地址的加密链接与二维码。</li>
   </ol>
 
   <h2>4. 登录与片库</h2>
   <ul>
     <li>输入管理员分配的<strong>账号和密码</strong>，点登录。</li>
-    <li>若提示未完成配置，先回服务配置检查 IM 服务器 + 对象存储是否齐全。</li>
-    <li>片库为空时：确认 Bucket（及 Prefix）下确有 <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code>，且密钥有列举/下载权限。</li>
+    <li>若提示未完成配置，先回服务配置填写 IM 服务器地址。</li>
+    <li>提示「服务器尚未配置片库」：请管理员在 GO-IM 添加片源。片库为空：请管理员确认片源（及 prefix）下确有 <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code>。</li>
   </ul>
 
   <h2>5. 同步观看与邀请</h2>
   <ol>
     <li>在片库点选影片 → 进入房间（房主可控制播放同步）。</li>
     <li><strong>邀请好友</strong>：房间内用系统分享或复制邀请链接（<code>https://paircast.chaisz.com/invite/?roomId=…</code>），iOS / Android 均可打开。</li>
-    <li>好友需先完成同一套服务配置，并在同一 GO-IM 服务器上有账号，再打开邀请链接。</li>
+    <li>好友需在同一 GO-IM 服务器（同一 IM 服务器地址）上有账号，再打开邀请链接。</li>
     <li>房间内可文字聊天；长按消息可<strong>屏蔽</strong>（本机）或<strong>举报</strong>。</li>
   </ol>
 
@@ -203,8 +109,8 @@
   <h2>7. 常见问题</h2>
   <ul>
     <li><strong>配置链接无效</strong>：确认完整复制；导入失败不会覆盖已有配置。</li>
-    <li><strong>导入后仍像旧配置</strong>：按提示重新登录；导入后不要立刻用空的密钥栏再点保存。</li>
-    <li><strong>Endpoint 报错</strong>：必须是 API 地域域名（见上表），不要填 CDN 或自定义域名。</li>
+    <li><strong>导入后仍像旧配置</strong>：按提示重新登录。</li>
+    <li><strong>视频播不了</strong>：播放直链几小时后过期，回到片库重新打开即可。管理员：S3 Endpoint 必须是 API 地域域名，不要填 CDN 域名。</li>
     <li><strong>无法登录</strong>：检查 IM 服务器地址，以及账号是否已在该服务器创建；提示「无法连接 IM 服务器」说明地址或网络有误。</li>
   </ul>
 

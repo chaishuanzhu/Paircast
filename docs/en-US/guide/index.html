@@ -23,7 +23,7 @@
 <body>
   <p class="lang"><a href="./">English</a><a href="../../zh-Hans/guide/">简体中文</a></p>
   <h1>Paircast User Guide</h1>
-  <p>Paircast is an <strong>invite-only</strong> private cloud sync player. Videos come from <strong>your own</strong> object storage. Accounts are created by the admin of your self-hosted <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> server — there is <strong>no in-app sign-up</strong>. Available on iOS and Android; both can join the same room.</p>
+  <p>Paircast is an <strong>invite-only</strong> private cloud sync player. Videos come from the media library that the admin of your self-hosted GO-IM server connects to <strong>your own</strong> storage. Accounts are created by the admin of your self-hosted <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> server — there is <strong>no in-app sign-up</strong>. Available on iOS and Android; both can join the same room.</p>
 
   <div class="note">
     Fast path: get a <code>paircast://config?…</code> link from your admin → Login → Service Configuration → Paste to Import → sign in with your assigned account and password.
@@ -31,9 +31,9 @@
 
   <h2>1. Typical flow</h2>
   <ol>
-    <li>Finish <strong>Service Configuration</strong> (import a link or fill fields manually).</li>
+    <li>Finish <strong>Service Configuration</strong> (import a link or enter the IM server address).</li>
     <li>Sign in with the <strong>account and password</strong> your admin gave you. If the admin requires it, you must set a new password on first sign-in.</li>
-    <li>Browse <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files in your bucket on the <strong>Library</strong> screen.</li>
+    <li>Browse <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files from the server media library on the <strong>Library</strong> screen.</li>
     <li>Open a title to create/join a <strong>room</strong> for synced playback and chat.</li>
     <li>Share an invite link so friends can join the same room.</li>
   </ol>
@@ -41,7 +41,7 @@
   <h2>2. Where each configuration value comes from</h2>
   <p>Open <strong>Service Configuration</strong> from the login screen or <strong>Me</strong>.</p>
   <div class="warn">
-    Shared config links contain the IM server address and object-storage secrets. Share only with trusted friends. After a successful import, <strong>sign in again</strong>.
+    Since version 2.1 the app only needs the IM server address. Shared config links contain nothing else, and friends still sign in with their own account. After a successful import, <strong>sign in again</strong>.
   </div>
 
   <h3>2.1 IM server (required)</h3>
@@ -64,131 +64,37 @@
   </table>
   <p>The server must run a GO-IM build that supports transient group signals (used for playback sync).</p>
 
-  <h3>2.2 Object storage (required)</h3>
-  <p>Providers: Qiniu (S3), Alibaba Cloud OSS, Tencent Cloud COS, MinIO. Required: AccessKey, SecretKey, Bucket, Endpoint.</p>
-  <table>
-    <thead>
-      <tr><th>Field</th><th>Where to get it</th><th>Notes</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Provider</td>
-        <td>Match your cloud</td>
-        <td>Controls Endpoint validation</td>
-      </tr>
-      <tr>
-        <td><code>AccessKey</code> / <code>SecretKey</code></td>
-        <td>Cloud IAM / key console</td>
-        <td>Prefer least-privilege keys</td>
-      </tr>
-      <tr>
-        <td><code>Bucket</code></td>
-        <td>Bucket / space name</td>
-        <td>Videos live here (optional Prefix)</td>
-      </tr>
-      <tr>
-        <td><code>Endpoint</code></td>
-        <td>Regional <strong>API</strong> host (no <code>https://</code>, no path)</td>
-        <td><strong>Do not</strong> put a CDN / custom download domain here</td>
-      </tr>
-      <tr>
-        <td><code>Region</code> (optional)</td>
-        <td>Region id from the console</td>
-        <td>Often blank — inferred from Endpoint</td>
-      </tr>
-      <tr>
-        <td><code>Prefix</code> (optional)</td>
-        <td>e.g. <code>movies/</code></td>
-        <td>Limits library listing</td>
-      </tr>
-      <tr>
-        <td>HTTPS / Path-Style URL</td>
-        <td>—</td>
-        <td>Public clouds: HTTPS on; MinIO often HTTPS off + Path-Style on</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h4>Endpoint examples</h4>
-  <table>
-    <thead>
-      <tr><th>Provider</th><th>Console</th><th>Example Endpoint</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Qiniu</td>
-        <td><a href="https://portal.qiniu.com/kodo">Kodo</a> (S3-compatible host)</td>
-        <td><code>s3.cn-south-1.qiniucs.com</code></td>
-      </tr>
-      <tr>
-        <td>Alibaba Cloud OSS</td>
-        <td><a href="https://oss.console.aliyun.com/">OSS console</a> → public endpoint</td>
-        <td><code>oss-cn-hangzhou.aliyuncs.com</code></td>
-      </tr>
-      <tr>
-        <td>Tencent Cloud COS</td>
-        <td><a href="https://console.cloud.tencent.com/cos">COS console</a> → regional domain</td>
-        <td><code>cos.ap-guangzhou.myqcloud.com</code></td>
-      </tr>
-      <tr>
-        <td>MinIO</td>
-        <td>Your server</td>
-        <td><code>192.168.1.10:9000</code></td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>2.2.1 Chat stickers (optional)</h3>
-  <p>In-room sticker packs are loaded from the <strong>same object storage</strong>:</p>
+  <h3>2.2 Media library (configured on the server)</h3>
+  <p>Videos, sidecar subtitles, posters, online subtitle search, and stickers are provided by the GO-IM server. You do not enter storage keys or API tokens in the app. Your admin sets them up once on the server:</p>
   <ul>
-    <li><code>{Prefix?}stickers/catalog.json</code> — pack index</li>
-    <li><code>{Prefix?}stickers/{pack_id}/pack.json</code> — pack manifest</li>
-    <li><code>{Prefix?}stickers/{pack_id}/…</code> — sticker images (png / gif, etc.)</li>
+    <li><strong>Video sources</strong>: S3-compatible storage (Qiniu, Alibaba Cloud OSS, Tencent Cloud COS, MinIO, …) under <code>gateway.media.sources</code>. Keys are injected through the environment variables <code>GOIM_MEDIA_&lt;ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code>. Read-only access is enough: the server issues short-lived playback links and the video stream does not pass through it.</li>
+    <li><strong>Posters and overviews</strong>: a <code>{name}.nfo</code> / <code>{name}-poster.jpg</code> next to the video is used first. Otherwise the server queries TMDB when <code>GOIM_TMDB_ACCESS_TOKEN</code> is set.</li>
+    <li><strong>Online subtitles</strong>: enabled when <code>GOIM_OPENSUBTITLES_API_KEY</code> is set on the server.</li>
+    <li><strong>Stickers</strong>: set <code>stickers_source</code> / <code>stickers_prefix</code> (default <code>stickers/</code>) and put <code>catalog.json</code> and <code>{pack_id}/pack.json</code> there. <code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist</code> builds this layout from a local sticker dump.</li>
   </ul>
-  <p>After an admin uploads packs under <code>stickers/</code>, members can open the emoji panel in chat. Unicode emoji are rendered with Twemoji.</p>
-  <p>Use the repo script to convert a local sticker dump into this layout, then upload:</p>
-  <pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
-# Upload stickers-dist/ contents to your bucket under stickers/</code></pre>
-
-  <h3>2.3 Extensions (optional)</h3>
-  <table>
-    <thead>
-      <tr><th>Field</th><th>Where to get it</th><th>Used for</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>OpenSubtitles API Key</td>
-        <td><a href="https://www.opensubtitles.com/en/consumers">OpenSubtitles Consumers</a></td>
-        <td>Online subtitle search/download</td>
-      </tr>
-      <tr>
-        <td>TMDB API Read Access Token</td>
-        <td><a href="https://www.themoviedb.org/settings/api">TMDB API settings</a></td>
-        <td>Localized titles, posters, backdrops, and overviews from filenames</td>
-      </tr>
-    </tbody>
-  </table>
+  <p>See the “媒体库（Paircast）” section of the GO-IM <a href="https://github.com/chaishuanzhu/GO-IM/blob/main/deploy/README.md">deploy README</a> for the full setup. The old <code>_paircast/</code> folder in the bucket is no longer used: rooms are stored in the server's MySQL and shared subtitles in its file storage.</p>
+  <p>If the server lists more than one source, the Library screen shows a source picker.</p>
 
   <h2>3. Import / share configuration</h2>
   <ol>
     <li><strong>Import:</strong> Service Configuration → Paste to Import or Scan QR Code → confirm overwrite → sign in again.</li>
     <li>Or open a <code>paircast://config?args=…</code> deep link.</li>
-    <li>Links created by Paircast 1.x (Tencent Cloud IM) still import storage settings; enter the IM server address afterwards.</li>
-    <li><strong>Share:</strong> Share Configuration creates an encrypted link and QR code (contains secrets).</li>
+    <li>Links from older versions still import, but their storage keys and API tokens are ignored, because the library is now configured on the server. Links without an IM server address ask you to enter it.</li>
+    <li><strong>Share:</strong> Share Configuration creates an encrypted link and QR code containing the IM server address.</li>
   </ol>
 
   <h2>4. Login and library</h2>
   <ul>
     <li>Enter the assigned <strong>account and password</strong>.</li>
-    <li>If config is incomplete, finish the IM server + storage first.</li>
-    <li>Empty library: confirm the bucket (and prefix) has <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code> and the key can list/get objects.</li>
+    <li>If config is incomplete, enter the IM server address first.</li>
+    <li>“The server has no media library configured”: ask the admin to add a video source on GO-IM. Empty library: ask the admin to check that the source (and prefix) contains <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code> files.</li>
   </ul>
 
   <h2>5. Watch together and invites</h2>
   <ol>
     <li>Tap a title → room (host can drive sync).</li>
     <li><strong>Invite:</strong> system share or copy the invite link (<code>https://paircast.chaisz.com/invite/?roomId=…</code>); it opens Paircast on iOS or Android.</li>
-    <li>Friends need the same cloud config and an account on the same GO-IM server before opening the invite.</li>
+    <li>Friends need an account on the same GO-IM server (same IM server address) before opening the invite.</li>
     <li>Long-press a chat message to <strong>Block</strong> (local) or <strong>Report</strong>.</li>
   </ol>
 
@@ -203,8 +109,8 @@
   <h2>7. Troubleshooting</h2>
   <ul>
     <li><strong>Invalid config link:</strong> copy the full URL; failed imports do not overwrite existing config.</li>
-    <li><strong>Import looks OK but nothing changed:</strong> sign in again; do not Save empty SecureFields right after import.</li>
-    <li><strong>Endpoint errors:</strong> use the API regional host (table above), not a CDN domain.</li>
+    <li><strong>Import looks OK but nothing changed:</strong> sign in again.</li>
+    <li><strong>Videos do not play:</strong> playback links expire after a few hours; go back to the library and open the title again. Admins: the S3 endpoint must be the regional API host, not a CDN domain.</li>
     <li><strong>Login fails:</strong> check the IM server address and that the account exists on that server; “Cannot reach the IM server” means the address or network is wrong.</li>
   </ul>
 

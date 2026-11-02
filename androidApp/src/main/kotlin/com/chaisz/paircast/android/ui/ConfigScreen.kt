@@ -29,8 +29,6 @@ import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -66,24 +63,11 @@ import com.chaisz.paircast.android.app.t
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.IMConfig
-import com.chaisz.paircast.core.model.ObjectStorageConfig
-import com.chaisz.paircast.core.model.ObjectStorageProvider
 import com.chaisz.paircast.core.rules.ConfigQRCodec
 import kotlinx.coroutines.launch
 
 private class ConfigForm(config: AppCloudConfig?) {
     var serverUrl by mutableStateOf("")
-    var provider by mutableStateOf(ObjectStorageProvider.QINIU)
-    var accessKey by mutableStateOf("")
-    var secretKey by mutableStateOf("")
-    var bucket by mutableStateOf("")
-    var endpoint by mutableStateOf("")
-    var region by mutableStateOf("")
-    var prefix by mutableStateOf("")
-    var useSSL by mutableStateOf(true)
-    var forcePathStyle by mutableStateOf(true)
-    var subtitleApiKey by mutableStateOf("")
-    var tmdbAccessToken by mutableStateOf("")
 
     init {
         config?.let(::apply)
@@ -91,44 +75,9 @@ private class ConfigForm(config: AppCloudConfig?) {
 
     fun apply(config: AppCloudConfig) {
         if (config.im.serverUrl.isNotEmpty()) serverUrl = config.im.serverUrl
-        val s = config.storage
-        provider = s.provider
-        accessKey = s.accessKey
-        secretKey = s.secretKey
-        bucket = s.bucket
-        endpoint = s.endpoint
-        region = s.region.orEmpty()
-        prefix = s.prefix.orEmpty()
-        useSSL = s.useSSL
-        forcePathStyle = s.forcePathStyle
-        subtitleApiKey = config.subtitleApiKey.orEmpty()
-        tmdbAccessToken = config.tmdbAccessToken.orEmpty()
     }
 
-    fun selectProvider(next: ObjectStorageProvider) {
-        if (next == provider) return
-        provider = next
-        useSSL = next.defaultUseSSL
-        forcePathStyle = next.defaultForcePathStyle
-        if (region.isBlank()) next.defaultRegion?.let { region = it }
-    }
-
-    fun draft() = AppCloudConfig(
-        im = IMConfig(serverUrl),
-        storage = ObjectStorageConfig(
-            provider = provider,
-            accessKey = accessKey,
-            secretKey = secretKey,
-            bucket = bucket,
-            endpoint = endpoint,
-            region = region.ifEmpty { null },
-            prefix = prefix.ifEmpty { null },
-            useSSL = useSSL,
-            forcePathStyle = forcePathStyle,
-        ),
-        subtitleApiKey = subtitleApiKey.ifEmpty { null },
-        tmdbAccessToken = tmdbAccessToken.ifEmpty { null },
-    )
+    fun draft() = AppCloudConfig(im = IMConfig(serverUrl))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,7 +89,6 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
     var formEpoch by remember { mutableIntStateOf(0) }
     var status by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
-    var showExportRisk by remember { mutableStateOf(false) }
     var shareUrl by remember { mutableStateOf<String?>(null) }
     var showPaste by remember { mutableStateOf(false) }
     var showScanner by remember { mutableStateOf(false) }
@@ -185,7 +133,7 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
             val stored = app.graph.saveConfig(form.draft())
             app.config = stored
             shareUrl = app.graph.configLinkCodec.shareUrl(stored)
-            status = t("Configuration link generated (contains secrets — do not share publicly)")
+            status = t("Configuration link generated")
         } catch (e: Exception) {
             status = L10n.message(e, AppError.InvalidConfigQR)
         }
@@ -197,9 +145,7 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
         if (ConfigQRCodec.needsServerUrl(incoming)) {
             val server = form.serverUrl.trim()
             if (server.isEmpty()) {
-                form.apply(incoming)
-                formEpoch++
-                status = t("Imported storage settings. Enter the IM server address, then Save")
+                status = t("This link has no IM server address. Enter it, then Save")
                 return@launch
             }
             incoming = incoming.copy(im = IMConfig(server))
@@ -208,6 +154,7 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
             val saved = app.graph.saveConfig(incoming)
             form.apply(saved)
             formEpoch++
+            if (ConfigQRCodec.isLegacy(config)) app.showToast(t("Storage settings in this link were ignored — the media library is now configured on the server"))
             app.applyImportedConfig(saved)
         } catch (e: Exception) {
             status = L10n.message(e, AppError.InvalidConfigQR)
@@ -239,20 +186,20 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                SectionCard(footer = t("Where to get the IM server address, storage keys, Endpoint, and how to use Paircast")) {
+                SectionCard(footer = t("Where to get the IM server address and how to use Paircast")) {
                     ActionRow(Icons.Filled.MenuBook, t("Configuration Guide"), null) {
                         val lang = if (L10n.useChinese) "zh-Hans" else "en-US"
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://paircast.chaisz.com/$lang/guide/")))
                     }
                 }
 
-                SectionCard(title = t("Share & Import"), footer = t("Links contain secrets — share only with trusted friends")) {
+                SectionCard(title = t("Share & Import"), footer = t("Links contain only the IM server address; friends still sign in with their own account")) {
                     ActionRow(Icons.Filled.ContentPaste, t("Paste to Import"), t("Paste a paircast://config?args=… link")) { showPaste = true }
                     HorizontalDivider()
                     ActionRow(Icons.Filled.QrCodeScanner, t("Scan QR Code"), null) { showScanner = true }
                     HorizontalDivider()
                     ActionRow(Icons.Filled.Share, t("Share Configuration"), t("Generate an encrypted link to copy or share with friends")) {
-                        showExportRisk = true
+                        confirmExport()
                     }
                 }
 
@@ -260,30 +207,9 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
                     PaircastField(t("Address"), form.serverUrl, { form.serverUrl = it }, keyboardType = KeyboardType.Uri, placeholder = "im.example.com")
                 }
 
-                SectionCard(title = t("Object Storage"), footer = t(storageFooter(form.provider))) {
-                    ProviderPicker(form.provider, form::selectProvider)
-                    PaircastField("AccessKey", form.accessKey, { form.accessKey = it }, secure = true)
-                    PaircastField("SecretKey", form.secretKey, { form.secretKey = it }, secure = true)
-                    PaircastField("Bucket", form.bucket, { form.bucket = it })
-                    PaircastField(
-                        t("Endpoint ({{example}})", "example" to form.provider.endpointPlaceholder),
-                        form.endpoint, { form.endpoint = it }, keyboardType = KeyboardType.Uri,
-                    )
-                    PaircastField(
-                        t("Region (optional, {{example}})", "example" to form.provider.regionPlaceholder),
-                        form.region, { form.region = it },
-                    )
-                    PaircastField(t("Prefix (optional)"), form.prefix, { form.prefix = it })
-                    SwitchRow("HTTPS", form.useSSL) { form.useSSL = it }
-                    SwitchRow("Path-Style URL", form.forcePathStyle) { form.forcePathStyle = it }
-                }
-
-                SectionCard(
-                    title = t("Extensions"),
-                    footer = t("With your TMDB token, Paircast uses filenames to fetch localized titles, posters, backdrops, and overviews. This product uses the TMDB API but is not endorsed or certified by TMDB."),
-                ) {
-                    PaircastField("OpenSubtitles API Key", form.subtitleApiKey, { form.subtitleApiKey = it }, secure = true)
-                    PaircastField("TMDB API Read Access Token", form.tmdbAccessToken, { form.tmdbAccessToken = it }, secure = true)
+                SectionCard(footer = t("Videos, subtitles, posters and stickers come from the media library your GO-IM admin configures on the server.")) {
+                    Text(t("Media Library"), fontWeight = FontWeight.SemiBold)
+                    Text(t("Managed by the server"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 status?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -292,15 +218,6 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
         }
     }
 
-    if (showExportRisk) {
-        AlertDialog(
-            onDismissRequest = { showExportRisk = false },
-            title = { Text(t("Sharing includes secrets — do not post publicly")) },
-            text = { Text(t("The link includes the IM server address and object storage credentials. Share only with trusted friends.")) },
-            confirmButton = { TextButton(onClick = { showExportRisk = false; confirmExport() }) { Text(t("Continue Sharing")) } },
-            dismissButton = { TextButton(onClick = { showExportRisk = false }) { Text(t("Cancel")) } },
-        )
-    }
     shareUrl?.let { url -> ShareConfigDialog(url) { shareUrl = null } }
     if (showPaste) PasteImportDialog(onCancel = { showPaste = false }, onContinue = ::prepareImport)
     if (showScanner) {
@@ -314,13 +231,6 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
     }
 }
 
-private fun storageFooter(provider: ObjectStorageProvider): String = when (provider) {
-    ObjectStorageProvider.QINIU -> "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint."
-    ObjectStorageProvider.ALIYUN_OSS -> "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
-    ObjectStorageProvider.TENCENT_COS -> "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint."
-    ObjectStorageProvider.MINIO -> "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1."
-}
-
 @Composable
 private fun ActionRow(icon: ImageVector, title: String, subtitle: String?, onClick: () -> Unit) {
     Row(
@@ -332,31 +242,6 @@ private fun ActionRow(icon: ImageVector, title: String, subtitle: String?, onCli
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.SemiBold)
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
-    }
-}
-
-@Composable
-private fun SwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
-}
-
-@Composable
-private fun ProviderPicker(selected: ObjectStorageProvider, onSelect: (ObjectStorageProvider) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Row(
-        Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(t("Provider"), Modifier.weight(1f))
-        Text(t(selected.displayName), color = MaterialTheme.colorScheme.primary)
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            ObjectStorageProvider.entries.forEach { provider ->
-                DropdownMenuItem(text = { Text(t(provider.displayName)) }, onClick = { open = false; onSelect(provider) })
-            }
         }
     }
 }
@@ -377,11 +262,6 @@ private fun ShareConfigDialog(url: String, onDismiss: () -> Unit) {
                 )
                 qr?.let { Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.size(200.dp)) }
                 Text(url, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, maxLines = 4)
-                Text(
-                    t("Link contains secrets — do not post to public groups or social media"),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
             }
         },
         confirmButton = {
@@ -432,20 +312,19 @@ private fun PasteImportDialog(onCancel: () -> Unit, onContinue: (String) -> Unit
 
 @Composable
 private fun ImportConfirmDialog(config: AppCloudConfig, onCancel: () -> Unit, onConfirm: () -> Unit) {
-    val rows = buildList {
-        add(t("IM Server") to if (config.im.isComplete) config.im.maskedSummary else t("Not included — enter it in the form"))
-        add(t("Provider") to t(config.storage.provider.displayName))
-        add("AccessKey" to ConfigQRCodec.maskedAccessKey(config.storage.accessKey))
-        add("Bucket" to config.storage.bucket)
-        add("Endpoint" to ConfigQRCodec.truncate(config.storage.endpoint, 22))
-        add(t("Region") to (config.storage.region ?: config.storage.signingRegion))
-    }
+    val rows = listOf(t("IM Server") to if (config.im.isComplete) config.im.maskedSummary else t("Not included — enter it in the form"))
     AlertDialog(
         onDismissRequest = onCancel,
         title = { Text(t("Confirm Import")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(t("This will overwrite your local cloud service configuration"), color = MaterialTheme.colorScheme.error)
+                if (ConfigQRCodec.isLegacy(config)) {
+                    Text(
+                        t("This link is from an older version. Its storage settings will be ignored — the media library is now configured on the server"),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 rows.forEach { (label, value) ->
                     Row(Modifier.fillMaxWidth()) {
                         Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)

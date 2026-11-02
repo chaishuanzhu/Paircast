@@ -25,6 +25,8 @@ data class StickerItem(
     val fileName: String,
     val width: Int = 240,
     val height: Int = 240,
+    /** Server-signed download URL (valid for days; not sent over the wire). */
+    val url: String? = null,
 ) {
     val id: String get() = stickerId
 
@@ -47,6 +49,7 @@ data class StickerPack(
     val version: Int,
     val coverFileName: String? = null,
     val stickers: List<StickerItem> = emptyList(),
+    val coverUrl: String? = null,
 ) {
     val id: String get() = packId
 }
@@ -93,6 +96,7 @@ data class StickerPackDTO(
     val name: String,
     val version: Int? = null,
     val cover: String? = null,
+    @SerialName("cover_url") val coverUrl: String? = null,
     val stickers: List<StickerItemDTO>,
 ) {
     fun asPack() = StickerPack(
@@ -100,8 +104,16 @@ data class StickerPackDTO(
         name = name,
         version = version ?: 1,
         coverFileName = cover,
+        coverUrl = coverUrl,
         stickers = stickers.map {
-            StickerItem(packId = packId, stickerId = it.id, fileName = it.file, width = it.w ?: 240, height = it.h ?: 240)
+            StickerItem(
+                packId = packId,
+                stickerId = it.id,
+                fileName = it.file,
+                width = it.w ?: 240,
+                height = it.h ?: 240,
+                url = it.url,
+            )
         },
     )
 }
@@ -112,4 +124,6 @@ data class StickerItemDTO(
     val file: String,
     val w: Int? = null,
     val h: Int? = null,
+    /** Added by the server (`/media/stickers/pack`). */
+    val url: String? = null,
 )

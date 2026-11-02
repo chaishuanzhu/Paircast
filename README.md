@@ -38,7 +38,7 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 
 ## 双端冒烟
 
-管理员在 GO-IM 建两个账号（`/admin/users/create`），两台设备配置同一 GO-IM 地址与对象存储：
+管理员在 GO-IM 建两个账号（`/admin/users/create`），并在 GO-IM `gateway.media.sources` 配好片源（见 GO-IM `deploy/README.md`「媒体库（Paircast）」）；两台设备填同一 GO-IM 地址：
 
 1. A 登录 → 开片建房 → 分享邀请链接  
 2. B 登录 → 打开邀请 → 加入成功  
@@ -49,7 +49,7 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 ## 安全说明
 
 - 账号密码由 GO-IM 校验；会话 token 存 Keychain / EncryptedSharedPreferences
-- 配置只含 GO-IM 地址与对象存储凭证；分享链接 `paircast://config?args=…` 含加密后的存储密钥，勿公开传播
+- 客户端配置只含 GO-IM 地址；对象存储 / TMDB / OpenSubtitles 凭证只在 GO-IM 服务端（环境变量注入）。分享链接 `paircast://config?args=…` 只含服务器地址
 
 ## 文档
 

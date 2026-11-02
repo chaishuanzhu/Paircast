@@ -84,52 +84,18 @@ public final class UserDefaultsKeyValueStore: KeyValueStore, @unchecked Sendable
     }
 }
 
-/// Imports 1.x Keychain storage settings (Tencent IM era) once; the IM server address stays empty.
+/// Purges 1.x Keychain storage settings (Tencent IM era): the media library is configured on the
+/// server now, so nothing from them is migrated.
 enum LegacyConfigMigration {
     private static let service = "com.chaisz.config"
     private static let account = "cloud-config"
     private static let sessionService = "com.chaisz.session"
     private static let sessionAccount = "user-id"
 
-    private struct LegacyDTO: Decodable {
-        var storageProvider: String
-        var storageAccessKey: String
-        var storageSecretKey: String
-        var storageBucket: String
-        var storageEndpoint: String
-        var storageRegion: String?
-        var storagePrefix: String?
-        var storageUseSSL: Bool
-        var storageForcePathStyle: Bool
-        var subtitleApiKey: String?
-        var tmdbAccessToken: String?
-    }
-
     static func migrateIfNeeded(into configGateway: ConfigGateway) async {
-        guard (try? await configGateway.load()) == nil, let data = readLegacy() else { return }
-        defer { deleteLegacy() }
-        guard let dto = try? JSONDecoder().decode(LegacyDTO.self, from: data) else { return }
-        let provider = ObjectStorageProvider.allCases.first { $0.rawValue == dto.storageProvider } ?? .qiniu
-        let config = AppCloudConfig(
-            im: IMConfig(serverUrl: ""),
-            storage: ObjectStorageConfig(
-                provider: provider,
-                accessKey: dto.storageAccessKey,
-                secretKey: dto.storageSecretKey,
-                bucket: dto.storageBucket,
-                endpoint: dto.storageEndpoint,
-                region: dto.storageRegion,
-                prefix: dto.storagePrefix,
-                useSSL: dto.storageUseSSL,
-                forcePathStyle: dto.storageForcePathStyle
-            ),
-            subtitleApiKey: dto.subtitleApiKey,
-            tmdbAccessToken: dto.tmdbAccessToken,
-            updatedAtMs: Int64(Date().timeIntervalSince1970 * 1000),
-            configVersion: AppCloudConfig.companion.CURRENT_VERSION
-        )
-        try? await configGateway.save(config: config)
-        PaircastLog.app.info("migrated 1.x storage config; IM server address required")
+        guard readLegacy() != nil else { return }
+        deleteLegacy()
+        PaircastLog.app.info("purged 1.x storage config")
     }
 
     private static func readLegacy() -> Data? {

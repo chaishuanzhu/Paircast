@@ -49,7 +49,7 @@ struct SubtitlePanelView: View {
                         }
                     }
 
-                    let sidecars = viewModel.subtitleTracks.filter { $0.source == .oss }
+                    let sidecars = viewModel.subtitleTracks.filter { $0.source == .library }
                     if !sidecars.isEmpty {
                         sectionLabel("Library sidecars")
                         groupCard {

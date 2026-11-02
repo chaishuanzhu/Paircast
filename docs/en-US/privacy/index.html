@@ -15,15 +15,15 @@
 <body>
   <p class="lang"><a href="./">English</a><a href="../../zh-Hans/privacy/">简体中文</a></p>
   <h1>Paircast Privacy Policy</h1>
-  <p>Effective date: 2026-11-02. Paircast is an invite-only private cloud sync player. It does not provide a public catalog and does not sell your data.</p>
+  <p>Effective date: 2026-11-02 (updated for version 2.1). Paircast is an invite-only private cloud sync player. It does not provide a public catalog and does not sell your data.</p>
 
   <h2>Information we process</h2>
   <ul>
     <li><strong>Account and nickname</strong>: The account and password you enter are sent only to the self-hosted GO-IM server you configured, to sign you in. Your nickname is shown to members of rooms you join.</li>
     <li><strong>Avatar</strong>: If you choose a photo, it is compressed on-device and uploaded to that GO-IM server, which serves it to room members.</li>
     <li><strong>Chat messages</strong>: Messages are sent only to invite-only rooms you join and are delivered through your GO-IM server. Playback-sync signals are relayed in real time and are not stored.</li>
-    <li><strong>Credentials</strong>: Object-storage keys and your GO-IM session token stay in on-device secure storage (iOS Keychain / Android encrypted storage) so the app can access <b>your own</b> services. Shared configuration links are wrapped with AES-GCM instead of pasting secrets in plaintext.</li>
-    <li><strong>Optional third parties</strong>: If you enter an OpenSubtitles API key or TMDB API Read Access Token, those queries go to the corresponding services.</li>
+    <li><strong>Credentials</strong>: The app stores only the GO-IM server address and your session token, in on-device secure storage (iOS Keychain / Android encrypted storage). Storage keys and third-party tokens are kept on the GO-IM server, never on your device. Shared configuration links contain only the server address.</li>
+    <li><strong>Media library</strong>: The movie list, playback links, subtitles, and stickers come from your GO-IM server. Video streams load directly from the short-lived links it issues. If the server operator enables OpenSubtitles or TMDB, your subtitle searches and the movie titles in the library are sent to those services by the server.</li>
   </ul>
 
   <h2>What we do not do</h2>
@@ -33,7 +33,7 @@
   </ul>
 
   <h2>Third parties</h2>
-  <p>The self-hosted GO-IM server operated by whoever invited you, your S3-compatible object storage, and any OpenSubtitles or TMDB services you configure yourself. Their processing is governed by their own terms. This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+  <p>The self-hosted GO-IM server operated by whoever invited you, together with the S3-compatible object storage, OpenSubtitles, and TMDB services that the server operator configures. Their processing is governed by their own terms. This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
 
   <h2>Deletion</h2>
   <p>In the app, open Me → Delete Account to clear your avatar, on-device configuration, and session. GO-IM accounts are created by the server operator; ask them to disable or remove the account itself.</p>

@@ -1,6 +1,6 @@
 # Paircast 技术说明
 
-对应 PRD v2.0 与本地设计预览 `docs/design-preview/index.html`。
+对应 PRD v2.1 与本地设计预览 `docs/design-preview/index.html`。
 
 ## 架构
 
@@ -15,7 +15,7 @@ Android: androidApp (Compose + libVLC + Coil) ───────────�
 | 模块 | 内容 |
 |------|------|
 | `shared/core` | 纯 Kotlin：实体、规则（播控/转让/配置码/校验）、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
-| `shared/data` | GO-IM（Wire protobuf over WebSocket + Ktor REST）、S3 兼容存储（SigV4）、房间 JSON、片库/元数据（NFO + TMDB）、字幕（OpenSubtitles + GBK 转码）、贴纸、安全存储接口 |
+| `shared/data` | GO-IM（Wire protobuf over WebSocket + Ktor REST）、服务端片库 / 房间 / 字幕 / 贴纸客户端（`ServerMediaApi` + `Server*Gateway`）、字幕 GBK 转码、安全存储接口 |
 | `shared/umbrella` | `PaircastGraph` 组装依赖（两端共用）；iOS 由 Xcode 构建阶段 `embedAndSignAppleFrameworkForXcode` 编译 `PaircastShared` 框架（SKIE：`suspend` → `async throws`，`Flow` → `AsyncSequence`） |
 | `iosApp/Presentation` | SwiftUI 场景、`VLCPlayerController`（实现 `PlayerPort`）、Keychain / UserDefaults 平台存储 |
 | `iosApp/App` | iOS 入口、Deep Link；`iosApp/Project.swift` 为唯一 Tuist 工程清单（Paircast / Presentation 两个 target） |
@@ -41,7 +41,7 @@ make android      # Debug APK
 - 登录：`POST /login`（账号 = UID 或邮箱 + 密码）→ `token` + `must_change_password`；为真时强制 `POST /change-password` 后才进片库
 - 会话（serverUrl、uid、token）存安全存储：iOS Keychain（AfterFirstUnlockThisDeviceOnly），Android EncryptedSharedPreferences
 - token 失效 / 被踢（WebSocket `KICK`）→ `SessionEvent` → 回登录页
-- 配置不再包含任何 IM 密钥，只有 GO-IM 服务器地址
+- 配置只有 GO-IM 服务器地址：不含 IM 密钥，也不含对象存储 / TMDB / OpenSubtitles 凭证（v2.1 起全部在服务端）
 
 ## 配置分享（加密深链）
 
@@ -52,26 +52,14 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 - `args`：AES-GCM sealed box（nonce ‖ ciphertext ‖ tag）的 base64url（无 padding），UTF-8 明文 ≤ 2KB
 - 密钥：App 内嵌派生（`SHA256("Tandem.iOS.ConfigShare.v1")`），仅作传输混淆，**不能**替代对接收方的信任
 - 导入：打开深链、粘贴完整 URL 或扫码；非法/篡改载荷不覆盖现有配置；导入前脱敏确认
-- **v4** 载荷：`im.serverUrl`。导入 v1–v3（腾讯云 IM 时代）链接时丢弃 `sdkAppId` / `secretKey`，保留存储与扩展配置，并提示补填服务器地址
-- 1.x 升级：iOS 首次启动把旧 Keychain 配置迁移为 v4（服务器地址留空）
+- **v5** 载荷只有 `im.serverUrl`。v4（含 `storage` / 扩展密钥）及更早链接仍可解析：**丢弃存储与扩展密钥**，导入确认页与结果提示「片库现由服务器统一配置」；v1–v3 无服务器地址时提示补填
+- 本机安全存储（键 `paircast.cloud-config.v4` 保持不变）只存 `serverUrl` / `updatedAtMs` / `configVersion`；读到旧版遗留的 `accessKey` / `secretKey` / `subtitleApiKey` / `tmdbAccessToken` 时立即重写清除。iOS 1.x Keychain 旧配置直接删除
 
 ```json
 {
-  "v": 4,
+  "v": 5,
   "type": "paircast-config",
-  "im": { "serverUrl": "https://im.example.com" },
-  "storage": {
-    "provider": "qiniu",
-    "accessKey": "...",
-    "secretKey": "...",
-    "bucket": "movies",
-    "endpoint": "s3.cn-south-1.qiniucs.com",
-    "prefix": "films/",
-    "useSSL": true,
-    "forcePathStyle": true
-  },
-  "subtitleApiKey": null,
-  "tmdbAccessToken": null
+  "im": { "serverUrl": "https://im.example.com" }
 }
 ```
 
@@ -80,7 +68,7 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 - WebSocket：`ws(s)://host/ws?token=&device_id=&platform=ios|android`，每帧一个 protobuf `im.Message`
 - 心跳 25s（`CmdHeartbeat=6`），连续 3 次无响应重连；指数退避重连；`CmdAck=2` 匹配本机发出的消息
 - 回前台 `PaircastGraph.onAppForeground()`：已连接则立即探活（5s 无 pong 断开重连），退避等待中则立即重连
-- 群生命周期：房主建房 `POST /group/create` → `groupId`（`g_…`）写入房间 JSON；成员读 JSON 后 `POST /group/join`；离开 `POST /group/leave`（最后一人离开服务端自动删群）
+- 群生命周期：由服务端房间接口托管——`POST /room/create` 同时建群（`groupId` = `g_…`），`/room/join` 入群，`/room/leave` 退群（最后一人离开结束房间并删群）
 - 聊天：`CmdChat=1`，`chat_type=2`（群）；文本 `msg_type=1`（系统消息前缀 `[sys]`）；贴纸 `msg_type=6` + JSON `StickerRef`；本人消息收到 Ack 后本地回显
 - 播控：`CmdGroupSignal=25` 瞬时群信令（服务端校验成员身份、跨网关转发，不落库、不计未读、不回显给发送者），`content` 为下方信令 JSON
 
@@ -90,13 +78,13 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 {
   "action": "play|pause|seek|heartbeat|movie_change|host_transfer|subtitle_change",
   "positionMs": 0,
-  "movieId": "films/Inception.2010.mp4",
+  "movieId": "oss:films/Inception.2010.mp4",
   "hostUserId": "10001",
   "senderId": "10001",
   "clientTs": 1710000000000,
   "playbackRate": 1.0,
   "seq": 12,
-  "subtitleObjectKey": "films/Inception.2010.srt",
+  "subtitleObjectKey": "blob:paircast/subtitles/<roomId>/<id>.srt",
   "subtitleLabel": "简体中文"
 }
 ```
@@ -106,16 +94,17 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 - 仅当前 `hostUserId` 的 play/pause/seek/heartbeat/movie_change/subtitle_change 生效
 - `seq` 单调；旧序丢弃
 - 房主播放中约每 5s 发 heartbeat；成员用**本机播放器实时进度**与房主 `positionMs` 比较，> 1200ms 才 Seek
-- 房主离开按 joinOrder 转让（`host_transfer`）；最后一人结束房间
+- 房主离开：先发 `host_transfer`（目标 = joinOrder 下一位），再 `POST /room/leave`（`transfer_seq`），服务端按加入顺序落库转让；最后一人离开结束房间
+- `subtitleObjectKey` 字段名沿用旧版，内容是服务端字幕 ref（见「字幕」）
 - **前后台**：`WatchSession.onBackground()` 本机暂停（房主播放中发 `pause`），后台期间不执行远端播控；`onForeground()` 离开 ≥15s 或播放器报错则用新 URL 重新 prepare 并 seek 回原进度、恢复当前字幕。`PlayerPort.enterBackground/enterForeground` 由平台处理渲染面（Android 后台 `detachViews` + 关视频轨，回前台重新挂载）
-- **字幕共享**：房主下载外挂/在线字幕后上传到影片同目录同名文件，发 `subtitle_change`；成员按 key 拉取加载。成员自选字幕仅本机；时间轴偏移始终本机；内嵌轨不同步
+- **字幕共享**：房主选片库外挂字幕时直接广播其 ref（`src:…`）；在线 / 其他字幕经 `POST /media/subtitles/share` 上传到 GO-IM 文件存储得到 `blob:…` ref，服务端同时写入房间 `subtitle_ref` 供后加入者加载；随后发 `subtitle_change`。成员按 ref 调 `GET /media/subtitle` 拉取。成员自选字幕仅本机；时间轴偏移始终本机；内嵌轨不同步
 
 ## 头像与资料
 
 - 上传：`POST /upload`（GO-IM 文件存储）→ `file_id`，再 `POST /user/profile` 写 `avatar_file_id`；公开地址 `/avatar/{id}`
 - 观影页成员条：`/user/profiles` 批量拉取（带短缓存）；头像外圈环形进度反映播放进度
 - 播放器控件：5s 无操作自动隐藏；全屏自动横屏；房主拖动进度条发 `seek`
-- 字幕：内嵌（VLC 轨）/ 存储同目录外挂（srt/vtt/ass）/ OpenSubtitles 在线搜索；本机偏移 ±30s（按 movieId 记忆）
+- 字幕：内嵌（VLC 轨）/ 片库外挂（服务端匹配同目录 srt/vtt/ass）/ 在线搜索（服务端代理 OpenSubtitles）；本机偏移 ±30s（按 movieId 记忆）
 
 ## Deep Link
 
@@ -125,24 +114,34 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 | `https://paircast.chaisz.com/invite/?roomId=…` | 同上（邀请落地页；Android 声明了 intent-filter） |
 | `paircast://config?args={encrypted}` | 打开服务配置并弹出脱敏确认导入 |
 
-房间状态写入对象存储 `_paircast/rooms/{roomId}.json`（含 `groupId`），约 2s 轮询。
+## 服务端片库与房间（GO-IM，v2.1）
 
-## 元数据
+客户端只连 GO-IM。片源、TMDB、OpenSubtitles 凭证都在 GO-IM 配置文件的 `media` 段（密钥走环境变量 `GOIM_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`GOIM_TMDB_ACCESS_TOKEN`、`GOIM_OPENSUBTITLES_API_KEY`，见 GO-IM `deploy/README.md`）。所有接口都要 `uid` + `token`；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
 
-1. **存储 sidecar 优先**：同目录 `{base}.nfo` + `{base}-poster.jpg` + `{base}-fanart.jpg` 存在则直接读取，不再刮削
-2. 否则：内存缓存 → TMDB（需 `tmdbAccessToken`）→ 文件名 `{Title}.{Year}` / `{Title} (Year)`
-3. 刮削成功后写回存储（NFO + 海报；无背景图时用海报兼作 fanart）
+| 接口 | 说明 |
+|------|------|
+| `GET /media/sources` | 片源列表（`id` / `name` / `type` / `capabilities`），以及 `online_subtitles` / `stickers` 开关 |
+| `GET /media/items?source=&cursor=&refresh=` | 影片分页（每页 500，`next_cursor` 翻页），服务端缓存列表 |
+| `GET /media/item?id=` | 单片元数据（刮削并缓存在 `media_metadata` 表） |
+| `GET /media/play?id=` | 播放直链 `{url, expires_at, format}`（S3 预签名，两端 VLC 直接拉流） |
+| `GET /media/subtitles?id=&room_id=` | 外挂字幕 + 房主共享字幕 ref 列表 |
+| `GET /media/subtitle?ref=` | 字幕原始字节，`X-Subtitle-Format` 头给出扩展名；客户端转 UTF-8 后加载 |
+| `GET /media/subtitles/search?q=&year=` | 在线字幕搜索（`os:<fileId>` ref） |
+| `POST /media/subtitles/fetch` | `ref=os:…` → 下载到服务端存储，返回可读 ref |
+| `POST /media/subtitles/share` | multipart：`room_id` / `label` / `file`；仅房主；返回 `blob:…` ref 并写入房间 |
+| `GET /media/stickers`、`/media/stickers/pack?id=` | 贴纸目录 / 包清单（每张注入签名 `url`，7 天有效） |
+| `GET /room?room_id=`、`POST /room/create`、`/room/join`、`/room/leave`、`/room/update` | 观影房间（MySQL `watch_rooms`；`revision` 单调） |
 
-## 片库（S3 兼容）
-
-- **Endpoint**（必填）为 S3 API 主机；列表 / 播放 / 海报 / 房间 JSON 全部 SigV4 预签名，不支持自定义域名
-- 列表：`ListObjectsV2`，按 `NextContinuationToken` 翻页（每页 ≤1000，最多 50 页）
-- 播放：预签名 GET（默认 6h），两端 VLC 直接拉流解码；仅 `.mp4` / `.m4v` / `.mkv`
+- **影片 ID**：`<sourceId>:<nativeId>`（如 `oss:films/A.mkv`），为后续 openlist / Emby / Jellyfin 片源预留；无前缀的旧 ID 归入默认片源
+- **字幕 ref**：`src:<sourceId>:<key>`（片源外挂）、`blob:paircast/subtitles/…`（共享 / 在线下载后存入 GO-IM 文件存储）、`os:<fileId>`（在线搜索结果）
+- **房间**：服务端维护成员、`joinOrder`、房主、`movieId`、`subtitle_ref`、两个 seq 与 `revision`。仅房主可改片 / 转让 / 结束（传未变化的值不算越权）；换片清空共享字幕。每次变更通过 `CmdGroupSignal` 推送 `{"type":"room_updated","group_id":…,"room":{…}}`（不回给操作者）；客户端另以 15s 轮询 `GET /room` 兜底，只接受更大的 `revision`。播控信令解析会忽略这类 JSON
+- **元数据**：服务端刮削——同目录 `{base}.nfo` / `-poster` / `-fanart` 优先 → TMDB → 文件名；结果（含无结果）缓存，无海报的结果 1 小时后重试；不再写回片源目录。客户端只对无海报的影片调用 `/media/item`
+- 对象存储里不再需要 `_paircast/` 目录（房间改存 MySQL，共享字幕存 GO-IM 文件存储）
 
 ## 测试
 
 ```bash
-make shared-test   # core 规则/用例/WatchSession + data（SigV4、NFO、DTO、GO-IM 协议）
+make shared-test   # core 规则/用例/WatchSession + data（服务端 DTO / 错误映射 / room_updated、GO-IM 协议、配置清理）
 make test          # + iOS（Paircast scheme：PaircastTests + PresentationTests）
 make android-test
 ```

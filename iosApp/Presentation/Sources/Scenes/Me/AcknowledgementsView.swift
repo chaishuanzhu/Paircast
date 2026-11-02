@@ -19,7 +19,7 @@ public struct AcknowledgementsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Subtitles & Metadata") {
-                Text("Online subtitle search uses the OpenSubtitles API (requires your own key). Movie metadata uses TMDB (requires your own token). This product uses the TMDB API but is not endorsed or certified by TMDB.")
+                Text("Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your GO-IM server. This product uses the TMDB API but is not endorsed or certified by TMDB.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

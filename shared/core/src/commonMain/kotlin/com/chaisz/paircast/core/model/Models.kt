@@ -35,10 +35,13 @@ data class WatchRoom(
     val status: RoomStatus = RoomStatus.ACTIVE,
     val lastAppliedSeq: Long = 0,
     val hostTransferSeq: Long = 0,
-    /** Monotonic object-storage revision used to reject stale reads after a write. */
+    /** Server revision; bumps on every change, used to drop stale pushes / polls. */
     val revision: Long = 0,
     /** GO-IM group (`g_…`) carrying chat + playback signals for this room. */
     val groupId: String? = null,
+    /** Host-shared subtitle ref stored on the room (late joiners load it). */
+    val subtitleRef: String? = null,
+    val subtitleLabel: String? = null,
 )
 
 enum class ChatMessageKind { USER, SYSTEM, STICKER }
@@ -71,9 +74,13 @@ enum class VideoFormat(val rawValue: String) {
     }
 }
 
+/** A video source configured on the server (S3-compatible storage today; Emby / Jellyfin later). */
+data class MediaSource(val id: String, val name: String, val type: String)
+
 data class Movie(
+    /** Server media item ID: `<sourceId>:<nativeId>` (e.g. `oss:films/Inception.2010.mkv`). */
     val id: String,
-    val objectKey: String,
+    val sourceId: String? = null,
     val title: String,
     val year: String? = null,
     val overview: String? = null,
@@ -81,7 +88,20 @@ data class Movie(
     val backdropUrl: String? = null,
     val format: VideoFormat,
     val playUrl: String? = null,
-)
+) {
+    companion object {
+        /** Placeholder for a room movie that is not in the loaded catalog yet. */
+        fun placeholder(id: String): Movie {
+            val native = id.substringAfter(':', id)
+            return Movie(
+                id = id,
+                sourceId = id.substringBefore(':', "").ifEmpty { null },
+                title = Paths.deletingPathExtension(Paths.lastPathComponent(native)).ifEmpty { id },
+                format = VideoFormat.fromFilename(native) ?: VideoFormat.MP4,
+            )
+        }
+    }
+}
 
 @Serializable
 enum class PlaybackAction {
@@ -93,8 +113,8 @@ enum class PlaybackAction {
     @SerialName("host_transfer") HOST_TRANSFER,
 
     /**
-     * Host uploaded a subtitle to object storage; members should load `subtitleObjectKey`.
-     * Empty / missing key means host turned shared subtitles off.
+     * Host shared a subtitle through the server; members load the ref in `subtitleObjectKey`.
+     * Empty / missing ref means host turned shared subtitles off.
      */
     @SerialName("subtitle_change") SUBTITLE_CHANGE,
 }
@@ -109,6 +129,7 @@ data class PlaybackSyncSignal(
     val clientTs: Long = 0,
     val playbackRate: Double = 1.0,
     val seq: Long,
+    /** Server subtitle ref (`blob:…` / `src:…`); the JSON name predates the server-side library. */
     val subtitleObjectKey: String? = null,
     val subtitleLabel: String? = null,
 )
@@ -120,7 +141,8 @@ data class PlaybackState(
     val lastSeq: Long = 0,
 )
 
-enum class SubtitleSource { EMBEDDED, OSS, ONLINE, OFF }
+/** [LIBRARY]: sidecar or host-shared subtitle served by the media library. */
+enum class SubtitleSource { EMBEDDED, LIBRARY, ONLINE, OFF }
 
 data class SubtitleTrack(
     val id: String,

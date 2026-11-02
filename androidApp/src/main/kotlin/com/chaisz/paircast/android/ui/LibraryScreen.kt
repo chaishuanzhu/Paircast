@@ -9,6 +9,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,6 +67,7 @@ import com.chaisz.paircast.android.app.AppState
 import com.chaisz.paircast.android.app.L10n
 import com.chaisz.paircast.android.app.t
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.rules.ProfileRules
 import kotlinx.coroutines.CancellationException
@@ -83,11 +86,14 @@ fun LibraryScreen(app: AppState) {
     var error by remember { mutableStateOf<String?>(null) }
     var creatingFor by remember { mutableStateOf<String?>(null) }
     var showMe by remember { mutableStateOf(false) }
+    var sources by remember { mutableStateOf<List<MediaSource>>(emptyList()) }
+    var sourceId by remember { mutableStateOf<String?>(null) }
 
     suspend fun load() {
         error = null
         try {
-            val listed = app.graph.listMovies(enrichMetadata = false)
+            if (sources.isEmpty()) sources = runCatching { app.graph.listMovies.sources() }.getOrDefault(emptyList())
+            val listed = app.graph.listMovies(enrichMetadata = false, sourceId = sourceId)
             movies = listed
             loading = false
             val config = app.config ?: return
@@ -101,7 +107,7 @@ fun LibraryScreen(app: AppState) {
         }
     }
 
-    LaunchedEffect(app.config) { load() }
+    LaunchedEffect(app.config, sourceId) { load() }
 
     fun open(movie: Movie) {
         val user = app.currentUser ?: return
@@ -134,6 +140,21 @@ fun LibraryScreen(app: AppState) {
             )
         },
     ) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding)) {
+        if (sources.size > 1) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                sources.forEach { source ->
+                    FilterChip(
+                        selected = (sourceId ?: sources.first().id) == source.id,
+                        onClick = { if (sourceId != source.id) { loading = true; sourceId = source.id } },
+                        label = { Text(source.name) },
+                    )
+                }
+            }
+        }
         PullToRefreshBox(
             isRefreshing = refreshing,
             onRefresh = {
@@ -143,12 +164,12 @@ fun LibraryScreen(app: AppState) {
                     refreshing = false
                 }
             },
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize(),
         ) {
             when {
                 loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 error != null && movies.isEmpty() -> EmptyState(error!!, t("Retry")) { scope.launch { loading = true; load() } }
-                movies.isEmpty() -> EmptyState(t("No videos yet. Upload MP4/MKV to the movies/ folder in your bucket"), null, null)
+                movies.isEmpty() -> EmptyState(t("No videos yet. Ask your admin to add MP4/MKV files to the server media library"), null, null)
                 else -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(150.dp),
                     contentPadding = PaddingValues(16.dp),
@@ -160,6 +181,7 @@ fun LibraryScreen(app: AppState) {
                     }
                 }
             }
+        }
         }
     }
 

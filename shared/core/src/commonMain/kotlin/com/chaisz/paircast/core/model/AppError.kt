@@ -18,6 +18,8 @@ sealed class AppError(key: String) : Exception(key) {
     data object InvalidConfigQR : AppError("Invalid configuration link. Existing settings were not changed")
     data object ConfigQRTooLarge : AppError("Configuration is too large to share or import")
     data object CatalogUnauthorized : AppError("Library configuration is invalid")
+    data object MediaLibraryUnavailable : AppError("The server has no media library configured. Contact an admin")
+    data object OnlineSubtitlesUnavailable : AppError("Online subtitle search is not enabled on the server")
     data object PlaybackFailed : AppError("Unable to play. Please try again later")
     data object UnsupportedContainer : AppError("This container or codec is not supported on this device")
     data object MovieChangeFailed : AppError("Failed to switch movie")

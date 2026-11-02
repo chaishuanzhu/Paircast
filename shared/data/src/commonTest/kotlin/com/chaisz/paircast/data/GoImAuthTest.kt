@@ -3,7 +3,6 @@ package com.chaisz.paircast.data
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.IMConfig
-import com.chaisz.paircast.core.model.ObjectStorageConfig
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImConnection
@@ -47,10 +46,7 @@ class GoImAuthTest {
         val store = InMemorySecureStore()
         val config = SecureConfigStore(store)
         config.save(
-            AppCloudConfig(
-                im = IMConfig("im.example.com"),
-                storage = ObjectStorageConfig(accessKey = "a", secretKey = "s", bucket = "b", endpoint = "e.com"),
-            ),
+            AppCloudConfig(im = IMConfig("im.example.com")),
         )
         val api = GoImApi(client)
         val scope = CoroutineScope(SupervisorJob())

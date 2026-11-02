@@ -82,7 +82,7 @@ fun SubtitlePanel(session: WatchSession, state: WatchUiState, onDismiss: () -> U
     val selectedId = state.subtitleState.trackId ?: "off"
     val groups = listOf(
         t("Embedded") to state.subtitleTracks.filter { it.source == SubtitleSource.EMBEDDED },
-        t("Library sidecars") to state.subtitleTracks.filter { it.source == SubtitleSource.OSS },
+        t("Library sidecars") to state.subtitleTracks.filter { it.source == SubtitleSource.LIBRARY },
         t("Online Search") to state.subtitleTracks.filter { it.source == SubtitleSource.ONLINE },
     ).filter { it.second.isNotEmpty() }
 
@@ -228,7 +228,7 @@ fun SwitchMovieSheet(state: WatchUiState, onPick: (Movie) -> Unit, onDismiss: ()
                         Text(t("Loading library…"))
                     }
                 state.libraryMovies.isEmpty() -> Text(
-                    t("Make sure your object storage bucket contains mp4/m4v/mkv files"),
+                    t("Ask your admin to add mp4/m4v/mkv files to the server media library"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp),
                 )
                 movies.isEmpty() -> Text(
@@ -328,7 +328,7 @@ private fun saveRecent(context: Context, refs: List<StickerRef>) {
         .apply()
 }
 
-/** Emoji grid + object-storage sticker packs (`stickers/`). */
+/** Emoji grid + server sticker packs. */
 @Composable
 fun EmojiStickerPanel(app: AppState, onEmoji: (String) -> Unit, onSticker: (StickerRef) -> Unit, modifier: Modifier) {
     val context = LocalContext.current
@@ -381,7 +381,7 @@ fun EmojiStickerPanel(app: AppState, onEmoji: (String) -> Unit, onSticker: (Stic
                     Box(Modifier.weight(1f)) {
                         when {
                             summaries.isEmpty() && selectedPack != RECENT_PAGE || failed && recent.isEmpty() ->
-                                PanelMessage(t("Upload sticker packs to your bucket under stickers/"))
+                                PanelMessage(t("No sticker packs on the server yet"))
                             items.isEmpty() -> PanelMessage(
                                 t(if (selectedPack == RECENT_PAGE) "No recent stickers" else "No stickers in this pack"),
                             )

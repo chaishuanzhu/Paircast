@@ -24,7 +24,6 @@ import com.chaisz.paircast.core.model.SubtitleState
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.UiText
 import com.chaisz.paircast.core.model.User
-import com.chaisz.paircast.core.model.VideoFormat
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.PlaybackSyncRules
 import com.chaisz.paircast.core.store.ChatSafetyStore
@@ -148,7 +147,7 @@ class WatchSession(
     private val changeMovie = ChangeMovieUseCase(deps.roomGateway, deps.syncGateway, deps.chatGateway)
     private val leaveRoom = LeaveRoomUseCase(deps.roomGateway, deps.chatGateway, deps.syncGateway)
     private val listTracks = ListSubtitleTracksUseCase(deps.configGateway, deps.subtitleGateway)
-    private val searchSubtitles = SearchOnlineSubtitlesUseCase(deps.configGateway, deps.subtitleGateway)
+    private val searchSubtitles = SearchOnlineSubtitlesUseCase(deps.subtitleGateway)
 
     /**
      * Signal sequence. Clock-seeded so a host that re-opens the room (new session, app relaunch)
@@ -196,7 +195,12 @@ class WatchSession(
                 listen()
                 startHeartbeatIfNeeded()
                 refreshMemberProfiles()
-                refreshSubtitlesInternal(autoSelectChinese = true)
+                if (current.isHost || current.room?.subtitleRef.isNullOrEmpty()) {
+                    refreshSubtitlesInternal(autoSelectChinese = true)
+                } else {
+                    refreshSubtitlesInternal(autoSelectChinese = false)
+                    applyRoomSharedSubtitle()
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -317,10 +321,10 @@ class WatchSession(
     // region Movie + player
 
     private suspend fun loadMovie(id: String) {
-        val movies = runCatching { listMovies(enrichMetadata = false) }.getOrDefault(emptyList())
-        var movie = movies.firstOrNull { it.id == id }
-            ?: Movie(id = id, objectKey = id, title = id, format = VideoFormat.fromFilename(id) ?: VideoFormat.MP4)
-        // Stage cover uses storage/TMDB art — enrich this title before prepare.
+        val sourceId = Movie.placeholder(id).sourceId
+        val movies = runCatching { listMovies(enrichMetadata = false, sourceId = sourceId) }.getOrDefault(emptyList())
+        var movie = movies.firstOrNull { it.id == id } ?: Movie.placeholder(id)
+        // Stage cover uses server-scraped art — enrich this title before prepare.
         var library = movies
         deps.configGateway.load()?.let { config ->
             movie = deps.metadataGateway.enrich(movie, config)
@@ -538,7 +542,8 @@ class WatchSession(
     fun loadLibraryForSwitch() {
         scope.launch {
             _state.update { it.copy(isLoadingLibraryForSwitch = true) }
-            val movies = runCatching { listMovies(enrichMetadata = false) }.getOrDefault(emptyList())
+            val sourceId = current.movie?.sourceId
+            val movies = runCatching { listMovies(enrichMetadata = false, sourceId = sourceId) }.getOrDefault(emptyList())
             if (movies.isNotEmpty()) _state.update { it.copy(libraryMovies = movies) }
             _state.update { it.copy(isLoadingLibraryForSwitch = false) }
             // Enrich posters in background for the switch list thumbs.
@@ -651,18 +656,18 @@ class WatchSession(
         if (player.embeddedSubtitleTracks().isEmpty()) delay(400)
         val embedded = player.embeddedSubtitleTracks()
         val off = listed.filter { it.source == SubtitleSource.OFF }
-        val ossTracks = listed.filter { it.source == SubtitleSource.OSS }
+        val libraryTracks = listed.filter { it.source == SubtitleSource.LIBRARY }
         val selected = current.subtitleState
-        // Keep host-shared / online selections that aren't in the fresh storage sidecar list.
+        // Keep host-shared / online selections that aren't in the fresh sidecar list.
         val preserved = current.subtitleTracks.filter { track ->
             when {
                 track.source == SubtitleSource.OFF || track.source == SubtitleSource.EMBEDDED -> false
-                ossTracks.any { it.id == track.id } -> false
+                libraryTracks.any { it.id == track.id } -> false
                 track.id.startsWith("shared:") -> true
                 else -> track.source == SubtitleSource.ONLINE && track.id == selected.trackId
             }
         }
-        _state.update { it.copy(subtitleTracks = off + embedded + ossTracks + preserved) }
+        _state.update { it.copy(subtitleTracks = off + embedded + libraryTracks + preserved) }
 
         val state = current.subtitleState
         val unselected = state.source == SubtitleSource.OFF || state.trackId == null || state.trackId == "off"
@@ -693,7 +698,7 @@ class WatchSession(
                 // Only clear members if this host previously shared a file-based subtitle.
                 if (current.isHost && lastHostSharedSubtitleKey != null) {
                     lastHostSharedSubtitleKey = null
-                    broadcastHostSubtitleShare(objectKey = null, label = null, movieId = movieId)
+                    broadcastHostSubtitleShare(ref = null, label = null, movieId = movieId)
                 }
                 return
             }
@@ -706,7 +711,7 @@ class WatchSession(
                     // Re-apply after index change; some VLC builds reset delay on track switch.
                     player.applySubtitleOffsetMs(retainedOffset)
                 }
-                SubtitleSource.OSS, SubtitleSource.ONLINE -> {
+                SubtitleSource.LIBRARY, SubtitleSource.ONLINE -> {
                     val path = deps.subtitleGateway.download(track, deps.configGateway.load())
                     if (!player.loadExternalSubtitle(path)) throw AppError.SubtitleUnavailable
                     sharedLocalPath = path
@@ -735,7 +740,7 @@ class WatchSession(
             }
             player.applySubtitleOffsetMs(retainedOffset)
 
-            // Host: upload downloaded file to storage and instruct members to load it. Member
+            // Host: share the subtitle through the server and instruct members to load it. Member
             // downloads remain local-only; embedded tracks have no portable file (host-only).
             val path = sharedLocalPath
             if (current.isHost && path != null) shareDownloadedSubtitleWithRoom(path, track, movieId)
@@ -748,36 +753,23 @@ class WatchSession(
         }
     }
 
-    /** Host uploads a downloaded subtitle and broadcasts `subtitle_change`. */
+    /**
+     * Host shares the subtitle with the room. Library sidecars are already readable by every
+     * member, so only their ref is broadcast; online / local downloads are uploaded to the server.
+     */
     private suspend fun shareDownloadedSubtitleWithRoom(localPath: String, track: SubtitleTrack, movieId: String) {
         val room = current.room ?: return
         if (me == null || !current.isHost) return
-        val config = deps.configGateway.load()
-        if (config == null || !config.storage.isComplete) {
-            toast("Subtitles loaded (library not configured — cannot sync to members)")
-            return
-        }
+        val config = deps.configGateway.load() ?: return
         try {
-            val movieObjectKey = current.movie?.objectKey ?: movieId
-            val key = deps.sharedSubtitleStorage.upload(localPath, room.id, movieObjectKey, config)
-            broadcastHostSubtitleShare(key, track.label, movieObjectKey)
-            lastHostSharedSubtitleKey = key
-            runCatching { deps.chatGateway.postSystemMessage(room, "Host shared subtitles: ${track.label}") }
-            // Sidecar now lives beside the movie — refresh sidecars and mark it current.
-            refreshSubtitlesInternal(autoSelectChinese = false)
-            current.subtitleTracks.firstOrNull { it.id == "oss:$key" }?.let { sidecar ->
-                _state.update {
-                    it.copy(
-                        subtitleState = SubtitleState(
-                            movieId = movieObjectKey,
-                            source = SubtitleSource.OSS,
-                            trackId = sidecar.id,
-                            url = sidecar.url,
-                            offsetMs = it.subtitleState.offsetMs,
-                        ),
-                    )
-                }
+            val ref = if (track.source == SubtitleSource.LIBRARY && track.url != null) {
+                track.url
+            } else {
+                deps.sharedSubtitleStorage.upload(localPath, room.id, track.label, config)
             }
+            broadcastHostSubtitleShare(ref, track.label, movieId)
+            lastHostSharedSubtitleKey = ref
+            runCatching { deps.chatGateway.postSystemMessage(room, "Host shared subtitles: ${track.label}") }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -785,7 +777,7 @@ class WatchSession(
         }
     }
 
-    private suspend fun broadcastHostSubtitleShare(objectKey: String?, label: String?, movieId: String) {
+    private suspend fun broadcastHostSubtitleShare(ref: String?, label: String?, movieId: String) {
         val room = current.room ?: return
         val user = me ?: return
         if (!current.isHost) return
@@ -798,23 +790,33 @@ class WatchSession(
                 positionMs = player.currentPositionMs,
                 seq = currentSeq,
                 movieId = movieId,
-                subtitleObjectKey = objectKey,
+                subtitleObjectKey = ref,
                 subtitleLabel = label,
             )
         }
         _state.update { it.copy(playback = it.playback.copy(lastSeq = currentSeq)) }
     }
 
-    /** Member follows host-shared subtitle from object storage (local offset retained). */
+    /** Member follows a host-shared subtitle (local offset retained). */
     private suspend fun applyHostSharedSubtitle(signal: PlaybackSyncSignal) {
         val signalMovie = signal.movieId
         val currentMovie = current.movie?.id
         if (!signalMovie.isNullOrEmpty() && currentMovie != null && signalMovie != currentMovie) return
         val movieId = signalMovie ?: currentMovie ?: current.subtitleState.movieId
-        val retainedOffset = current.subtitleState.offsetMs
+        loadHostSharedSubtitle(signal.subtitleObjectKey, signal.subtitleLabel, movieId)
+    }
 
-        val key = signal.subtitleObjectKey
-        if (key.isNullOrEmpty()) {
+    /** Late joiner: the room remembers the host's last shared subtitle. */
+    private suspend fun applyRoomSharedSubtitle() {
+        val room = current.room ?: return
+        val movie = current.movie ?: return
+        if (current.isHost || room.subtitleRef.isNullOrEmpty() || room.movieId != movie.id) return
+        loadHostSharedSubtitle(room.subtitleRef, room.subtitleLabel, movie.id)
+    }
+
+    private suspend fun loadHostSharedSubtitle(ref: String?, rawLabel: String?, movieId: String) {
+        val retainedOffset = current.subtitleState.offsetMs
+        if (ref.isNullOrEmpty()) {
             player.disableSubtitles()
             _state.update {
                 it.copy(subtitleState = SubtitleState(movieId, SubtitleSource.OFF, "off", offsetMs = retainedOffset))
@@ -822,25 +824,22 @@ class WatchSession(
             return
         }
 
-        val config = deps.configGateway.load()
-        if (config == null || !config.storage.isComplete) {
-            _events.emit(WatchEvent.Toast(AppError.SubtitleUnavailable.toUiText()))
-            return
-        }
+        val config = deps.configGateway.load() ?: return
         try {
-            val path = deps.sharedSubtitleStorage.download(key, config)
+            val path = deps.sharedSubtitleStorage.download(ref, config)
             if (!player.loadExternalSubtitle(path)) throw AppError.SubtitleUnavailable
-            val label = signal.subtitleLabel?.trim()?.ifEmpty { null } ?: "Host shared"
+            val label = rawLabel?.trim()?.ifEmpty { null } ?: "Host shared"
             val track = SubtitleTrack(
-                id = "shared:$key",
+                id = "shared:$ref",
                 label = label,
-                source = SubtitleSource.OSS,
+                source = SubtitleSource.LIBRARY,
+                url = ref,
                 detail = "Host shared",
-                format = Paths.pathExtension(key).uppercase(),
+                format = Paths.pathExtension(ref).uppercase(),
             )
             _state.update { s ->
                 s.copy(
-                    subtitleState = SubtitleState(movieId, SubtitleSource.OSS, track.id, offsetMs = retainedOffset),
+                    subtitleState = SubtitleState(movieId, SubtitleSource.LIBRARY, track.id, offsetMs = retainedOffset),
                     subtitleTracks = if (s.subtitleTracks.any { it.id == track.id }) {
                         s.subtitleTracks
                     } else {

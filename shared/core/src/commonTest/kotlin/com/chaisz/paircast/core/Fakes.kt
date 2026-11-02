@@ -17,6 +17,7 @@ import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.ChatMessageKind
 import com.chaisz.paircast.core.model.LoginResult
+import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
 import com.chaisz.paircast.core.model.StickerRef
@@ -33,7 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 internal fun movieFixture(id: String, title: String = "Title") =
-    Movie(id = id, objectKey = "$id.mp4", title = title, format = VideoFormat.MP4)
+    Movie(id = id, sourceId = "oss", title = title, format = VideoFormat.MP4)
 
 internal class FakeConfigGateway(var config: AppCloudConfig? = null) : ConfigGateway {
     override suspend fun load() = config
@@ -85,9 +86,18 @@ internal class FakeRoomGateway : RoomGateway {
         return joined
     }
 
-    override suspend fun leaveRoom(room: WatchRoom, userId: String): WatchRoom? {
+    override suspend fun leaveRoom(room: WatchRoom, userId: String, transferSeq: Long): WatchRoom? {
         left += userId
-        return rooms[room.id]
+        val current = rooms[room.id] ?: room
+        val outcome = com.chaisz.paircast.core.rules.HostTransferRules.resolveLeave(current, userId, transferSeq)
+        val next = when (outcome) {
+            com.chaisz.paircast.core.rules.HostTransferRules.Outcome.Unchanged -> current
+            is com.chaisz.paircast.core.rules.HostTransferRules.Outcome.MemberLeft -> outcome.room
+            is com.chaisz.paircast.core.rules.HostTransferRules.Outcome.EndRoom -> outcome.room
+            is com.chaisz.paircast.core.rules.HostTransferRules.Outcome.Transfer -> outcome.room
+        }
+        rooms[room.id] = next
+        return next
     }
 
     override suspend fun updateRoom(room: WatchRoom) { rooms[room.id] = room }
@@ -117,17 +127,35 @@ internal class FakeChatGateway : ChatGateway {
 }
 
 internal class FakeCatalog(private val movies: List<Movie>) : MovieCatalogGateway, MetadataGateway {
-    override suspend fun listMovies(config: AppCloudConfig) = movies
-    override suspend fun playUrl(movie: Movie, config: AppCloudConfig) = "https://cdn/${movie.objectKey}"
-    override suspend fun enrich(movie: Movie, config: AppCloudConfig) = movie.copy(overview = "enriched")
+    val listedSources = mutableListOf<String?>()
+    val enriched = mutableListOf<String>()
+    override suspend fun listSources(config: AppCloudConfig) = listOf(MediaSource("oss", "Library", "s3"))
+    override suspend fun listMovies(config: AppCloudConfig, sourceId: String?): List<Movie> {
+        listedSources += sourceId
+        return movies
+    }
+    override suspend fun playUrl(movie: Movie, config: AppCloudConfig) = "https://cdn/${movie.id}"
+    override suspend fun enrich(movie: Movie, config: AppCloudConfig): Movie {
+        enriched += movie.id
+        return movie.copy(overview = "enriched")
+    }
 }
 
 internal class FakeSubtitles : SubtitleGateway, SharedSubtitleStorageGateway {
-    override suspend fun listOSSSidecars(movie: Movie, config: AppCloudConfig) = emptyList<SubtitleTrack>()
-    override suspend fun searchOnline(query: String, year: String?, apiKey: String?) = emptyList<SubtitleTrack>()
+    var sidecars = emptyList<SubtitleTrack>()
+    val uploads = mutableListOf<String>()
+    val sharedDownloads = mutableListOf<String>()
+    override suspend fun listSidecars(movie: Movie, config: AppCloudConfig) = sidecars
+    override suspend fun searchOnline(query: String, year: String?) = emptyList<SubtitleTrack>()
     override suspend fun download(track: SubtitleTrack, config: AppCloudConfig?) = "/tmp/${track.id}.srt"
-    override suspend fun upload(filePath: String, roomId: String, movieId: String, config: AppCloudConfig) = "films/a.srt"
-    override suspend fun download(objectKey: String, config: AppCloudConfig) = "/tmp/shared.srt"
+    override suspend fun upload(filePath: String, roomId: String, label: String?, config: AppCloudConfig): String {
+        uploads += filePath
+        return "blob:paircast/subtitles/shared/$roomId/1.srt"
+    }
+    override suspend fun download(ref: String, config: AppCloudConfig): String {
+        sharedDownloads += ref
+        return "/tmp/shared.srt"
+    }
 }
 
 internal class FakePlayer : PlayerPort {

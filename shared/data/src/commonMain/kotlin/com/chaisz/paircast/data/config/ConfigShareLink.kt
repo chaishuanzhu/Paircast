@@ -4,14 +4,15 @@ import com.chaisz.paircast.core.gateway.ConfigLinkCodec
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.rules.ConfigQRCodec
-import com.chaisz.paircast.data.s3.Digest
 import dev.whyoleg.cryptography.CryptographyProvider
 import dev.whyoleg.cryptography.algorithms.AES
+import dev.whyoleg.cryptography.algorithms.SHA256
 import kotlin.io.encoding.Base64
 
 /**
  * `paircast://config?args=<base64url(AES-GCM combined: nonce‖ciphertext‖tag)>`.
- * The app-embedded key is transport obfuscation only; the payload still contains secrets.
+ * The app-embedded key is transport obfuscation only. v5 payloads carry just the server URL;
+ * older links may still contain storage keys, which are decoded and discarded.
  */
 object ConfigShareLink : ConfigLinkCodec {
     const val URL_SCHEME = "paircast"
@@ -20,7 +21,7 @@ object ConfigShareLink : ConfigLinkCodec {
     const val MAX_ARGS_UTF8_BYTES = 3_500
 
     /** Historical key material — must stay stable so existing `args` still decrypt. */
-    private val keyBytes by lazy { Digest.sha256("Tandem.iOS.ConfigShare.v1".encodeToByteArray()) }
+    private val keyBytes by lazy { CryptographyProvider.Default.get(SHA256).hasher().hashBlocking("Tandem.iOS.ConfigShare.v1".encodeToByteArray()) }
     private val cipher by lazy {
         CryptographyProvider.Default.get(AES.GCM).keyDecoder()
             .decodeFromByteArrayBlocking(AES.Key.Format.RAW, keyBytes)

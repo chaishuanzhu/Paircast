@@ -12,6 +12,7 @@ import com.chaisz.paircast.core.gateway.SubtitleGateway
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.LoginResult
+import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackAction
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
@@ -22,7 +23,6 @@ import com.chaisz.paircast.core.rules.ConfigQRCodec
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
 import com.chaisz.paircast.core.rules.LoginRules
-import com.chaisz.paircast.core.rules.MovieCatalogRules
 import com.chaisz.paircast.core.rules.ProfileRules
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -88,10 +88,12 @@ class SaveCloudConfigUseCase(private val configGateway: ConfigGateway) {
 /**
  * Decodes a share link / encrypted args / legacy JSON. Complete configs are persisted; legacy
  * (pre-GO-IM) payloads are returned unsaved with [needsServerUrl] so the UI can ask for the
- * server address first. Invalid payloads never overwrite the existing config.
+ * server address first. [droppedLegacyStorage] tells the UI that object-storage settings in an
+ * old payload were ignored (the library is configured on the server). Invalid payloads never
+ * overwrite the existing config.
  */
 class ImportConfigUseCase(private val configGateway: ConfigGateway, private val codec: ConfigLinkCodec) {
-    data class Result(val config: AppCloudConfig, val needsServerUrl: Boolean)
+    data class Result(val config: AppCloudConfig, val needsServerUrl: Boolean, val droppedLegacyStorage: Boolean = false)
 
     @Throws(Exception::class)
     suspend operator fun invoke(raw: String): Result {
@@ -102,19 +104,17 @@ class ImportConfigUseCase(private val configGateway: ConfigGateway, private val 
         } catch (_: Exception) {
             throw AppError.InvalidConfigQR
         }
+        val legacy = ConfigQRCodec.isLegacy(decoded)
         if (ConfigQRCodec.needsServerUrl(decoded)) {
             val existingServer = configGateway.load()?.im?.takeIf { it.isComplete }
-            if (existingServer == null) {
-                ConfigValidation.normalizedStorage(decoded.storage)
-                return Result(decoded, needsServerUrl = true)
-            }
-            val merged = ConfigValidation.normalized(decoded.copy(im = existingServer))
+                ?: return Result(decoded, needsServerUrl = true, droppedLegacyStorage = legacy)
+            val merged = ConfigValidation.normalized(decoded.copy(im = existingServer, configVersion = AppCloudConfig.CURRENT_VERSION))
             configGateway.save(merged)
-            return Result(merged, needsServerUrl = false)
+            return Result(merged, needsServerUrl = false, droppedLegacyStorage = legacy)
         }
-        val normalized = ConfigValidation.normalized(decoded)
+        val normalized = ConfigValidation.normalized(decoded.copy(configVersion = AppCloudConfig.CURRENT_VERSION))
         configGateway.save(normalized)
-        return Result(normalized, needsServerUrl = false)
+        return Result(normalized, needsServerUrl = false, droppedLegacyStorage = legacy)
     }
 }
 
@@ -136,12 +136,13 @@ class ListMoviesUseCase(
     private val catalogGateway: MovieCatalogGateway,
     private val metadataGateway: MetadataGateway,
 ) {
+    /** Movies of [sourceId] (server default when null). Only items without a poster are enriched. */
     @Throws(Exception::class)
-    suspend operator fun invoke(enrichMetadata: Boolean = true): List<Movie> {
+    suspend operator fun invoke(enrichMetadata: Boolean = true, sourceId: String? = null): List<Movie> {
         val config = configGateway.load() ?: throw AppError.NotConfigured
         ConfigValidation.validate(config)
         return try {
-            val movies = catalogGateway.listMovies(config).filter { MovieCatalogRules.isVideoObjectKey(it.objectKey) }
+            val movies = catalogGateway.listMovies(config, sourceId)
             if (enrichMetadata) enrich(movies, config) else movies
         } catch (e: CancellationException) {
             throw e
@@ -152,11 +153,20 @@ class ListMoviesUseCase(
         }
     }
 
+    /** Server media sources; the library shows a picker only when there is more than one. */
+    @Throws(Exception::class)
+    suspend fun sources(): List<MediaSource> {
+        val config = configGateway.load() ?: throw AppError.NotConfigured
+        return catalogGateway.listSources(config)
+    }
+
     /** Enriches in bounded batches of [CONCURRENCY]. */
     @Throws(Exception::class)
     suspend fun enrich(movies: List<Movie>, config: AppCloudConfig): List<Movie> = coroutineScope {
         movies.chunked(CONCURRENCY).flatMap { batch ->
-            batch.map { async { metadataGateway.enrich(it, config) } }.awaitAll()
+            batch.map { movie ->
+                async { if (movie.posterUrl != null) movie else metadataGateway.enrich(movie, config) }
+            }.awaitAll()
         }
     }
 
@@ -184,17 +194,11 @@ class LeaveRoomUseCase(
         val outcome = HostTransferRules.resolveLeave(room, leavingUserId, nextTransferSeq)
         when (outcome) {
             HostTransferRules.Outcome.Unchanged -> Unit
-            is HostTransferRules.Outcome.MemberLeft -> {
-                roomGateway.updateRoom(outcome.room)
-                roomGateway.leaveRoom(outcome.room, leavingUserId)
-            }
-            is HostTransferRules.Outcome.EndRoom -> {
-                roomGateway.updateRoom(outcome.room)
-                roomGateway.leaveRoom(outcome.room, leavingUserId)
-            }
+            is HostTransferRules.Outcome.MemberLeft, is HostTransferRules.Outcome.EndRoom ->
+                roomGateway.leaveRoom(room, leavingUserId, nextTransferSeq)
             is HostTransferRules.Outcome.Transfer -> {
-                roomGateway.updateRoom(outcome.room)
-                // Signal + system message must go out while we are still a group member.
+                // The server applies the same join-order transfer on leave. Signal + system message
+                // must go out while we are still a group member.
                 syncGateway.send(
                     outcome.room,
                     PlaybackSyncSignal(
@@ -208,7 +212,7 @@ class LeaveRoomUseCase(
                     ),
                 )
                 chatGateway.postSystemMessage(outcome.room, "Host transferred to ${outcome.newHostUserId}")
-                roomGateway.leaveRoom(outcome.room, leavingUserId)
+                roomGateway.leaveRoom(room, leavingUserId, nextTransferSeq)
             }
         }
         return outcome
@@ -310,26 +314,23 @@ class EmitHostPlaybackUseCase(private val syncGateway: PlaybackSyncGateway) {
 
 // region Subtitles
 
-class SearchOnlineSubtitlesUseCase(
-    private val configGateway: ConfigGateway,
-    private val subtitleGateway: SubtitleGateway,
-) {
+class SearchOnlineSubtitlesUseCase(private val subtitleGateway: SubtitleGateway) {
     @Throws(Exception::class)
     suspend operator fun invoke(query: String, year: String?): List<SubtitleTrack> =
-        subtitleGateway.searchOnline(query, year, configGateway.load()?.subtitleApiKey)
+        subtitleGateway.searchOnline(query, year)
 }
 
 class ListSubtitleTracksUseCase(
     private val configGateway: ConfigGateway,
     private val subtitleGateway: SubtitleGateway,
 ) {
-    /** `Off` + storage sidecars. Embedded tracks come from the player and are merged by the session. */
+    /** `Off` + library sidecars. Embedded tracks come from the player and are merged by the session. */
     @Throws(Exception::class)
     suspend operator fun invoke(movie: Movie): List<SubtitleTrack> {
         val config = configGateway.load()
         return buildList {
             add(SubtitleTrack.OFF)
-            if (config != null) addAll(subtitleGateway.listOSSSidecars(movie, config))
+            if (config != null) addAll(subtitleGateway.listSidecars(movie, config))
         }
     }
 }

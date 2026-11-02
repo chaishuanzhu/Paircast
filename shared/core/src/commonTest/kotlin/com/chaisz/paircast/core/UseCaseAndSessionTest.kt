@@ -1,10 +1,13 @@
 package com.chaisz.paircast.core
 
+import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.IMConfig
 import com.chaisz.paircast.core.model.PlaybackAction
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
+import com.chaisz.paircast.core.model.SubtitleSource
+import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.rules.ConfigQRCodec
 import com.chaisz.paircast.core.rules.HostTransferRules
@@ -18,6 +21,7 @@ import com.chaisz.paircast.core.usecase.ChangeMovieUseCase
 import com.chaisz.paircast.core.usecase.ExportConfigUseCase
 import com.chaisz.paircast.core.usecase.ImportConfigUseCase
 import com.chaisz.paircast.core.usecase.LeaveRoomUseCase
+import com.chaisz.paircast.core.usecase.ListMoviesUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -25,6 +29,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -68,11 +73,21 @@ class ConfigUseCaseTest {
 
     @Test fun validImportReplacesConfig() = runTest {
         val gateway = FakeConfigGateway(configFixture())
-        val next = configFixture().copy(storage = configFixture().storage.copy(bucket = "other-bucket"))
+        val next = AppCloudConfig(im = IMConfig("https://other.example.com"))
         val codec = PlainLinkCodec()
         val result = ImportConfigUseCase(gateway, codec)(codec.shareUrl(next))
         assertFalse(result.needsServerUrl)
-        assertEquals("other-bucket", gateway.config?.storage?.bucket)
+        assertFalse(result.droppedLegacyStorage)
+        assertEquals("https://other.example.com", gateway.config?.im?.serverUrl)
+    }
+
+    @Test fun v4ImportKeepsServerAndReportsDroppedStorage() = runTest {
+        val gateway = FakeConfigGateway(null)
+        val v4 = """{"v":4,"type":"paircast-config","im":{"serverUrl":"im.v4.com"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
+        val result = ImportConfigUseCase(gateway, PlainLinkCodec())(v4)
+        assertTrue(result.droppedLegacyStorage)
+        assertEquals("https://im.v4.com", gateway.config?.im?.serverUrl)
+        assertEquals(AppCloudConfig.CURRENT_VERSION, gateway.config?.configVersion)
     }
 
     @Test fun legacyImportKeepsExistingServer() = runTest {
@@ -80,7 +95,7 @@ class ConfigUseCaseTest {
         val legacy = """{"v":3,"type":"paircast-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"legacy","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
         val result = ImportConfigUseCase(gateway, PlainLinkCodec())(legacy)
         assertFalse(result.needsServerUrl)
-        assertEquals("legacy", gateway.config?.storage?.bucket)
+        assertTrue(result.droppedLegacyStorage)
         assertEquals("https://im.example.com", gateway.config?.im?.serverUrl)
     }
 
@@ -95,7 +110,7 @@ class ConfigUseCaseTest {
     @Test fun exportReturnsShareLink() = runTest {
         val exported = ExportConfigUseCase(FakeConfigGateway(configFixture()), PlainLinkCodec())()
         assertTrue(exported.startsWith("paircast://config?args="))
-        assertEquals("movies", ConfigQRCodec.decode(exported.substringAfter("args=")).storage.bucket)
+        assertEquals("https://im.example.com", ConfigQRCodec.decode(exported.substringAfter("args=")).im.serverUrl)
     }
 }
 
@@ -127,6 +142,14 @@ class RoomUseCaseTest {
         assertEquals("b", sync.sent.single().hostUserId)
         assertEquals(listOf("a"), rooms.left)
         assertEquals("b", rooms.rooms["room1"]?.hostUserId)
+    }
+
+    @Test fun listMoviesEnrichesOnlyItemsWithoutPoster() = runTest {
+        val catalog = FakeCatalog(listOf(movieFixture("oss:a").copy(posterUrl = "https://p"), movieFixture("oss:b")))
+        val movies = ListMoviesUseCase(FakeConfigGateway(configFixture()), catalog, catalog)(sourceId = "oss")
+        assertEquals(listOf<String?>("oss"), catalog.listedSources)
+        assertEquals(listOf("oss:b"), catalog.enriched)
+        assertEquals(listOf<String?>(null, "enriched"), movies.map { it.overview })
     }
 }
 
@@ -172,7 +195,7 @@ class WatchSessionTest {
         val state = h.session.state.value
         assertEquals(listOf("host", "member"), state.room?.memberIds)
         assertEquals("One", state.movie?.title)
-        assertEquals("https://cdn/m1.mp4", h.player.prepared)
+        assertEquals("https://cdn/m1", h.player.prepared)
         assertFalse(state.isHost)
         assertEquals("One", state.suggestedOnlineQuery)
 
@@ -180,6 +203,42 @@ class WatchSessionTest {
         runCurrent()
         assertFalse(h.player.isPaused)
         assertEquals(listOf(5_000L), h.player.seeks)
+        h.session.close()
+    }
+
+    @Test fun lateJoinerLoadsRoomSharedSubtitle() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.rooms.rooms["room1"] = h.rooms.rooms["room1"]!!.copy(subtitleRef = "blob:paircast/subtitles/shared/room1/1.srt", subtitleLabel = "中文")
+        h.session.start()
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertEquals(listOf("blob:paircast/subtitles/shared/room1/1.srt"), h.subtitles.sharedDownloads)
+        assertEquals("shared:blob:paircast/subtitles/shared/room1/1.srt", h.session.state.value.subtitleState.trackId)
+        h.session.close()
+    }
+
+    @Test fun hostSharesOnlineSubtitleThroughServer() = runTest {
+        val h = Harness(this, User("host", "Host"), roomHost = "host")
+        h.session.start()
+        advanceTimeBy(1_000)
+        runCurrent()
+        h.session.selectTrack(SubtitleTrack(id = "os:1", label = "English", source = SubtitleSource.ONLINE))
+        runCurrent()
+        assertEquals(listOf("/tmp/os:1.srt"), h.subtitles.uploads)
+        val signal = h.sync.sent.last { it.action == PlaybackAction.SUBTITLE_CHANGE }
+        assertEquals("blob:paircast/subtitles/shared/room1/1.srt", signal.subtitleObjectKey)
+        h.session.close()
+    }
+
+    @Test fun hostSharesLibrarySidecarByRefWithoutUpload() = runTest {
+        val h = Harness(this, User("host", "Host"), roomHost = "host")
+        h.session.start()
+        advanceTimeBy(1_000)
+        runCurrent()
+        h.session.selectTrack(SubtitleTrack(id = "src:oss:films/a.srt", label = "ZH", source = SubtitleSource.LIBRARY, url = "src:oss:films/a.srt"))
+        runCurrent()
+        assertTrue(h.subtitles.uploads.isEmpty())
+        assertEquals("src:oss:films/a.srt", h.sync.sent.last { it.action == PlaybackAction.SUBTITLE_CHANGE }.subtitleObjectKey)
         h.session.close()
     }
 
@@ -257,7 +316,7 @@ class WatchSessionTest {
         h.session.onForeground()
         runCurrent()
         assertFalse(h.player.inBackground)
-        assertEquals("https://cdn/m1.mp4", h.player.prepared)
+        assertEquals("https://cdn/m1", h.player.prepared)
         assertEquals(42_000L, h.player.seeks.last())
         assertTrue(h.player.isPaused)
         h.session.close()

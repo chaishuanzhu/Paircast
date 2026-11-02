@@ -8,7 +8,6 @@ import com.chaisz.paircast.core.model.RoomStatus
 import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.support.PaircastJson
-import com.chaisz.paircast.core.support.Paths
 import kotlin.math.abs
 
 /** Named placeholders in localization templates, e.g. `"Host is now {{name}}"`. */
@@ -118,33 +117,6 @@ object HostTransferRules {
             newHostUserId = nextHost,
             room = remaining.copy(hostUserId = nextHost, hostTransferSeq = transferSeq),
         )
-    }
-}
-
-object MovieCatalogRules {
-    val allowedExtensions = setOf("mp4", "m4v", "mkv")
-
-    private val dotted = Regex("^(.+?)\\.(\\d{4})(?:\\.|$)")
-    private val paren = Regex("^(.+?)\\s*[(（](\\d{4})[)）]\\s*$")
-
-    fun isVideoObjectKey(key: String): Boolean = Paths.pathExtension(key).lowercase() in allowedExtensions
-
-    fun filterVideoKeys(keys: List<String>): List<String> = keys.filter(::isVideoObjectKey)
-
-    data class FilenameMetadata(val title: String, val year: String?)
-
-    fun parseFilenameMetadata(objectKey: String): FilenameMetadata {
-        val base = Paths.deletingPathExtension(Paths.lastPathComponent(objectKey))
-
-        // `Title.2010.1080p` style
-        dotted.find(base)?.let { m ->
-            return FilenameMetadata(m.groupValues[1].replace(".", " ").trim(), m.groupValues[2])
-        }
-        // `Title (2023)` / `Title（2023）` style (common for Chinese filenames)
-        paren.find(base)?.let { m ->
-            return FilenameMetadata(m.groupValues[1].trim(), m.groupValues[2])
-        }
-        return FilenameMetadata(base.replace(".", " ").trim(), null)
     }
 }
 

@@ -139,7 +139,7 @@ class GoImApi(private val client: HttpClient) {
         post(session, "group/leave", "group_id" to groupId)
     }
 
-    private suspend fun get(session: GoImSession, path: String, vararg params: Pair<String, String>): HttpResponse = send {
+    internal suspend fun get(session: GoImSession, path: String, vararg params: Pair<String, String>): HttpResponse = send {
         client.get(url(session.serverUrl, path)) {
             parameter("uid", session.uid)
             parameter("token", session.token)
@@ -148,7 +148,7 @@ class GoImApi(private val client: HttpClient) {
         }
     }
 
-    private suspend fun post(session: GoImSession, path: String, vararg params: Pair<String, String?>): HttpResponse = send {
+    internal suspend fun post(session: GoImSession, path: String, vararg params: Pair<String, String?>): HttpResponse = send {
         client.submitForm(
             url = url(session.serverUrl, path),
             formParameters = Parameters.build {
@@ -159,7 +159,7 @@ class GoImApi(private val client: HttpClient) {
         ) { short() }
     }
 
-    private suspend fun send(block: suspend () -> HttpResponse): HttpResponse {
+    internal suspend fun send(block: suspend () -> HttpResponse): HttpResponse {
         val response = try {
             block()
         } catch (e: CancellationException) {
@@ -171,7 +171,7 @@ class GoImApi(private val client: HttpClient) {
         return response
     }
 
-    private suspend fun <T> decode(response: HttpResponse, serializer: KSerializer<T>): T = try {
+    internal suspend fun <T> decode(response: HttpResponse, serializer: KSerializer<T>): T = try {
         apiJson.decodeFromString(serializer, response.bodyAsText())
     } catch (e: CancellationException) {
         throw e

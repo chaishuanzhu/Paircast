@@ -91,7 +91,7 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         mediaPlayer.drawable = videoView
         let media = VLCMedia(url: streamURL)
         // VOD over HTTP — do NOT use :http-continuous (live clock → wrong speed / 花屏).
-        // Two seconds is enough for object-storage VOD without imposing an 8s startup delay.
+        // Two seconds is enough for signed-URL VOD without imposing an 8s startup delay.
         media.addOption(":network-caching=2000")
         media.addOption(":file-caching=1000")
         media.addOption(":http-reconnect")

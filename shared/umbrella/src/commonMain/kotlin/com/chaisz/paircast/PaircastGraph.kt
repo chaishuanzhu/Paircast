@@ -25,7 +25,6 @@ import com.chaisz.paircast.core.usecase.ListMoviesUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
 import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
 import com.chaisz.paircast.core.usecase.UpdateProfileUseCase
-import com.chaisz.paircast.data.catalog.OssMovieCatalogGateway
 import com.chaisz.paircast.data.config.ConfigShareLink
 import com.chaisz.paircast.data.files.FileStore
 import com.chaisz.paircast.data.goim.GoImApi
@@ -33,19 +32,15 @@ import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImChatGateway
 import com.chaisz.paircast.data.goim.GoImConnection
 import com.chaisz.paircast.data.goim.GoImPlaybackSyncGateway
-import com.chaisz.paircast.data.goim.GoImRoomGateway
-import com.chaisz.paircast.data.metadata.CascadingMetadataGateway
-import com.chaisz.paircast.data.metadata.MetadataCache
-import com.chaisz.paircast.data.metadata.OssMovieMetadataStorage
+import com.chaisz.paircast.data.media.ServerCatalogGateway
+import com.chaisz.paircast.data.media.ServerMediaApi
+import com.chaisz.paircast.data.media.ServerRoomGateway
+import com.chaisz.paircast.data.media.ServerStickerCatalog
+import com.chaisz.paircast.data.media.ServerSubtitleGateway
 import com.chaisz.paircast.data.net.createHttpClient
 import com.chaisz.paircast.data.net.platformName
-import com.chaisz.paircast.data.rooms.OssRoomStore
-import com.chaisz.paircast.data.s3.S3Client
 import com.chaisz.paircast.data.secure.SecureConfigStore
 import com.chaisz.paircast.data.secure.SessionStore
-import com.chaisz.paircast.data.stickers.StickerCatalogStore
-import com.chaisz.paircast.data.subtitles.OpenSubtitlesGateway
-import com.chaisz.paircast.data.subtitles.OssSharedSubtitleStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,7 +61,6 @@ class PaircastGraph(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val http = createHttpClient()
-    private val s3 = S3Client(http)
     private val cache = FileStore(cacheDirectory)
     private val support = FileStore(supportDirectory)
     private val sessions = SessionStore(secureStore)
@@ -78,35 +72,24 @@ class PaircastGraph(
         deviceId = sessions.deviceId { Uuid.random().toString() },
         platform = platformName,
     )
-    private val metadataCache = MetadataCache()
-    private val goImAuth: GoImAuthGateway
+    private val goImAuth: GoImAuthGateway = GoImAuthGateway(SecureConfigStore(secureStore), sessions, api, connection)
+    private val media = ServerMediaApi(http, api, goImAuth)
+    private val catalog = ServerCatalogGateway(media)
+    private val subtitles = ServerSubtitleGateway(media, cache)
 
     val configGateway: ConfigGateway = SecureConfigStore(secureStore)
     val configLinkCodec: ConfigLinkCodec = ConfigShareLink
-    val authGateway: AuthGateway
-    val roomGateway: RoomGateway
-    val chatGateway: ChatGateway
-    val syncGateway: PlaybackSyncGateway
-    val catalogGateway: MovieCatalogGateway = OssMovieCatalogGateway(s3)
-    val metadataGateway: MetadataGateway = CascadingMetadataGateway(
-        http = http,
-        storage = OssMovieMetadataStorage(http, s3),
-        cache = metadataCache,
-        tmdbLanguage = { CascadingMetadataGateway.tmdbLanguageFor(preferredLanguage) },
-    )
-    val subtitleGateway: SubtitleGateway = OpenSubtitlesGateway(http, s3, cache, userAgent = "Paircast $platformName v$appVersion")
-    val sharedSubtitleStorage: SharedSubtitleStorageGateway = OssSharedSubtitleStorage(s3, cache)
-    val stickerCatalog: StickerCatalogGateway = StickerCatalogStore(s3, support)
+    val authGateway: AuthGateway = goImAuth
+    val roomGateway: RoomGateway = ServerRoomGateway(media, connection)
+    val chatGateway: ChatGateway = GoImChatGateway(connection, goImAuth)
+    val syncGateway: PlaybackSyncGateway = GoImPlaybackSyncGateway(connection)
+    val catalogGateway: MovieCatalogGateway = catalog
+    val metadataGateway: MetadataGateway = catalog
+    val subtitleGateway: SubtitleGateway = subtitles
+    val sharedSubtitleStorage: SharedSubtitleStorageGateway = subtitles
+    val stickerCatalog: StickerCatalogGateway = ServerStickerCatalog(media, http, support)
     val subtitleOffsets = SubtitleOffsetStore(keyValueStore)
     val chatSafety = ChatSafetyStore(keyValueStore)
-
-    init {
-        goImAuth = GoImAuthGateway(configGateway, sessions, api, connection)
-        authGateway = goImAuth
-        roomGateway = GoImRoomGateway(OssRoomStore(configGateway, s3, scope), api, goImAuth)
-        chatGateway = GoImChatGateway(connection, goImAuth)
-        syncGateway = GoImPlaybackSyncGateway(connection)
-    }
 
     val login get() = LoginUseCase(configGateway, authGateway)
     val changePassword get() = ChangePasswordUseCase(authGateway)
@@ -138,8 +121,8 @@ class PaircastGraph(
     /** Call when the app returns to the foreground: re-verifies the GO-IM link right away. */
     fun onAppForeground() = connection.probe()
 
-    /** Drops cached scrape results (e.g. after the storage config changes). */
-    suspend fun clearMetadataCache() = metadataCache.clear()
+    /** Drops in-memory scrape results (e.g. after switching servers). */
+    suspend fun clearMetadataCache() = catalog.clearCache()
 
     /** Removes downloaded subtitles and cached sticker images. */
     fun clearLocalCaches() {

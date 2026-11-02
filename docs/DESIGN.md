@@ -74,7 +74,7 @@
 | 01 | Login | 无注册；「服务配置」文字按钮 |
 | 02 | Library (SPA) | 主壳；**右上角头像 = 我的** |
 | 03 | Me Sheet | 头像/昵称/服务配置/退出 |
-| 04 | Service Config | IM + 七牛；分享与导入列表行；测试连接 |
+| 04 | Service Config | 仅 GO-IM 地址（片库由服务端管理）；分享与导入列表行 |
 | 05 | Watch | 沉浸播放器、成员、「+」邀请、聊天 |
 | 06 | Switch Movie | 换片 Sheet |
 | 07 | Subtitle Sync | ±0.5s 时间轴校准 |

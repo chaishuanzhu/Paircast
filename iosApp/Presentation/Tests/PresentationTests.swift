@@ -200,19 +200,6 @@ private extension AppCloudConfig {
     static func fixture() -> AppCloudConfig {
         AppCloudConfig(
             im: IMConfig(serverUrl: "https://im.example.com"),
-            storage: ObjectStorageConfig(
-                provider: .qiniu,
-                accessKey: "ak",
-                secretKey: "sk",
-                bucket: "movies",
-                endpoint: "s3-cn-east-1.qiniucs.com",
-                region: nil,
-                prefix: nil,
-                useSSL: true,
-                forcePathStyle: true
-            ),
-            subtitleApiKey: nil,
-            tmdbAccessToken: nil,
             updatedAtMs: 0,
             configVersion: AppCloudConfig.companion.CURRENT_VERSION
         )

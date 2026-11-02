@@ -75,8 +75,8 @@ let project = Project(
                 "CODE_SIGN_IDENTITY": "Apple Distribution",
                 "PROVISIONING_PROFILE_SPECIFIER": "Tandem AppStore",
                 "EXCLUDED_ARCHS[sdk=iphoneos*]": "armv7 armv7s",
-                "MARKETING_VERSION": "2.0.0",
-                "CURRENT_PROJECT_VERSION": "14",
+                "MARKETING_VERSION": "2.1.0",
+                "CURRENT_PROJECT_VERSION": "15",
             ]) { $1 })
         ),
         .target(

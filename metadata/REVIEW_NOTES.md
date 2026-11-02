@@ -33,9 +33,9 @@ There is **no in-app registration**, **no paid content / IAP**, and **no public 
 
 ## 2) Purpose and target audience
 
-**Purpose:** Paircast is an invite-only private cloud sync player. Friends who already lawfully store personal media in their own object storage can watch the same file together remotely with synchronized play/pause/seek and light in-room chat.
+**Purpose:** Paircast is an invite-only private cloud sync player. Friends who already lawfully store personal media in their own storage (connected to their self-hosted GO-IM server) can watch the same file together remotely with synchronized play/pause/seek and light in-room chat.
 
-**Problem it solves:** Consumer streaming apps do not sync playback of *your own* private files. Paircast does not host or distribute a public film/TV catalog; it only plays objects from the user’s configured bucket and coordinates sync via a self-hosted GO-IM server.
+**Problem it solves:** Consumer streaming apps do not sync playback of *your own* private files. Paircast does not host or distribute a public film/TV catalog; it only plays the media library that the operator of a self-hosted GO-IM server connects to their own storage, and coordinates sync through that server.
 
 **Target audience:** Small groups of friends / households who self-host S3-compatible media and want remote “movie night” sync. Not intended as a business / employee-only tool distribution.
 
@@ -56,10 +56,10 @@ There is **no in-app registration**, **no paid content / IAP**, and **no public 
 2. On Login, open **Service Configuration**.
 3. Paste the demo cloud config link provided below (`paircast://config?args=…`), confirm import, then return to Login when prompted.
 4. Enter the demo account and password and sign in.
-5. Library lists objects from the demo bucket. Sample files are public-domain / Creative Commons shorts only (e.g. Big Buck Bunny). Do **not** expect commercial films.
+5. Library lists videos from the demo server’s media library. Sample files are public-domain / Creative Commons shorts only (e.g. Big Buck Bunny). Do **not** expect commercial films.
 6. Tap a title → create or join a room → use play/pause and invite/sync.
 7. Chat is invite-only. Long-press a message to **Block** (local hide) or **Report** (opens the public issue form).
-8. Me → **Delete Account** clears the uploaded avatar, Keychain cloud config, and session token, then signs out. Accounts on the GO-IM server are admin-managed (no public self-serve registration).
+8. Me → **Delete Account** clears the uploaded avatar, Keychain config (server address), and session token, then signs out. Accounts on the GO-IM server are admin-managed (no public self-serve registration).
 
 **Demo config link:**  
 *(Keep the live `paircast://config?args=…` string and demo passwords only in App Store Connect Notes / Resolution Center — do not commit secrets to git.)*
@@ -77,10 +77,10 @@ There is **no in-app registration**, **no paid content / IAP**, and **no public 
 | Service | Role |
 |---------|------|
 | **GO-IM (self-hosted)** | Account sign-in (account + password), invite-only room messaging, avatars, and transient sync signaling; server address comes from the user-supplied config |
-| **S3-compatible object storage** (e.g. Qiniu S3 / Tencent COS / other SigV4 hosts) | Private media library listing + presigned playback; avatar/room metadata objects |
+| **S3-compatible object storage** (configured on the GO-IM server) | Private media library; the server lists videos and issues short-lived presigned playback URLs. The app stores no storage keys |
 | **VLCKit (MobileVLCKit)** | Local playback of common containers/codecs |
-| **OpenSubtitles API** *(optional, user key)* | Online subtitle search when the user configures their own key |
-| **TMDB API** *(optional, user token)* | Localized movie titles, overviews, posters, and backdrops when the user configures their own token |
+| **OpenSubtitles API** *(optional, server-side key)* | Online subtitle search, proxied by the GO-IM server when its operator enables it |
+| **TMDB API** *(optional, server-side token)* | Movie titles, overviews, posters, and backdrops, fetched by the GO-IM server when its operator enables it |
 
 No payment processors. No AI services. This product uses the TMDB API but is not endorsed or certified by TMDB.
 

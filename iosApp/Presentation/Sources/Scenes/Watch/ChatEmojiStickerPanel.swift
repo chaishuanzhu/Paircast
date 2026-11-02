@@ -136,8 +136,7 @@ struct ChatEmojiStickerPanel: View {
     }
 
     private var configFingerprint: String {
-        guard let s = config?.storage else { return "" }
-        return [s.bucket, s.endpoint, s.prefix ?? ""].joined(separator: "|")
+        config?.im.serverUrl ?? ""
     }
 
     /// Pages: Recent + each catalog pack (swipe horizontally).
@@ -174,13 +173,13 @@ struct ChatEmojiStickerPanel: View {
 
     @ViewBuilder
     private var stickerContent: some View {
-        if config == nil || !(config?.storage.isComplete ?? false) {
+        if config == nil || !(config?.im.isComplete ?? false) {
             emptyState("Finish service configuration to load stickers")
         } else if loading && summaries.isEmpty {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if loadFailed || summaries.isEmpty {
-            emptyState("Upload sticker packs to your bucket under stickers/")
+            emptyState("No sticker packs on the server yet")
         } else {
             VStack(spacing: 0) {
                 packBar
@@ -341,7 +340,7 @@ struct ChatEmojiStickerPanel: View {
     }
 
     private func reloadCatalog() async {
-        guard let config, config.storage.isComplete else {
+        guard let config, config.im.isComplete else {
             summaries = []
             packsById = [:]
             loadFailed = false

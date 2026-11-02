@@ -7,6 +7,8 @@ public final class LibraryViewModel: ObservableObject {
     @Published public var isLoading = false
     @Published public var errorMessage: String?
     @Published public var showMe = false
+    @Published public var sources: [MediaSource] = []
+    @Published public var sourceId: String?
 
     private let session: AppSession
 
@@ -20,7 +22,10 @@ public final class LibraryViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             let useCase = session.graph.listMovies
-            let listed = try await useCase.invoke(enrichMetadata: false)
+            if sources.isEmpty {
+                sources = (try? await useCase.sources()) ?? []
+            }
+            let listed = try await useCase.invoke(enrichMetadata: false, sourceId: sourceId)
             movies = listed
             errorMessage = nil
 
@@ -40,6 +45,13 @@ public final class LibraryViewModel: ObservableObject {
                 session.showToast(message)
             }
         }
+    }
+
+    public func selectSource(_ id: String) async {
+        guard id != (sourceId ?? sources.first?.id) else { return }
+        sourceId = id
+        movies = []
+        await load()
     }
 
     public func openMovie(_ movie: Movie) async {
@@ -94,7 +106,7 @@ public struct LibraryView: View {
                     ContentUnavailableView(
                         "No movies",
                         systemImage: "film",
-                        description: Text("Make sure your object storage bucket contains mp4/m4v/mkv files")
+                        description: Text("Ask your admin to add mp4/m4v/mkv files to the server media library")
                     )
                 } else {
                     ScrollView {
@@ -120,6 +132,26 @@ public struct LibraryView: View {
             .navigationTitle("Paircast")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                if viewModel.sources.count > 1 {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Menu {
+                            Picker(
+                                "Source",
+                                selection: Binding(
+                                    get: { viewModel.sourceId ?? viewModel.sources.first?.id ?? "" },
+                                    set: { id in Task { await viewModel.selectSource(id) } }
+                                )
+                            ) {
+                                ForEach(viewModel.sources, id: \.id) { source in
+                                    Text(source.name).tag(source.id)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "square.stack.3d.up")
+                                .accessibilityLabel("Source")
+                        }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.showMe = true

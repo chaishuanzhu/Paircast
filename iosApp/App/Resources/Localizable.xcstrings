@@ -69,74 +69,6 @@
         }
       }
     },
-    "AccessKey": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AccessKey"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "访问密钥"
-          }
-        }
-      }
-    },
-    "Bucket": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bucket"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "存储桶"
-          }
-        }
-      }
-    },
-    "Endpoint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "端点"
-          }
-        }
-      }
-    },
-    "SecretKey": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SecretKey"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密钥"
-          }
-        }
-      }
-    },
     "Account not found or not provisioned. Contact an admin": {
       "extractionState": "manual",
       "localizations": {
@@ -235,23 +167,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请先完成服务配置以加载贴纸"
-          }
-        }
-      }
-    },
-    "Upload sticker packs to your bucket under stickers/": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upload sticker packs to your bucket under stickers/"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请将贴纸包上传到对象存储的 stickers/ 目录"
           }
         }
       }
@@ -358,23 +273,6 @@
         }
       }
     },
-    "Add an OpenSubtitles API Key in Service Configuration first": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add an OpenSubtitles API Key in Service Configuration first"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请先在服务配置中填写 OpenSubtitles API Key"
-          }
-        }
-      }
-    },
     "AES-GCM encrypted": {
       "extractionState": "manual",
       "localizations": {
@@ -422,23 +320,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "解析成功后会展示脱敏预览，确认才会覆盖本机配置"
-          }
-        }
-      }
-    },
-    "Alibaba Cloud OSS": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alibaba Cloud OSS"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "阿里云 OSS"
           }
         }
       }
@@ -766,23 +647,6 @@
         }
       }
     },
-    "Configuration link generated (contains secrets — do not share publicly)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configuration link generated (contains secrets — do not share publicly)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已生成配置链接（含密钥，请勿公开分享）"
-          }
-        }
-      }
-    },
     "Configuration QR code": {
       "extractionState": "manual",
       "localizations": {
@@ -881,23 +745,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "继续"
-          }
-        }
-      }
-    },
-    "Continue Sharing": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue Sharing"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "继续分享"
           }
         }
       }
@@ -1106,91 +953,6 @@
         }
       }
     },
-    "Endpoint ({{example}})": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint ({{example}})"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint（{{example}}）"
-          }
-        }
-      }
-    },
-    "Endpoint must be a MinIO host (e.g. {{example}})": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint must be a MinIO host (e.g. {{example}})"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 需为 MinIO 主机（如 {{example}}）"
-          }
-        }
-      }
-    },
-    "Endpoint must be a Qiniu S3 host (e.g. {{example}})": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint must be a Qiniu S3 host (e.g. {{example}})"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 需为七牛 S3 地址（如 {{example}}）"
-          }
-        }
-      }
-    },
-    "Endpoint must be a Tencent Cloud COS host (e.g. {{example}})": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint must be a Tencent Cloud COS host (e.g. {{example}})"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 需为腾讯云 COS 地址（如 {{example}}）"
-          }
-        }
-      }
-    },
-    "Endpoint must be an Alibaba Cloud OSS host (e.g. {{example}})": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint must be an Alibaba Cloud OSS host (e.g. {{example}})"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 需为阿里云 OSS 地址（如 {{example}}）"
-          }
-        }
-      }
-    },
     "English": {
       "extractionState": "manual",
       "localizations": {
@@ -1221,23 +983,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "退出全屏"
-          }
-        }
-      }
-    },
-    "Extensions": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Extensions"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "扩展"
           }
         }
       }
@@ -1463,23 +1208,6 @@
         }
       }
     },
-    "HTTPS": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTTPS"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HTTPS"
-          }
-        }
-      }
-    },
     "Import": {
       "extractionState": "manual",
       "localizations": {
@@ -1514,23 +1242,6 @@
         }
       }
     },
-    "Includes IM / object storage secrets": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Includes IM / object storage secrets"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "含 IM / 对象存储密钥"
-          }
-        }
-      }
-    },
     "Incomplete configuration: {{fields}}": {
       "extractionState": "manual",
       "localizations": {
@@ -1561,23 +1272,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "配置链接无效，未修改现有配置"
-          }
-        }
-      }
-    },
-    "Invalid OpenSubtitles API Key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid OpenSubtitles API Key"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OpenSubtitles API Key 无效"
           }
         }
       }
@@ -1752,23 +1446,6 @@
         }
       }
     },
-    "Link contains secrets — do not post to public groups or social media": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Link contains secrets — do not post to public groups or social media"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接含密钥，请勿发到公开群或社交平台"
-          }
-        }
-      }
-    },
     "Link copied": {
       "extractionState": "manual",
       "localizations": {
@@ -1799,23 +1476,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "链接预览"
-          }
-        }
-      }
-    },
-    "Links contain secrets — share only with trusted friends": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Links contain secrets — share only with trusted friends"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接含密钥，仅发给可信好友"
           }
         }
       }
@@ -1888,23 +1548,6 @@
         }
       }
     },
-    "Make sure your object storage bucket contains mp4/m4v/mkv files": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Make sure your object storage bucket contains mp4/m4v/mkv files"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确认对象存储 Bucket 中有 mp4/m4v/mkv"
-          }
-        }
-      }
-    },
     "Match System": {
       "extractionState": "manual",
       "localizations": {
@@ -1935,23 +1578,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的"
-          }
-        }
-      }
-    },
-    "MinIO": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MinIO"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MinIO"
           }
         }
       }
@@ -2160,23 +1786,6 @@
         }
       }
     },
-    "Object Storage": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Object Storage"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对象存储"
-          }
-        }
-      }
-    },
     "Off": {
       "extractionState": "manual",
       "localizations": {
@@ -2207,23 +1816,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在线搜索"
-          }
-        }
-      }
-    },
-    "Online subtitle search uses the OpenSubtitles API (requires your own key). Movie metadata uses TMDB (requires your own token). This product uses the TMDB API but is not endorsed or certified by TMDB.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Online subtitle search uses the OpenSubtitles API (requires your own key). Movie metadata uses TMDB (requires your own token). This product uses the TMDB API but is not endorsed or certified by TMDB."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在线字幕检索使用 OpenSubtitles API（需你自己的 Key）。影片元数据使用 TMDB（需你自己的令牌）。本产品使用 TMDB API，但未经 TMDB 认可或认证。"
           }
         }
       }
@@ -2309,23 +1901,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "粘贴导入"
-          }
-        }
-      }
-    },
-    "Path-Style URL": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Path-Style URL"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "路径风格 URL"
           }
         }
       }
@@ -2432,23 +2007,6 @@
         }
       }
     },
-    "Prefix (optional)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prefix (optional)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prefix（可选）"
-          }
-        }
-      }
-    },
     "Privacy": {
       "extractionState": "manual",
       "localizations": {
@@ -2479,57 +2037,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "隐私政策"
-          }
-        }
-      }
-    },
-    "Provider": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Provider"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "提供商"
-          }
-        }
-      }
-    },
-    "Region (optional, {{example}})": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Region (optional, {{example}})"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Region（可选，{{example}}）"
-          }
-        }
-      }
-    },
-    "Qiniu": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qiniu"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "七牛云"
           }
         }
       }
@@ -2959,23 +2466,6 @@
         }
       }
     },
-    "Sharing includes secrets — do not post publicly": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sharing includes secrets — do not post publicly"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享含密钥，勿发到公开场合"
-          }
-        }
-      }
-    },
     "Show": {
       "extractionState": "manual",
       "localizations": {
@@ -3316,23 +2806,6 @@
         }
       }
     },
-    "Tencent Cloud COS": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tencent Cloud COS"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "腾讯云 COS"
-          }
-        }
-      }
-    },
     "Title year": {
       "extractionState": "manual",
       "localizations": {
@@ -3346,23 +2819,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "片名 年份"
-          }
-        }
-      }
-    },
-    "TMDB API Read Access Token": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TMDB API Read Access Token"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TMDB API 读取访问令牌"
           }
         }
       }
@@ -3554,74 +3010,6 @@
         }
       }
     },
-    "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 填 COS 地域域名（如 cos.ap-guangzhou.myqcloud.com），Region 可留空由 Endpoint 推断。"
-          }
-        }
-      }
-    },
-    "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 填七牛 S3 地址（如 s3.cn-south-1.qiniucs.com），不要填 CDN 或自定义域名。"
-          }
-        }
-      }
-    },
-    "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 填 OSS 地域域名（如 oss-cn-hangzhou.aliyuncs.com），Region 可留空由 Endpoint 推断。"
-          }
-        }
-      }
-    },
-    "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endpoint 填主机:端口（如 192.168.1.10:9000）。自建 MinIO 通常关 HTTPS、开 Path-Style；Region 默认 us-east-1。"
-          }
-        }
-      }
-    },
     "Username": {
       "extractionState": "manual",
       "localizations": {
@@ -3703,23 +3091,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "简体中文"
-          }
-        }
-      }
-    },
-    "With your TMDB token, Paircast uses filenames to fetch localized titles, posters, backdrops, and overviews. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "With your TMDB token, Paircast uses filenames to fetch localized titles, posters, backdrops, and overviews. This product uses the TMDB API but is not endorsed or certified by TMDB."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "填写 TMDB 令牌后，Paircast 会根据文件名获取本地化片名、海报、背景图和简介。本产品使用 TMDB API，但未经 TMDB 认可或认证。"
           }
         }
       }
@@ -3996,23 +3367,6 @@
         }
       }
     },
-    "Imported storage settings. Enter the IM server address, then Save": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imported storage settings. Enter the IM server address, then Save"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已导入存储设置，请填写 IM 服务器地址后保存"
-          }
-        }
-      }
-    },
     "Incorrect account or password": {
       "extractionState": "manual",
       "localizations": {
@@ -4077,23 +3431,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "未包含——请在表单中填写"
-          }
-        }
-      }
-    },
-    "Object storage: {{code}} — {{message}}": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Object storage: {{code}} — {{message}}"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对象存储：{{code}} — {{message}}"
           }
         }
       }
@@ -4217,23 +3554,6 @@
         }
       }
     },
-    "The link includes the IM server address and object storage credentials. Share only with trusted friends.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The link includes the IM server address and object storage credentials. Share only with trusted friends."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接包含 IM 服务器地址和对象存储密钥，请只分享给信任的好友。"
-          }
-        }
-      }
-    },
     "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin.": {
       "extractionState": "manual",
       "localizations": {
@@ -4247,23 +3567,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "这会清除本机云服务配置、登录会话、头像和昵称并退出登录。GO-IM 账号本身需由管理员另行停用。"
-          }
-        }
-      }
-    },
-    "Where to get the IM server address, storage keys, Endpoint, and how to use Paircast": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Where to get the IM server address, storage keys, Endpoint, and how to use Paircast"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IM 服务器地址、存储密钥、Endpoint 从哪里获取，以及 Paircast 的使用方法"
           }
         }
       }
@@ -4315,40 +3618,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "片库"
-          }
-        }
-      }
-    },
-    "No videos yet. Upload MP4/MKV to the movies/ folder in your bucket": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No videos yet. Upload MP4/MKV to the movies/ folder in your bucket"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有视频。请把 MP4/MKV 上传到存储桶的 movies/ 目录"
-          }
-        }
-      }
-    },
-    "Region": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Region"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "地域"
           }
         }
       }
@@ -4451,6 +3720,295 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放同步失败，请检查网络"
+          }
+        }
+      }
+    },
+    "The server has no media library configured. Contact an admin": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server has no media library configured. Contact an admin"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器尚未配置片库，请联系管理员"
+          }
+        }
+      }
+    },
+    "Online subtitle search is not enabled on the server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online subtitle search is not enabled on the server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器未开启在线字幕搜索"
+          }
+        }
+      }
+    },
+    "Configuration link generated": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration link generated"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已生成配置链接"
+          }
+        }
+      }
+    },
+    "This link has no IM server address. Enter it, then Save": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This link has no IM server address. Enter it, then Save"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该链接不含 IM 服务器地址，请填写后保存"
+          }
+        }
+      }
+    },
+    "Storage settings in this link were ignored — the media library is now configured on the server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storage settings in this link were ignored — the media library is now configured on the server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接中的存储配置已忽略——片库现由服务器统一配置"
+          }
+        }
+      }
+    },
+    "This link is from an older version. Its storage settings will be ignored — the media library is now configured on the server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This link is from an older version. Its storage settings will be ignored — the media library is now configured on the server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该链接来自旧版本，其中的存储配置将被忽略——片库现由服务器统一配置"
+          }
+        }
+      }
+    },
+    "Where to get the IM server address and how to use Paircast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where to get the IM server address and how to use Paircast"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如何获取 IM 服务器地址，以及 Paircast 使用说明"
+          }
+        }
+      }
+    },
+    "Links contain only the IM server address; friends still sign in with their own account": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links contain only the IM server address; friends still sign in with their own account"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接只包含 IM 服务器地址，好友仍需使用自己的账号登录"
+          }
+        }
+      }
+    },
+    "Media Library": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media Library"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片库"
+          }
+        }
+      }
+    },
+    "Managed by the server": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Managed by the server"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由服务器管理"
+          }
+        }
+      }
+    },
+    "Videos, subtitles, posters and stickers come from the media library your GO-IM admin configures on the server.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videos, subtitles, posters and stickers come from the media library your GO-IM admin configures on the server."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频、字幕、海报和表情包均来自 GO-IM 管理员在服务器上配置的片库。"
+          }
+        }
+      }
+    },
+    "Includes the IM server address only": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includes the IM server address only"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅包含 IM 服务器地址"
+          }
+        }
+      }
+    },
+    "No sticker packs on the server yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sticker packs on the server yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器上暂无表情包"
+          }
+        }
+      }
+    },
+    "Ask your admin to add mp4/m4v/mkv files to the server media library": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask your admin to add mp4/m4v/mkv files to the server media library"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请联系管理员向服务器片库添加 mp4/m4v/mkv 文件"
+          }
+        }
+      }
+    },
+    "No videos yet. Ask your admin to add MP4/MKV files to the server media library": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No videos yet. Ask your admin to add MP4/MKV files to the server media library"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无视频。请联系管理员向服务器片库添加 MP4/MKV 文件"
+          }
+        }
+      }
+    },
+    "Source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片源"
+          }
+        }
+      }
+    },
+    "Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your GO-IM server. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your GO-IM server. This product uses the TMDB API but is not endorsed or certified by TMDB."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在线字幕搜索（OpenSubtitles）与影片元数据（TMDB）均经由你的 GO-IM 服务器提供。本产品使用 TMDB API，但未获 TMDB 认可或认证。"
           }
         }
       }

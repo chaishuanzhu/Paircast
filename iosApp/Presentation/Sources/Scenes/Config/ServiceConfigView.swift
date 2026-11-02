@@ -5,27 +5,15 @@ import PaircastShared
 @MainActor
 public final class ServiceConfigViewModel: ObservableObject {
     @Published public var serverUrl = ""
-    @Published public var provider: ObjectStorageProvider = .qiniu
-    @Published public var accessKey = ""
-    @Published public var secretKey = ""
-    @Published public var bucket = ""
-    @Published public var endpoint = ""
-    @Published public var region = ""
-    @Published public var prefix = ""
-    @Published public var useSSL = true
-    @Published public var forcePathStyle = true
-    @Published public var subtitleApiKey = ""
-    @Published public var tmdbAccessToken = ""
     @Published public var statusMessage: String?
     @Published public var exportShareURL: String?
-    @Published public var showExportRisk = false
     @Published public var showExportSheet = false
     @Published public var showImportPaste = false
     @Published public var importRaw = ""
     @Published public var showImportConfirm = false
     @Published public var importPreview = ""
     @Published public var pendingImportConfig: AppCloudConfig?
-    /// Bumped after import so SecureFields recreate and do not write stale empty values back.
+    /// Bumped after import so fields recreate with the imported values.
     @Published public var formEpoch = 0
 
     private let session: AppSession
@@ -40,32 +28,6 @@ public final class ServiceConfigViewModel: ObservableObject {
     private func apply(_ config: AppCloudConfig) {
         if !config.im.serverUrl.isEmpty {
             serverUrl = config.im.serverUrl
-        }
-        provider = config.storage.provider
-        accessKey = config.storage.accessKey
-        secretKey = config.storage.secretKey
-        bucket = config.storage.bucket
-        endpoint = config.storage.endpoint
-        region = config.storage.region ?? ""
-        prefix = config.storage.prefix ?? ""
-        useSSL = config.storage.useSSL
-        forcePathStyle = config.storage.forcePathStyle
-        subtitleApiKey = config.subtitleApiKey ?? ""
-        tmdbAccessToken = config.tmdbAccessToken ?? ""
-    }
-
-    public func selectProvider(_ newProvider: ObjectStorageProvider) {
-        guard newProvider != provider else { return }
-        provider = newProvider
-        applyProviderDefaults(newProvider)
-    }
-
-    public func applyProviderDefaults(_ newProvider: ObjectStorageProvider) {
-        useSSL = newProvider.defaultUseSSL
-        forcePathStyle = newProvider.defaultForcePathStyle
-        if region.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-           let defaultRegion = newProvider.defaultRegion {
-            region = defaultRegion
         }
     }
 
@@ -90,10 +52,6 @@ public final class ServiceConfigViewModel: ObservableObject {
         }
     }
 
-    public func prepareExport() {
-        showExportRisk = true
-    }
-
     public func confirmExport() async {
         do {
             // Persist current form first so export matches what the user sees.
@@ -101,7 +59,7 @@ public final class ServiceConfigViewModel: ObservableObject {
             session.config = stored
             exportShareURL = try session.graph.configLinkCodec.shareUrl(config: stored)
             showExportSheet = true
-            statusMessage = TandemL10n.string("Configuration link generated (contains secrets — do not share publicly)")
+            statusMessage = TandemL10n.string("Configuration link generated")
         } catch {
             statusMessage = TandemL10n.message(for: error, fallback: .invalidConfigQR)
         }
@@ -128,27 +86,26 @@ public final class ServiceConfigViewModel: ObservableObject {
             // Pre-GO-IM links carry no server address: reuse the one in the form, if any.
             let server = serverUrl.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !server.isEmpty else {
-                apply(incoming)
-                formEpoch += 1
-                statusMessage = TandemL10n.string("Imported storage settings. Enter the IM server address, then Save")
+                statusMessage = TandemL10n.string("This link has no IM server address. Enter it, then Save")
                 return
             }
             incoming = incoming.doCopy(
                 im: IMConfig(serverUrl: server),
-                storage: incoming.storage,
-                subtitleApiKey: incoming.subtitleApiKey,
-                tmdbAccessToken: incoming.tmdbAccessToken,
                 updatedAtMs: incoming.updatedAtMs,
                 configVersion: incoming.configVersion
             )
         }
         do {
-            // Persist directly — avoid re-encrypt round-trip and SecureField clobbering via Save.
+            // Persist directly — avoid a re-encrypt round-trip via Save.
             let saved = try await session.graph.saveConfig.invoke(config: incoming)
             apply(saved)
             formEpoch += 1
             await session.applyImportedCloudConfig(saved)
-            statusMessage = TandemL10n.string("Configuration imported. Please sign in again")
+            statusMessage = TandemL10n.string(
+                ConfigQRCodec.shared.isLegacy(config: pendingImportConfig)
+                    ? "Storage settings in this link were ignored — the media library is now configured on the server"
+                    : "Configuration imported. Please sign in again"
+            )
         } catch {
             statusMessage = TandemL10n.message(for: error, fallback: .invalidConfigQR)
         }
@@ -163,19 +120,6 @@ public final class ServiceConfigViewModel: ObservableObject {
     private func draftConfig() -> AppCloudConfig {
         AppCloudConfig(
             im: IMConfig(serverUrl: serverUrl),
-            storage: ObjectStorageConfig(
-                provider: provider,
-                accessKey: accessKey,
-                secretKey: secretKey,
-                bucket: bucket,
-                endpoint: endpoint,
-                region: region.isEmpty ? nil : region,
-                prefix: prefix.isEmpty ? nil : prefix,
-                useSSL: useSSL,
-                forcePathStyle: forcePathStyle
-            ),
-            subtitleApiKey: subtitleApiKey.isEmpty ? nil : subtitleApiKey,
-            tmdbAccessToken: tmdbAccessToken.isEmpty ? nil : tmdbAccessToken,
             updatedAtMs: 0,
             configVersion: AppCloudConfig.companion.CURRENT_VERSION
         )
@@ -212,7 +156,7 @@ public struct ServiceConfigView: View {
                         Label("Configuration Guide", systemImage: "book.fill")
                     }
                 } footer: {
-                    Text("Where to get the IM server address, storage keys, Endpoint, and how to use Paircast")
+                    Text("Where to get the IM server address and how to use Paircast")
                 }
 
                 Section {
@@ -231,12 +175,12 @@ public struct ServiceConfigView: View {
                         systemImage: "square.and.arrow.up.fill",
                         tint: TandemColors.systemBlue
                     ) {
-                        viewModel.prepareExport()
+                        Task { await viewModel.confirmExport() }
                     }
                 } header: {
                     Text("Share & Import")
                 } footer: {
-                    Text("Links contain secrets — share only with trusted friends")
+                    Text("Links contain only the IM server address; friends still sign in with their own account")
                 }
 
                 Section {
@@ -251,57 +195,9 @@ public struct ServiceConfigView: View {
                     Text("Your self-hosted GO-IM address. HTTPS is assumed unless you enter http:// (LAN only).")
                 }
                 Section {
-                    Picker(
-                        "Provider",
-                        selection: Binding(
-                            get: { viewModel.provider },
-                            set: { viewModel.selectProvider($0) }
-                        )
-                    ) {
-                        ForEach(ObjectStorageProvider.allCases, id: \.self) { item in
-                            Text(LocalizedStringKey(item.displayName)).tag(item)
-                        }
-                    }
-                    SecureField("AccessKey", text: $viewModel.accessKey)
-                    SecureField("SecretKey", text: $viewModel.secretKey)
-                    TextField("Bucket", text: $viewModel.bucket)
-                    TextField(
-                        TandemL10n.format(
-                            "Endpoint ({{example}})",
-                            ["example": viewModel.provider.endpointPlaceholder]
-                        ),
-                        text: $viewModel.endpoint
-                    )
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField(
-                        TandemL10n.format(
-                            "Region (optional, {{example}})",
-                            ["example": viewModel.provider.regionPlaceholder]
-                        ),
-                        text: $viewModel.region
-                    )
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("Prefix (optional)", text: $viewModel.prefix)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Toggle("HTTPS", isOn: $viewModel.useSSL)
-                    Toggle("Path-Style URL", isOn: $viewModel.forcePathStyle)
-                } header: {
-                    Text("Object Storage")
+                    LabeledContent("Media Library", value: TandemL10n.string("Managed by the server"))
                 } footer: {
-                    Text(LocalizedStringKey(storageFooter(for: viewModel.provider)))
-                }
-                Section {
-                    SecureField("OpenSubtitles API Key", text: $viewModel.subtitleApiKey)
-                    SecureField("TMDB API Read Access Token", text: $viewModel.tmdbAccessToken)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                } header: {
-                    Text("Extensions")
-                } footer: {
-                    Text("With your TMDB token, Paircast uses filenames to fetch localized titles, posters, backdrops, and overviews. This product uses the TMDB API but is not endorsed or certified by TMDB.")
+                    Text("Videos, subtitles, posters and stickers come from the media library your GO-IM admin configures on the server.")
                 }
                 if let status = viewModel.statusMessage {
                     Section {
@@ -337,12 +233,6 @@ public struct ServiceConfigView: View {
             }
             .task {
                 viewModel.consumePendingDeepLinkIfNeeded()
-            }
-            .alert("Sharing includes secrets — do not post publicly", isPresented: $viewModel.showExportRisk) {
-                Button("Continue Sharing") { Task { await viewModel.confirmExport() } }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("The link includes the IM server address and object storage credentials. Share only with trusted friends.")
             }
             .sheet(isPresented: $viewModel.showExportSheet) {
                 if let shareURL = viewModel.exportShareURL {
@@ -387,18 +277,6 @@ public struct ServiceConfigView: View {
         URL(string: "https://paircast.chaisz.com/\(docsLocalePath)/guide/")!
     }
 
-    private func storageFooter(for provider: ObjectStorageProvider) -> String {
-        switch provider {
-        case .qiniu:
-            return "Use a Qiniu S3 endpoint (e.g. s3.cn-south-1.qiniucs.com). Do not use a CDN or custom domain as Endpoint."
-        case .aliyunOss:
-            return "Use an OSS regional endpoint (e.g. oss-cn-hangzhou.aliyuncs.com). Region can be left blank and inferred from Endpoint."
-        case .tencentCos:
-            return "Use a COS regional endpoint (e.g. cos.ap-guangzhou.myqcloud.com). Region can be left blank and inferred from Endpoint."
-        case .minio:
-            return "Use host:port (e.g. 192.168.1.10:9000). Self-hosted MinIO usually disables HTTPS and enables Path-Style; Region defaults to us-east-1."
-        }
-    }
 }
 
 private struct ConfigTransferRow: View {
@@ -505,7 +383,7 @@ private struct ConfigExportShareView: View {
                             .accessibilityLabel(truncatedURL)
 
                         HStack {
-                            Text("Includes IM / object storage secrets")
+                            Text("Includes the IM server address only")
                                 .font(.system(size: 13))
                                 .foregroundStyle(TandemColors.secondaryLabel)
                             Spacer()
@@ -526,8 +404,6 @@ private struct ConfigExportShareView: View {
                     .padding(14)
                     .background(TandemColors.secondaryGrouped)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                    TandemWarningBanner("Link contains secrets — do not post to public groups or social media")
 
                     Button {
                         UIPasteboard.general.string = shareURL
@@ -712,12 +588,11 @@ private struct ConfigImportConfirmView: View {
                             ? config.im.maskedSummary
                             : TandemL10n.string("Not included — enter it in the form")),
                     ])
-                    confirmSection(title: LocalizedStringKey(config.storage.provider.displayName), rows: [
-                        ("AccessKey", ConfigQRCodec.shared.maskedAccessKey(value: config.storage.accessKey)),
-                        ("Bucket", config.storage.bucket),
-                        ("Endpoint", ConfigQRCodec.shared.truncate(value: config.storage.endpoint, max: 22)),
-                        ("Region", config.storage.region ?? config.storage.signingRegion),
-                    ])
+                    if ConfigQRCodec.shared.isLegacy(config: config) {
+                        Text("This link is from an older version. Its storage settings will be ignored — the media library is now configured on the server")
+                            .font(.system(size: 13))
+                            .foregroundStyle(TandemColors.secondaryLabel)
+                    }
 
                     Button(action: onConfirm) {
                         Text("Confirm Import & Overwrite")

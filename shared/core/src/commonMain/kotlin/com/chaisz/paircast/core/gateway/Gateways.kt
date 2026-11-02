@@ -3,6 +3,7 @@ package com.chaisz.paircast.core.gateway
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.LoginResult
+import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
 import com.chaisz.paircast.core.model.StickerPack
@@ -68,35 +69,36 @@ interface ConfigLinkCodec {
     fun decode(input: String): AppCloudConfig
 }
 
+/** Server media library (`/media/…`). Video sources and their keys live on the server. */
 interface MovieCatalogGateway {
+    /** Configured video sources (id + display name); empty when the server has no library. */
     @Throws(Exception::class)
-    suspend fun listMovies(config: AppCloudConfig): List<Movie>
-    /** AWS SigV4 query-presigned HTTPS URL for online playback (default 6h). */
+    suspend fun listSources(config: AppCloudConfig): List<MediaSource>
+    /** Movies of [sourceId] (server default when null), with cached metadata merged in. */
+    @Throws(Exception::class)
+    suspend fun listMovies(config: AppCloudConfig, sourceId: String? = null): List<Movie>
+    /** Short-lived direct play URL issued by the server (S3 sources: presigned, default 6h). */
     @Throws(Exception::class)
     suspend fun playUrl(movie: Movie, config: AppCloudConfig): String
 }
 
+/** Server-side scraping (NFO / poster sidecars / TMDB), cached on the server. */
 interface MetadataGateway {
     @Throws(Exception::class)
     suspend fun enrich(movie: Movie, config: AppCloudConfig): Movie
 }
 
-/** Reads/writes Kodi-style NFO + poster/fanart sidecars beside the movie in object storage. */
-interface MovieMetadataStorageGateway {
-    @Throws(Exception::class)
-    suspend fun load(movie: Movie, config: AppCloudConfig): Movie?
-    @Throws(Exception::class)
-    suspend fun save(movie: Movie, config: AppCloudConfig): Movie
-}
-
+/** Watch rooms (`/room/…`); the server owns membership, host transfer and revisions. */
 interface RoomGateway {
     @Throws(Exception::class)
     suspend fun createRoom(movieId: String, hostUserId: String): WatchRoom
-    /** [movieId]/[hostUserId]: optional invite bootstrap when the room record is not found yet. */
+    /** [movieId]/[hostUserId] come from the invite link and are only used for error context. */
     @Throws(Exception::class)
     suspend fun joinRoom(roomId: String, userId: String, movieId: String?, hostUserId: String?): WatchRoom
+    /** Server transfers host by join order and ends the room when the last member leaves. */
     @Throws(Exception::class)
-    suspend fun leaveRoom(room: WatchRoom, userId: String): WatchRoom?
+    suspend fun leaveRoom(room: WatchRoom, userId: String, transferSeq: Long): WatchRoom?
+    /** Sends movie / host / status / seq changes; host-only fields are enforced by the server. */
     @Throws(Exception::class)
     suspend fun updateRoom(room: WatchRoom)
     fun observeRoom(roomId: String): Flow<WatchRoom>
@@ -118,7 +120,7 @@ interface PlaybackSyncGateway {
     fun signals(room: WatchRoom): Flow<PlaybackSyncSignal>
 }
 
-/** Loads sticker packs from the user's object storage `stickers/` folder. */
+/** Sticker packs served by the media library (`/media/stickers…`). */
 interface StickerCatalogGateway {
     @Throws(Exception::class)
     suspend fun loadCatalog(config: AppCloudConfig): List<StickerPackSummary>
@@ -128,27 +130,29 @@ interface StickerCatalogGateway {
     suspend fun imageData(packId: String, fileName: String, config: AppCloudConfig): ByteArray
     @Throws(Exception::class)
     suspend fun imageDataForRef(ref: StickerRef, config: AppCloudConfig): ByteArray
-    /** SigV4 presigned GET URL for a sticker asset (stable cache key = `ref.bindKey`). */
+    /** Server-signed GET URL for a sticker asset (stable cache key = `ref.bindKey`). */
     @Throws(Exception::class)
     suspend fun imageUrl(ref: StickerRef, config: AppCloudConfig): String
 }
 
 interface SubtitleGateway {
+    /** Sidecar subtitles next to the movie in its video source. */
     @Throws(Exception::class)
-    suspend fun listOSSSidecars(movie: Movie, config: AppCloudConfig): List<SubtitleTrack>
+    suspend fun listSidecars(movie: Movie, config: AppCloudConfig): List<SubtitleTrack>
+    /** Online search through the server (OpenSubtitles key stays server-side). */
     @Throws(Exception::class)
-    suspend fun searchOnline(query: String, year: String?, apiKey: String?): List<SubtitleTrack>
+    suspend fun searchOnline(query: String, year: String?): List<SubtitleTrack>
     /** Downloads a track to a local file (UTF-8 normalized); returns its absolute path. */
     @Throws(Exception::class)
     suspend fun download(track: SubtitleTrack, config: AppCloudConfig?): String
 }
 
-/** Host uploads a downloaded subtitle beside the movie object; members pull via SigV4 GET. */
+/** Host shares a subtitle through the server; members load it by ref. */
 interface SharedSubtitleStorageGateway {
-    /** Uploads local subtitle bytes next to the movie (`{movieBase}.{ext}`); returns object key. */
+    /** Uploads local subtitle bytes for [roomId] (host only); returns the server subtitle ref. */
     @Throws(Exception::class)
-    suspend fun upload(filePath: String, roomId: String, movieId: String, config: AppCloudConfig): String
-    /** Downloads a shared / sidecar subtitle to a local file (UTF-8 normalized); returns its path. */
+    suspend fun upload(filePath: String, roomId: String, label: String?, config: AppCloudConfig): String
+    /** Downloads a server subtitle ref to a local file (UTF-8 normalized); returns its path. */
     @Throws(Exception::class)
-    suspend fun download(objectKey: String, config: AppCloudConfig): String
+    suspend fun download(ref: String, config: AppCloudConfig): String
 }
