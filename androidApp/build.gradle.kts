@@ -17,6 +17,8 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = providers.gradleProperty("paircast.versionCode").getOrElse("1").toInt()
         versionName = providers.gradleProperty("paircast.versionName").getOrElse("1.0.0")
+        // libvlc-all ships four ABIs (~120 MB); x86 32-bit devices are not a target.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
     // CI injects release signing via env; fall back to debug signing so artifacts stay installable.
@@ -48,11 +50,20 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/l10n"))
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
         jniLibs.useLegacyPackaging = true
     }
 }
+
+/** Both apps share one string catalog (keys = English templates, also used by shared `UiText`). */
+val copyStringCatalog by tasks.registering(Copy::class) {
+    from(rootProject.file("Projects/App/Resources/Localizable.xcstrings"))
+    into(layout.buildDirectory.dir("generated/l10n"))
+}
+tasks.named("preBuild") { dependsOn(copyStringCatalog) }
 
 kotlin {
     compilerOptions {

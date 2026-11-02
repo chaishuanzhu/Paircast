@@ -87,6 +87,8 @@ public enum TandemL10n {
     }
 
     private static func localizedConfigField(_ field: String) -> String {
+        let whole = string(field)
+        if whole != field { return whole }
         guard let separator = field.lastIndex(of: " ") else {
             return string(field)
         }
