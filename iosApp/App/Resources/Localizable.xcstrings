@@ -1548,23 +1548,6 @@
         }
       }
     },
-    "Invalid avatar key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid avatar key"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无效的头像 key"
-          }
-        }
-      }
-    },
     "Invalid configuration link. Existing settings were not changed": {
       "extractionState": "manual",
       "localizations": {
@@ -1612,23 +1595,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "无效的共享字幕 key"
-          }
-        }
-      }
-    },
-    "Invalid user ID or login failed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid user ID or login failed"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用户 ID 无效或登录失败"
           }
         }
       }
@@ -2445,23 +2411,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请选择头像图片"
-          }
-        }
-      }
-    },
-    "Please enter a user ID": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Please enter a user ID"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请输入用户 ID"
           }
         }
       }
@@ -3520,23 +3469,6 @@
         }
       }
     },
-    "Unable to access secure storage": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to access secure storage"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法访问安全存储"
-          }
-        }
-      }
-    },
     "Unable to generate QR code": {
       "extractionState": "manual",
       "localizations": {
@@ -3550,23 +3482,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法生成二维码"
-          }
-        }
-      }
-    },
-    "Unable to load configuration": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to load configuration"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法加载配置"
           }
         }
       }
