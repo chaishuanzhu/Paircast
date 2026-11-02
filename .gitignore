@@ -19,6 +19,18 @@ Vendor/VLCKitSPM/VLCKit-all.xcframework.zip
 Vendor/ImSDKSPM/ImSDK_Plus.xcframework/
 Vendor/ImSDKSPM/ImSDK_Plus.xcframework.zip
 
+# Gradle / Kotlin Multiplatform / Android
+.gradle/
+.kotlin/
+build/
+!Projects/**/build/
+local.properties
+*.iml
+.idea/
+captures/
+*.keystore
+*.jks
+
 # Fastlane / Ruby
 vendor/bundle/
 .bundle/
