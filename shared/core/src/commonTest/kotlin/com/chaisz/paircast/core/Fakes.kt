@@ -3,7 +3,6 @@ package com.chaisz.paircast.core
 import com.chaisz.paircast.core.gateway.AuthGateway
 import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
-import com.chaisz.paircast.core.gateway.ConfigLinkCodec
 import com.chaisz.paircast.core.gateway.ConnectionState
 import com.chaisz.paircast.core.gateway.MetadataGateway
 import com.chaisz.paircast.core.gateway.MovieCatalogGateway
@@ -25,7 +24,6 @@ import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.model.VideoFormat
 import com.chaisz.paircast.core.model.WatchRoom
-import com.chaisz.paircast.core.rules.ConfigQRCodec
 import com.chaisz.paircast.core.session.PlayerPort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -40,12 +38,6 @@ internal class FakeConfigGateway(var config: AppCloudConfig? = null) : ConfigGat
     override suspend fun load() = config
     override suspend fun save(config: AppCloudConfig) { this.config = config }
     override suspend fun clearAll() { config = null }
-}
-
-/** Plaintext "link" codec so core tests stay crypto-free. */
-internal class PlainLinkCodec : ConfigLinkCodec {
-    override fun shareUrl(config: AppCloudConfig) = "paircast://config?args=" + ConfigQRCodec.encode(config)
-    override fun decode(input: String): AppCloudConfig = ConfigQRCodec.decode(input.removePrefix("paircast://config?args="))
 }
 
 internal class FakeAuthGateway(user: User? = User("host", "Host")) : AuthGateway {

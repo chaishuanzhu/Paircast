@@ -273,23 +273,6 @@
         }
       }
     },
-    "AES-GCM encrypted": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AES-GCM encrypted"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AES-GCM 加密"
-          }
-        }
-      }
-    },
     "After friends open the link and sign in, they join this watch room and sync playback.": {
       "extractionState": "manual",
       "localizations": {
@@ -303,23 +286,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "好友打开链接并登录后，将加入当前观影房间并对齐进度。"
-          }
-        }
-      }
-    },
-    "After parsing, a masked preview is shown. Local configuration is overwritten only after you confirm.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After parsing, a masked preview is shown. Local configuration is overwritten only after you confirm."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解析成功后会展示脱敏预览，确认才会覆盖本机配置"
           }
         }
       }
@@ -494,23 +460,6 @@
         }
       }
     },
-    "Choose a profile photo and save configuration QR codes": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose a profile photo and save configuration QR codes"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择头像与保存配置二维码"
-          }
-        }
-      }
-    },
     "Choose Match System to follow iOS language settings. English and 简体中文 override the system.": {
       "extractionState": "manual",
       "localizations": {
@@ -545,36 +494,19 @@
         }
       }
     },
-    "Configuration imported": {
+    "Server changed. Please sign in again": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Configuration imported"
+            "value": "Server changed. Please sign in again"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "配置成功"
-          }
-        }
-      }
-    },
-    "Configuration imported. Please sign in again": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configuration imported. Please sign in again"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "配置已导入，请重新登录"
+            "value": "服务器已更换，请重新登录"
           }
         }
       }
@@ -596,70 +528,36 @@
         }
       }
     },
-    "Configuration is too large to share or import": {
+    "Server Deployment Guide": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Configuration is too large to share or import"
+            "value": "Server Deployment Guide"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "配置过大，无法分享或导入"
+            "value": "服务端部署指南"
           }
         }
       }
     },
-    "Configuration link": {
+    "Deploy your own server with Docker": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Configuration link"
+            "value": "Deploy your own server with Docker"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "配置链接"
-          }
-        }
-      }
-    },
-    "Configuration link detected. Confirm to import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configuration link detected. Confirm to import"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "检测到配置链接，请确认后导入"
-          }
-        }
-      }
-    },
-    "Configuration QR code": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configuration QR code"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "配置二维码"
+            "value": "用 Docker 部署自己的服务器"
           }
         }
       }
@@ -694,57 +592,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已配置"
-          }
-        }
-      }
-    },
-    "Confirm Import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirm Import"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确认导入"
-          }
-        }
-      }
-    },
-    "Confirm Import & Overwrite": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirm Import & Overwrite"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确认导入并覆盖"
-          }
-        }
-      }
-    },
-    "Continue": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Continue"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "继续"
           }
         }
       }
@@ -796,23 +643,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "复制邀请链接"
-          }
-        }
-      }
-    },
-    "Copy Link": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Link"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "复制链接"
           }
         }
       }
@@ -932,23 +762,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "内嵌"
-          }
-        }
-      }
-    },
-    "Encrypted link parsed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Encrypted link parsed"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加密链接已解析"
           }
         }
       }
@@ -1106,23 +919,6 @@
         }
       }
     },
-    "Generate an encrypted link to copy or share with friends": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Generate an encrypted link to copy or share with friends"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "生成加密链接，复制或分享给好友"
-          }
-        }
-      }
-    },
     "Hide": {
       "extractionState": "manual",
       "localizations": {
@@ -1208,40 +1004,6 @@
         }
       }
     },
-    "Import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入"
-          }
-        }
-      }
-    },
-    "Import Configuration": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import Configuration"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入配置"
-          }
-        }
-      }
-    },
     "Incomplete configuration: {{fields}}": {
       "extractionState": "manual",
       "localizations": {
@@ -1255,23 +1017,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "配置不完整：{{fields}}"
-          }
-        }
-      }
-    },
-    "Invalid configuration link. Existing settings were not changed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid configuration link. Existing settings were not changed"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "配置链接无效，未修改现有配置"
           }
         }
       }
@@ -1854,57 +1599,6 @@
         }
       }
     },
-    "Paste configuration link": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste configuration link"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "粘贴配置链接"
-          }
-        }
-      }
-    },
-    "Paste from Clipboard": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste from Clipboard"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从剪贴板粘贴"
-          }
-        }
-      }
-    },
-    "Paste to Import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste to Import"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "粘贴导入"
-          }
-        }
-      }
-    },
     "Playback": {
       "extractionState": "manual",
       "localizations": {
@@ -2160,57 +1854,6 @@
         }
       }
     },
-    "Save configuration QR codes to Photos": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save configuration QR codes to Photos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存配置分享二维码到相册"
-          }
-        }
-      }
-    },
-    "Save QR Code": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save QR Code"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存二维码"
-          }
-        }
-      }
-    },
-    "Saved to Photos": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saved to Photos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已保存到相册"
-          }
-        }
-      }
-    },
     "Saved": {
       "extractionState": "manual",
       "localizations": {
@@ -2364,23 +2007,6 @@
         }
       }
     },
-    "Send to a friend to import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send to a friend to import"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发给好友即可导入"
-          }
-        }
-      }
-    },
     "Service Configuration": {
       "extractionState": "manual",
       "localizations": {
@@ -2428,40 +2054,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "分享"
-          }
-        }
-      }
-    },
-    "Share & Import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share & Import"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享与导入"
-          }
-        }
-      }
-    },
-    "Share Configuration": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share Configuration"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享配置"
           }
         }
       }
@@ -2840,23 +2432,6 @@
         }
       }
     },
-    "They can open the link or paste it into Service Configuration to apply the same environment": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "They can open the link or paste it into Service Configuration to apply the same environment"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对方打开链接或粘贴到「服务配置」即可写入同一套环境"
-          }
-        }
-      }
-    },
     "This container or codec is not supported on this device": {
       "extractionState": "manual",
       "localizations": {
@@ -2921,23 +2496,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "试试其他关键词，或稍后再试"
-          }
-        }
-      }
-    },
-    "Unable to generate QR code": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to generate QR code"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法生成二维码"
           }
         }
       }
@@ -3146,40 +2704,6 @@
         }
       }
     },
-    "Paste a paircast://config?args=… link": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste a paircast://config?args=… link"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "粘贴 paircast://config?args=… 链接"
-          }
-        }
-      }
-    },
-    "Supports a full deep link, or a paircast://config?args=… link found in a chat message": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supports a full deep link, or a paircast://config?args=… link found in a chat message"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支持完整深链，或聊天消息中带有的 paircast://config?args=…"
-          }
-        }
-      }
-    },
     "Account": {
       "extractionState": "manual",
       "localizations": {
@@ -3214,19 +2738,19 @@
         }
       }
     },
-    "Cannot reach the IM server. Check the server address": {
+    "Cannot reach the server. Check the server address": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cannot reach the IM server. Check the server address"
+            "value": "Cannot reach the server. Check the server address"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法连接 IM 服务器，请检查服务器地址"
+            "value": "无法连接服务器，请检查服务器地址"
           }
         }
       }
@@ -3248,19 +2772,19 @@
         }
       }
     },
-    "Chat and playback sync use your self-hosted GO-IM server. Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization, Wire and cryptography-kotlin (Apache 2.0).": {
+    "Chat, playback sync and the media library run on your self-hosted server (GO-IM). Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization and Wire (Apache 2.0).": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chat and playback sync use your self-hosted GO-IM server. Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization, Wire and cryptography-kotlin (Apache 2.0)."
+            "value": "Chat, playback sync and the media library run on your self-hosted server (GO-IM). Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization and Wire (Apache 2.0)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "聊天和播放同步使用你自建的 GO-IM 服务器。共享逻辑基于 Kotlin Multiplatform、Ktor、kotlinx.serialization、Wire 和 cryptography-kotlin（Apache 2.0）构建。"
+            "value": "聊天、播放同步和片库都运行在你自建的服务器（GO-IM）上。共享逻辑基于 Kotlin Multiplatform、Ktor、kotlinx.serialization 和 Wire（Apache 2.0）构建。"
           }
         }
       }
@@ -3350,19 +2874,19 @@
         }
       }
     },
-    "IM Server": {
+    "Server": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "IM Server"
+            "value": "Server"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "IM 服务器"
+            "value": "服务器"
           }
         }
       }
@@ -3414,23 +2938,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "新密码不能与当前密码相同"
-          }
-        }
-      }
-    },
-    "Not included — enter it in the form": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not included — enter it in the form"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未包含——请在表单中填写"
           }
         }
       }
@@ -3554,19 +3061,19 @@
         }
       }
     },
-    "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin.": {
+    "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The account itself must be disabled separately by the server admin.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin."
+            "value": "This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The account itself must be disabled separately by the server admin."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "这会清除本机云服务配置、登录会话、头像和昵称并退出登录。GO-IM 账号本身需由管理员另行停用。"
+            "value": "这会清除本机云服务配置、登录会话、头像和昵称并退出登录。账号本身需由服务器管理员另行停用。"
           }
         }
       }
@@ -3588,19 +3095,19 @@
         }
       }
     },
-    "Your self-hosted GO-IM address. HTTPS is assumed unless you enter http:// (LAN only).": {
+    "The address of the server you or a friend deployed. HTTPS is assumed unless you enter http:// (LAN only).": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your self-hosted GO-IM address. HTTPS is assumed unless you enter http:// (LAN only)."
+            "value": "The address of the server you or a friend deployed. HTTPS is assumed unless you enter http:// (LAN only)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自建 GO-IM 服务地址。默认使用 HTTPS，局域网可显式填写 http://。"
+            "value": "你或好友部署的服务器地址。默认使用 HTTPS，局域网可显式填写 http://。"
           }
         }
       }
@@ -3618,23 +3125,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "片库"
-          }
-        }
-      }
-    },
-    "Scan QR Code": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scan QR Code"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "扫描二维码"
           }
         }
       }
@@ -3669,23 +3159,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "点击头像更换"
-          }
-        }
-      }
-    },
-    "This will overwrite your local cloud service configuration": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This will overwrite your local cloud service configuration"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这将覆盖本机的云服务配置"
           }
         }
       }
@@ -3758,104 +3231,19 @@
         }
       }
     },
-    "Configuration link generated": {
+    "Fill in the server address, save, then sign in with the account the server admin created for you": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Configuration link generated"
+            "value": "Fill in the server address, save, then sign in with the account the server admin created for you"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已生成配置链接"
-          }
-        }
-      }
-    },
-    "This link has no IM server address. Enter it, then Save": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This link has no IM server address. Enter it, then Save"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该链接不含 IM 服务器地址，请填写后保存"
-          }
-        }
-      }
-    },
-    "Storage settings in this link were ignored — the media library is now configured on the server": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Storage settings in this link were ignored — the media library is now configured on the server"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接中的存储配置已忽略——片库现由服务器统一配置"
-          }
-        }
-      }
-    },
-    "This link is from an older version. Its storage settings will be ignored — the media library is now configured on the server": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This link is from an older version. Its storage settings will be ignored — the media library is now configured on the server"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该链接来自旧版本，其中的存储配置将被忽略——片库现由服务器统一配置"
-          }
-        }
-      }
-    },
-    "Where to get the IM server address and how to use Paircast": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Where to get the IM server address and how to use Paircast"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如何获取 IM 服务器地址，以及 Paircast 使用说明"
-          }
-        }
-      }
-    },
-    "Links contain only the IM server address; friends still sign in with their own account": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Links contain only the IM server address; friends still sign in with their own account"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接只包含 IM 服务器地址，好友仍需使用自己的账号登录"
+            "value": "填写服务器地址并保存，然后用服务器管理员为你创建的账号登录"
           }
         }
       }
@@ -3894,36 +3282,19 @@
         }
       }
     },
-    "Videos, subtitles, posters and stickers come from the media library your GO-IM admin configures on the server.": {
+    "Videos, subtitles, posters and stickers come from the media library the server admin configures.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Videos, subtitles, posters and stickers come from the media library your GO-IM admin configures on the server."
+            "value": "Videos, subtitles, posters and stickers come from the media library the server admin configures."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "视频、字幕、海报和表情包均来自 GO-IM 管理员在服务器上配置的片库。"
-          }
-        }
-      }
-    },
-    "Includes the IM server address only": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Includes the IM server address only"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "仅包含 IM 服务器地址"
+            "value": "视频、字幕、海报和表情包均来自服务器管理员配置的片库。"
           }
         }
       }
@@ -3996,19 +3367,19 @@
         }
       }
     },
-    "Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your GO-IM server. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
+    "Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your server. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your GO-IM server. This product uses the TMDB API but is not endorsed or certified by TMDB."
+            "value": "Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your server. This product uses the TMDB API but is not endorsed or certified by TMDB."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在线字幕搜索（OpenSubtitles）与影片元数据（TMDB）均经由你的 GO-IM 服务器提供。本产品使用 TMDB API，但未获 TMDB 认可或认证。"
+            "value": "在线字幕搜索（OpenSubtitles）与影片元数据（TMDB）均经由你的服务器提供。本产品使用 TMDB API，但未获 TMDB 认可或认证。"
           }
         }
       }

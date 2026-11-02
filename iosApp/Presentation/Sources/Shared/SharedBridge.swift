@@ -47,8 +47,6 @@ public extension AppError {
     static var notConfigured: AppError { AppError.NotConfigured.shared }
     static var network: AppError { AppError.Network.shared }
     static var playbackFailed: AppError { AppError.PlaybackFailed.shared }
-    static var invalidConfigQR: AppError { AppError.InvalidConfigQR.shared }
-    static var configQRTooLarge: AppError { AppError.ConfigQRTooLarge.shared }
     static var catalogUnauthorized: AppError { AppError.CatalogUnauthorized.shared }
     static var onlyHostCanSwitchMovie: AppError { AppError.OnlyHostCanSwitchMovie.shared }
     static var kickedOffline: AppError { AppError.KickedOffline.shared }

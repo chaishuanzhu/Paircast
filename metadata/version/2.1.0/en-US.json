@@ -3,5 +3,5 @@
   "keywords": "sync player,private cloud,subtitles,chat,invite,remote,room,playback,storage,movie night",
   "promotionalText": "Use your own cloud storage to watch in sync with invited friends, and chat while you watch.",
   "supportUrl": "https://paircast.chaisz.com/en-US/support/",
-  "whatsNew": "Paircast 2.1 moves library setup to the server.\n- Service Configuration only needs the IM server address; no more storage keys or subtitle / TMDB tokens in the app\n- Videos, subtitles, posters, and stickers come from the server\n- Switch between sources in the Library when the server has more than one\n- Members who join later automatically load subtitles the host shared\n- Older config links still import; their storage keys are ignored"
+  "whatsNew": "Paircast 2.1 moves library setup to the server.\n- Service Configuration only needs the server address; no more storage keys or subtitle / TMDB tokens in the app\n- Videos, subtitles, posters, and stickers come from the server\n- Switch between sources in the Library when the server has more than one\n- Members who join later automatically load subtitles the host shared\n- Service Configuration links to a new server deployment guide; config sharing and import are removed"
 }

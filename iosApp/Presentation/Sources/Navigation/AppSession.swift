@@ -22,8 +22,6 @@ public final class AppSession: ObservableObject {
 
     /// Deep-link invite kept until the user finishes login.
     private(set) var pendingInvite: RoomInvite?
-    /// Config share link (`paircast://config?args=…`) awaiting confirm-import on the config screen.
-    private(set) var pendingConfigImportRaw: String?
     private var sessionEventsTask: Task<Void, Never>?
 
     public init(graph: PaircastGraph) {
@@ -48,15 +46,8 @@ public final class AppSession: ObservableObject {
             next = .library
         }
 
-        // Deep links received during splash win over the default destination.
-        if pendingConfigImportRaw != nil {
-            if currentUser == nil {
-                next = .config(fromLogin: true)
-            } else {
-                next = .library
-                nextLibraryPath = [.config]
-            }
-        } else if currentUser != nil, let invite = pendingInvite {
+        // An invite received during splash wins over the default destination.
+        if currentUser != nil, let invite = pendingInvite {
             pendingInvite = nil
             next = .library
             nextLibraryPath = [
@@ -72,9 +63,6 @@ public final class AppSession: ObservableObject {
         libraryPath = nextLibraryPath
         if case .login = next, pendingInvite != nil {
             showToast(TandemL10n.string("Sign in to join the room"))
-        }
-        if pendingConfigImportRaw != nil {
-            showToast(TandemL10n.string("Configuration link detected. Confirm to import"))
         }
     }
 
@@ -134,14 +122,6 @@ public final class AppSession: ObservableObject {
     }
 
     public func handleDeepLink(_ url: URL) {
-        if Self.isConfigShareURL(url) {
-            pendingConfigImportRaw = url.absoluteString
-            if route != .splash {
-                openConfig(fromLogin: currentUser == nil)
-                showToast(TandemL10n.string("Configuration link detected. Confirm to import"))
-            }
-            return
-        }
         guard let invite = RoomInvite(url: url) else { return }
         if currentUser == nil {
             pendingInvite = invite
@@ -153,16 +133,6 @@ public final class AppSession: ObservableObject {
             pendingInvite = nil
             openWatch(roomId: invite.roomId, movieId: invite.movieId, hostUserId: invite.hostUserId)
         }
-    }
-
-    static func isConfigShareURL(_ url: URL) -> Bool {
-        url.scheme?.lowercased() == "paircast" && url.host?.lowercased() == "config"
-    }
-
-    /// Consumes a pending config share once the config screen is ready to preview it.
-    public func consumePendingConfigImport() -> String? {
-        defer { pendingConfigImportRaw = nil }
-        return pendingConfigImportRaw
     }
 
     /// Call after a successful login so a queued invite can open the watch scene.
@@ -201,8 +171,8 @@ public final class AppSession: ObservableObject {
         route = .login
     }
 
-    /// After a config import / server change: keep the new config, drop the IM session, return to login.
-    public func applyImportedCloudConfig(_ config: AppCloudConfig) async {
+    /// After the server address changes: keep the new config, drop the session, return to login.
+    public func applyServerChange(_ config: AppCloudConfig) async {
         self.config = config
         if currentUser != nil {
             try? await authGateway.logout()
@@ -211,7 +181,7 @@ public final class AppSession: ObservableObject {
         pendingInvite = nil
         try? await graph.clearMetadataCache()
         resetToLogin()
-        showToast(TandemL10n.string("Configuration imported. Please sign in again"))
+        showToast(TandemL10n.string("Server changed. Please sign in again"))
     }
 
     private func observeSessionEvents() {

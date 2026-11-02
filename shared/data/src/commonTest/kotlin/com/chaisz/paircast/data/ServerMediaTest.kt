@@ -9,7 +9,6 @@ import com.chaisz.paircast.core.model.SubtitleSource
 import com.chaisz.paircast.core.model.VideoFormat
 import com.chaisz.paircast.core.store.InMemorySecureStore
 import com.chaisz.paircast.core.support.PaircastJson
-import com.chaisz.paircast.data.config.ConfigShareLink
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImConnection
@@ -165,32 +164,6 @@ class ServerMediaTest {
         val raw = store.read(SecureConfigStore.CONFIG_KEY)!!
         assertFalse("SK" in raw)
         assertFalse("accessKey" in raw)
-    }
-}
-
-class ShareLinkTest {
-    private val config = AppCloudConfig(im = IMConfig("https://im.example.com"))
-
-    @Test
-    fun roundTripAndPaste() {
-        val url = ConfigShareLink.shareUrl(config)
-        assertTrue(url.startsWith("paircast://config?args="))
-        assertEquals("https://im.example.com", ConfigShareLink.decode(url).im.serverUrl)
-        assertEquals("https://im.example.com", ConfigShareLink.decode("给你配置：$url 打开即可").im.serverUrl)
-    }
-
-    /** Sealed by the Swift (CryptoKit) 1.x app with dummy credentials; storage is now discarded. */
-    @Test
-    fun decodesLegacyCryptoKitLink() {
-        val args = "KyiwVh2UPRGtuUsjqHj3p3kCeJBEzwGO4kIQ58eR83zooERMWIi5SomJgdtXnBm_4YtZIJxTtEN0iJU0DRxZWOlMfGxIOOnqycp7e_kMwdhu9xaTh40HKrwtAxXyxTcyonqhLltTF4-proGY43dYvHx8otz2Py2dSpO6Mp3LQdwaQo9ZlgkhZUU-wPvZ3jGyWPycxyspoe1vK2y3MqDgZWFu6tCjhG7JeyTm2qF6UfEc85infL_Vfnyc4FZlAXLI7HzJOidcM1Qu8YgDHevZzT8gAA_4KUBsAMdDe66gJz8WUcHyxL6l2CUeMr47YGvi-Kb52SGDo5HVnJg5Y_0X2dYCV0z8G2rq-cOqkjmL9t494Y73"
-        val decoded = ConfigShareLink.decode("paircast://config?args=$args")
-        assertEquals("", decoded.im.serverUrl)
-        assertFalse(decoded.im.isComplete)
-    }
-
-    @Test
-    fun rejectsGarbage() {
-        assertFailsWith<AppError.InvalidConfigQR> { ConfigShareLink.decode("paircast://config?args=AAAA") }
     }
 }
 

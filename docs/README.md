@@ -12,7 +12,7 @@
 
 | 路径 | 说明 |
 |------|------|
-| [en-US/](./en-US/)、[zh-Hans/](./zh-Hans/) | 隐私、支持、使用说明 |
+| [en-US/](./en-US/)、[zh-Hans/](./zh-Hans/) | 隐私、支持、使用说明（`guide/`）、服务端部署指南（`deploy/`） |
 | [invite/](./invite/) | 邀请落地页（含 App Store / TestFlight） |
 | [livecontainer/](./livecontainer/) | LiveContainer / AltStore source 说明 |
 | [source.json](./source.json) | LiveContainer source 清单 |
@@ -37,5 +37,5 @@ python3 Scripts/export-soft-copyright-sources.py
 ## 维护约定
 
 - 更新 PRD 版本号时，同步修改 `TECH.md` 文首引用。
-- 不要把真实配置深链或密钥写进文档。
+- 不要把真实服务器账号、密码或任何密钥写进文档。
 - Agent / 工程红线见仓库根目录 [AGENTS.md](../AGENTS.md)。

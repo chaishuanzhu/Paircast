@@ -43,25 +43,13 @@ make android      # Debug APK
 - token 失效 / 被踢（WebSocket `KICK`）→ `SessionEvent` → 回登录页
 - 配置只有 GO-IM 服务器地址：不含 IM 密钥，也不含对象存储 / TMDB / OpenSubtitles 凭证（v2.1 起全部在服务端）
 
-## 配置分享（加密深链）
+## 服务配置
 
-```
-paircast://config?args=<base64url(AES-GCM(JSON))>
-```
-
-- `args`：AES-GCM sealed box（nonce ‖ ciphertext ‖ tag）的 base64url（无 padding），UTF-8 明文 ≤ 2KB
-- 密钥：App 内嵌派生（`SHA256("Tandem.iOS.ConfigShare.v1")`），仅作传输混淆，**不能**替代对接收方的信任
-- 导入：打开深链、粘贴完整 URL 或扫码；非法/篡改载荷不覆盖现有配置；导入前脱敏确认
-- **v5** 载荷只有 `im.serverUrl`。v4（含 `storage` / 扩展密钥）及更早链接仍可解析：**丢弃存储与扩展密钥**，导入确认页与结果提示「片库现由服务器统一配置」；v1–v3 无服务器地址时提示补填
+- 只有一个字段：服务器（GO-IM）地址，用户手动填写；`ConfigValidation.normalizedServerUrl` 补 `https://`、去掉路径与结尾 `/`，局域网可显式 `http://`
+- v2.1 起**不再提供配置分享 / 导入**：删除 `ConfigQRCodec`、`ConfigLinkCodec` / `ConfigShareLink`（AES-GCM）、导入导出用例与二维码 / 扫码 UI，Android 去掉 CameraX / ML Kit / ZXing 依赖与相机权限，iOS 去掉存相册权限；`paircast://config?args=…` 不再注册处理（`paircast://` scheme 仍用于 `watch`）
+- 已登录时保存了不同的服务器地址 → 退出登录、清元数据缓存、回登录页并提示「服务器已更换，请重新登录」
 - 本机安全存储（键 `paircast.cloud-config.v4` 保持不变）只存 `serverUrl` / `updatedAtMs` / `configVersion`；读到旧版遗留的 `accessKey` / `secretKey` / `subtitleApiKey` / `tmdbAccessToken` 时立即重写清除。iOS 1.x Keychain 旧配置直接删除
-
-```json
-{
-  "v": 5,
-  "type": "paircast-config",
-  "im": { "serverUrl": "https://im.example.com" }
-}
-```
+- 配置页附两个外链：`https://paircast.chaisz.com/{zh-Hans|en-US}/guide/`（使用说明）与 `/deploy/`（服务端部署指南：Docker 最小化部署、HTTPS、SMTP 与管理员、`/admin/users/create`、片库 / 字幕 / 海报 / 表情包）
 
 ## GO-IM 传输
 
@@ -112,7 +100,6 @@ paircast://config?args=<base64url(AES-GCM(JSON))>
 |-----|------|
 | `paircast://watch?roomId={id}&movieId={id}&hostUserId={id}` | 加入观影房（未登录则暂存邀请） |
 | `https://paircast.chaisz.com/invite/?roomId=…` | 同上（邀请落地页；Android 声明了 intent-filter） |
-| `paircast://config?args={encrypted}` | 打开服务配置并弹出脱敏确认导入 |
 
 ## 服务端片库与房间（GO-IM，v2.1）
 

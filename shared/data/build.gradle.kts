@@ -21,8 +21,6 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.wire.runtime)
             implementation(libs.okio)
-            implementation(libs.cryptography.core)
-            implementation(libs.cryptography.provider.optimal)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paircast 服务端部署指南</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1.25rem 3rem; line-height: 1.55; color: #111; }
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.2rem; margin-top: 2rem; }
+    h3 { font-size: 1.05rem; margin-top: 1.35rem; }
+    .lang { font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .lang a { margin-right: 0.75rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0.75rem 0 1.25rem; }
+    th, td { border: 1px solid #ddd; padding: 0.45rem 0.55rem; text-align: left; vertical-align: top; }
+    th { background: #f6f6f6; }
+    code { font-size: 0.88em; background: #f3f3f3; padding: 0.1em 0.35em; border-radius: 4px; }
+    pre { background: #f6f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.75rem 0.9rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.45; }
+    pre code { background: none; padding: 0; font-size: inherit; }
+    .note { background: #f7f9fc; border-left: 3px solid #3b82f6; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    .warn { background: #fff8f0; border-left: 3px solid #f59e0b; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    ol li, ul li { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <p class="lang"><a href="../../en-US/deploy/">English</a><a href="./">简体中文</a></p>
+  <h1>Paircast 服务端部署指南</h1>
+  <p>Paircast 的服务器是开源的 <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a>：它负责账号、聊天、播放同步、观影房间和片库。本文用 Docker 在一台 Linux 服务器上部署最小化版本，部署好后在 App 的「服务配置」里填服务器地址即可使用。</p>
+
+  <div class="note">
+    更多部署方式（Docker 全量、Kubernetes）和全部配置项见 GO-IM <a href="https://github.com/chaishuanzhu/GO-IM/blob/main/deploy/README.md">deploy/README.md</a>。
+  </div>
+
+  <h2>0. 准备</h2>
+  <table>
+    <thead><tr><th>项目</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>服务器</td><td>Linux，2 核 2 GB 起；已装 Docker 20.10+ 与 Docker Compose v2</td></tr>
+      <tr><td>域名（推荐）</td><td>如 <code>im.example.com</code>，解析到服务器，用于 HTTPS。仅局域网使用可以不要</td></tr>
+      <tr><td>发件邮箱</td><td>任意支持 SMTP 的邮箱，用来给管理员和好友发初始密码</td></tr>
+      <tr><td>视频存储</td><td>S3 兼容对象存储（阿里云 OSS、腾讯云 COS、七牛、MinIO 等）里放好的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>，以及一对<strong>只读</strong>的访问密钥</td></tr>
+    </tbody>
+  </table>
+  <p>需使用包含媒体库（<code>/media</code>、<code>/room</code> 接口）的 GO-IM 版本。</p>
+
+  <h2>1. 启动服务</h2>
+<pre><code>mkdir go-im &amp;&amp; cd go-im
+base=https://raw.githubusercontent.com/chaishuanzhu/GO-IM/main/deploy/docker
+curl -fsSLO $base/docker-compose.minimal.yml
+curl -fsSLO $base/config.minimal.json
+
+# 必改：JWT 签名密钥
+sed -i.bak "s|CHANGE_ME_run_openssl_rand_base64_48|$(openssl rand -base64 48 | tr -d '\n/+=')|" config.minimal.json
+
+docker compose -f docker-compose.minimal.yml up -d
+curl http://127.0.0.1:8080/health     # 返回 "status":"ok" 即就绪</code></pre>
+  <p>这会启动 Gateway、MySQL、Redis 和 RustFS（存共享字幕、头像等小文件）。之后每次改 <code>config.minimal.json</code> 或 <code>.env</code>，都执行下面的命令让 gateway 重新加载（下文简称「重启 gateway」）：</p>
+<pre><code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code></pre>
+
+  <h2>2. 配置 HTTPS（公网必做）</h2>
+  <p>在服务器上用 Caddy 反向代理到 8080，它会自动申请证书并透传 WebSocket：</p>
+<pre><code># /etc/caddy/Caddyfile
+im.example.com {
+    reverse_proxy 127.0.0.1:8080
+}</code></pre>
+  <p>完成后 App 里的服务器地址填 <code>im.example.com</code>。用 nginx 时记得透传 <code>Upgrade</code> / <code>Connection</code> 头。只在局域网用可跳过这一步，地址填 <code>http://192.168.x.x:8080</code>。</p>
+
+  <h2>3. 邮件与管理员账号</h2>
+  <p>Paircast 不开放注册，账号由管理员创建，初始密码通过邮件发出，所以需要先配置 SMTP。编辑 <code>config.minimal.json</code>：</p>
+<pre><code>"gateway": {
+    "mail": {
+        "enabled": true,
+        "host": "smtp.exmail.qq.com",
+        "port": 465,
+        "username": "no_reply@example.com",
+        "from": "Paircast &lt;no_reply@example.com&gt;"
+    },
+    ...
+},
+"admin_email": "you@example.com"</code></pre>
+  <p>SMTP 密码不要写进配置文件，放在同目录的 <code>.env</code>：</p>
+<pre><code>MAIL_PASSWORD=你的SMTP密码</code></pre>
+  <p>重启 gateway 后，网关会用 <code>admin_email</code> 自动创建管理员账号，并把随机密码发到该邮箱（邮件发送失败时写在 <code>docker compose -f docker-compose.minimal.yml logs gateway</code> 里）。用这个邮箱和密码在 App 登录，首次登录会要求改密码。</p>
+
+  <h2>4. 给好友创建账号</h2>
+  <p>先用管理员账号换一个令牌，再创建账号；新账号的初始密码会发到对方邮箱，对方首次登录时修改：</p>
+<pre><code>SERVER=https://im.example.com
+curl -s -X POST $SERVER/login -d account=you@example.com -d password='管理员密码'
+# 记下返回中的 "uid" 和 "token"
+
+curl -s -X POST $SERVER/admin/users/create \
+  -d uid=管理员UID -d token=上一步的token -d email=friend@example.com</code></pre>
+  <p>如果邮件没发出去，响应里会带 <code>initial_password</code>，请私下转交给好友。</p>
+
+  <h2 id="media">5. 片库</h2>
+  <h3>5.1 接入视频存储</h3>
+  <p>在 <code>config.minimal.json</code> 的 <code>gateway.media.sources</code> 里添加视频源（密钥留空，下一步用环境变量注入）：</p>
+<pre><code>"media": {
+    "sources": [
+        {
+            "id": "oss",
+            "name": "我的片库",
+            "type": "s3",
+            "s3": {
+                "endpoint": "oss-cn-hangzhou.aliyuncs.com",
+                "bucket": "my-videos",
+                "region": "cn-hangzhou",
+                "prefix": "films/",
+                "use_ssl": true,
+                "path_style": false
+            }
+        }
+    ]
+}</code></pre>
+  <p>在 <code>.env</code> 里加上密钥（compose 会以 <code>GOIM_MEDIA_OSS_ACCESS_KEY</code> / <code>GOIM_MEDIA_OSS_SECRET_KEY</code> 传给 gateway）：</p>
+<pre><code>MEDIA_OSS_ACCESS_KEY=只读AccessKey
+MEDIA_OSS_SECRET_KEY=只读SecretKey</code></pre>
+  <p>重启 gateway，日志出现 <code>media library enabled</code> 即生效，App 片库会列出 <code>prefix</code> 下的视频。</p>
+  <ul>
+    <li><code>endpoint</code> 填 S3 API 的地域域名（不含 <code>https://</code>），<strong>不要填 CDN 域名</strong>。七牛、MinIO 通常需要 <code>"path_style": true</code>。</li>
+    <li>源 <code>id</code> 会写进影片 ID，上线后不要修改。<code>id</code> 不是 <code>oss</code> 时，在 compose 的 gateway <code>environment</code> 里按 <code>GOIM_MEDIA_&lt;大写ID&gt;_ACCESS_KEY</code> 的格式自行添加。</li>
+    <li>可以配置多个源，App 片库页会出现片源切换。</li>
+    <li>播放时服务器签发 6 小时有效的直链，视频流不经过服务器，所以密钥只需<strong>只读</strong>权限。</li>
+  </ul>
+
+  <h3>5.2 字幕与海报</h3>
+  <ul>
+    <li><strong>外挂字幕</strong>：和视频放在同一目录、同名即可，如 <code>Inception.2010.mkv</code> 配 <code>Inception.2010.srt</code>、<code>Inception.2010.zh.ass</code>、<code>Inception.2010_en.vtt</code>（支持 srt / vtt / ass / ssa）。</li>
+    <li><strong>海报与简介</strong>：优先读取同目录的 <code>{主名}.nfo</code> 与 <code>{主名}-poster.jpg</code>；没有时可以让服务器查 TMDB。</li>
+    <li><strong>TMDB 刮削</strong>（可选）：<code>.env</code> 加 <code>TMDB_ACCESS_TOKEN=…</code>（TMDB 的 API Read Access Token）。</li>
+    <li><strong>在线字幕搜索</strong>（可选）：<code>.env</code> 加 <code>OPENSUBTITLES_API_KEY=…</code>。</li>
+  </ul>
+
+  <h3>5.3 表情包（可选）</h3>
+  <p>表情包放在某个片源的桶里，目录下要有 <code>catalog.json</code> 与 <code>{pack_id}/pack.json</code>。用 Paircast 仓库里的脚本整理并上传：</p>
+<pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
+PAIRCAST_S3_ACCESS_KEY=… PAIRCAST_S3_SECRET_KEY=… \
+  python3 Scripts/upload-stickers.py --endpoint oss-cn-hangzhou.aliyuncs.com --bucket my-videos</code></pre>
+  <p>上传需要可写密钥（只在你本机使用，不要放到服务器上）。然后在 <code>gateway.media</code> 里设 <code>"stickers_source": "oss"</code>、<code>"stickers_prefix": "stickers/"</code>。</p>
+
+  <h2>6. 在 App 里使用</h2>
+  <ol>
+    <li>打开 Paircast → 登录页右上角「服务配置」→ 服务器地址填 <code>im.example.com</code> → 保存。</li>
+    <li>用管理员或好友的账号登录，在片库选片、开房间、发邀请链接。</li>
+  </ol>
+  <p>详见 <a href="../guide/">使用说明</a>。</p>
+
+  <h2>7. 日常维护</h2>
+<pre><code>docker compose -f docker-compose.minimal.yml logs -f gateway       # 查看日志
+docker compose -f docker-compose.minimal.yml pull &amp;&amp; docker compose -f docker-compose.minimal.yml up -d   # 升级
+GOIM_TAG=x.y.z docker compose -f docker-compose.minimal.yml up -d  # 固定 / 回滚版本</code></pre>
+  <ul>
+    <li>生产环境建议在 <code>.env</code> 固定 <code>GOIM_TAG</code>，并定期备份 MySQL 与 RustFS 数据卷。</li>
+    <li>修改默认数据库密码与 <code>RUSTFS_SECRET_KEY</code>，<code>gateway.check_origin</code> 填写实际域名。</li>
+  </ul>
+
+  <div class="warn">
+    所有密钥（JWT、SMTP、存储、TMDB、OpenSubtitles）只放在服务器的 <code>config.minimal.json</code> / <code>.env</code> 里，不要发给用户，也不要提交到 git。用户只需要服务器地址和自己的账号。
+  </div>
+
+  <h2>8. 更多</h2>
+  <ul>
+    <li><a href="../guide/">使用说明</a> · <a href="../support/">支持页</a> · <a href="../privacy/">隐私政策</a></li>
+    <li>服务端问题：<a href="https://github.com/chaishuanzhu/GO-IM/issues/new">GO-IM Issues</a>；App 问题：<a href="https://github.com/chaishuanzhu/Paircast/issues/new">Paircast Issues</a></li>
+  </ul>
+</body>
+</html>

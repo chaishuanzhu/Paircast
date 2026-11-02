@@ -41,7 +41,7 @@ class GoImAuthGateway(
     override suspend fun login(account: String, password: String): LoginResult {
         val config = configGateway.load() ?: throw AppError.NotConfigured
         val serverUrl = ConfigValidation.normalizedServerUrl(config.im.serverUrl)
-            ?: throw AppError.IncompleteConfig(listOf("IM Server"))
+            ?: throw AppError.IncompleteConfig(listOf("Server"))
         val dto = try {
             api.login(serverUrl, account, password)
         } catch (e: GoImHttpException) {

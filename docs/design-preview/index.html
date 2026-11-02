@@ -1229,7 +1229,7 @@
 <body>
   <header class="page-head">
     <h1>Paircast iOS Design Preview</h1>
-    <p>本地全量预览 · Apple HIG · docs/designtoken.md 主题（跟随系统 / 浅色 / 深色）· 配置加密深链分享 / 粘贴导入</p>
+    <p>本地全量预览 · Apple HIG · docs/designtoken.md 主题（跟随系统 / 浅色 / 深色）· 服务配置只填服务器地址</p>
   </header>
 
   <div class="gallery">
@@ -1329,7 +1329,7 @@
 
     <!-- 04 Config -->
     <div class="shot">
-      <div class="caption">04 Service Config · 分享与导入列表行</div>
+      <div class="caption">04 Service Config · 服务器地址 + 指南</div>
       <div class="phone">
         <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
         <div class="nav">
@@ -1339,46 +1339,39 @@
         </div>
         <div class="cfg-body">
           <div>
-            <div class="section-label">分享与导入</div>
-            <div class="cfg-xfer">
-              <div class="cfg-xfer-row">
-                <div class="cfg-xfer-ico import" aria-hidden="true">↓</div>
-                <div class="cfg-xfer-copy">
-                  <h4>粘贴导入</h4>
-                  <p>粘贴 paircast://config?args=… 链接</p>
-                </div>
-                <div class="chev">›</div>
-              </div>
-              <div class="cfg-xfer-row">
-                <div class="cfg-xfer-ico share" aria-hidden="true">↑</div>
-                <div class="cfg-xfer-copy">
-                  <h4>分享配置</h4>
-                  <p>生成加密链接，复制或分享给好友</p>
-                </div>
-                <div class="chev">›</div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div class="section-label">IM 服务器</div>
+            <div class="section-label">服务器</div>
             <div class="group">
               <div class="field-stack"><div class="k">地址</div><div class="v">im.example.com</div></div>
             </div>
+            <div class="cfg-tip">你或好友部署的服务器地址。默认使用 HTTPS，局域网可显式填写 http://。</div>
           </div>
 
           <div>
-            <div class="section-label">七牛云</div>
-            <div class="group">
-              <div class="field-stack"><div class="k">AccessKey</div><div class="v">AK••••••••</div></div>
-              <div class="field-stack"><div class="k">SecretKey</div><div class="v">••••••••••••</div></div>
-              <div class="field-stack"><div class="k">Bucket</div><div class="v">tandem-movies</div></div>
-              <div class="field-stack"><div class="k">Endpoint</div><div class="v">s3-cn-east-1.qiniucs.com</div></div>
+            <div class="cfg-xfer">
+              <div class="cfg-xfer-row">
+                <div class="cfg-xfer-ico share" aria-hidden="true">?</div>
+                <div class="cfg-xfer-copy">
+                  <h4>配置指南</h4>
+                </div>
+                <div class="chev">›</div>
+              </div>
+              <div class="cfg-xfer-row">
+                <div class="cfg-xfer-ico import" aria-hidden="true">▤</div>
+                <div class="cfg-xfer-copy">
+                  <h4>服务端部署指南</h4>
+                  <p>用 Docker 部署自己的服务器</p>
+                </div>
+                <div class="chev">›</div>
+              </div>
             </div>
+            <div class="cfg-tip">填写服务器地址并保存，然后用服务器管理员为你创建的账号登录</div>
           </div>
 
-          <button class="btn-primary" type="button">测试连接</button>
-          <div class="cfg-tip">链接含密钥，仅发给可信好友</div>
+          <div>
+            <div class="group">
+              <div class="field-stack"><div class="k">片库</div><div class="v">由服务器管理</div></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1651,97 +1644,6 @@
           <button class="btn-primary disabled" type="button">登录</button>
           <div class="link-center">去配置服务 →</div>
           <div class="hint-center">账号由管理员分配 · 不提供注册</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 11 Share Config Link -->
-    <div class="shot">
-      <div class="caption">11 Share Config · 加密深链 + 二维码</div>
-      <div class="phone">
-        <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
-        <div class="nav">
-          <div class="side">‹ 返回</div>
-          <div class="title">分享配置</div>
-          <div class="side right">分享</div>
-        </div>
-        <div class="share-body">
-          <div class="share-hero">
-            <div class="badge">AES-GCM 加密</div>
-            <h3>发给好友即可导入</h3>
-            <p class="sub">对方打开链接或粘贴到「服务配置」即可写入同一套环境</p>
-            <div class="share-qr" aria-hidden="true" title="链接二维码"></div>
-          </div>
-          <div class="link-card">
-            <div class="label">配置链接</div>
-            <div class="url">paircast://config?args=x7Km2Qp9Rv…A3nF</div>
-            <div class="copy-row">
-              <span>含 IM / 七牛密钥</span>
-              <div class="copy-chip">复制</div>
-            </div>
-          </div>
-          <div class="warn">链接含密钥，请勿发到公开群或社交平台</div>
-          <button class="btn-primary" type="button">复制链接</button>
-          <div class="share-actions">
-            <button class="btn-ghost" type="button">系统分享</button>
-            <button class="btn-ghost" type="button">保存二维码</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 12 Paste Import -->
-    <div class="shot">
-      <div class="caption">12 Paste Import · 粘贴配置链接</div>
-      <div class="phone">
-        <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
-        <div class="nav">
-          <div class="side">取消</div>
-          <div class="title">导入配置</div>
-          <div class="side right">继续</div>
-        </div>
-        <div class="paste-body">
-          <div class="paste-intro">
-            <div class="mark" aria-hidden="true">↓</div>
-            <h3>粘贴配置链接</h3>
-            <p>支持完整深链，或聊天消息中带有的 paircast://config?args=…</p>
-          </div>
-          <div class="paste-box">paircast://config?args=…</div>
-          <button class="btn-ghost" type="button">从剪贴板粘贴</button>
-          <button class="btn-primary" type="button">继续解析</button>
-          <div class="paste-hint">解析成功后会展示脱敏预览，确认才会覆盖本机配置</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 13 Import confirm -->
-    <div class="shot">
-      <div class="caption">13 Import Confirm · 脱敏预览</div>
-      <div class="phone">
-        <div class="status"><span>9:41</span><span class="meta">LTE</span></div>
-        <div class="nav">
-          <div class="side">取消</div>
-          <div class="title">确认导入</div>
-          <div class="side right">导入</div>
-        </div>
-        <div class="cfg-body">
-          <div class="confirm-chip">加密链接已解析</div>
-          <div class="warn">将覆盖本机现有云服务配置</div>
-          <div>
-            <div class="section-label">IM 服务器</div>
-            <div class="confirm-card">
-              <div class="line"><span class="k">地址</span><span class="v">im.example.com</span></div>
-            </div>
-          </div>
-          <div>
-            <div class="section-label">七牛云</div>
-            <div class="confirm-card">
-              <div class="line"><span class="k">AccessKey</span><span class="v">AK••••••••</span></div>
-              <div class="line"><span class="k">Bucket</span><span class="v">tandem-movies</span></div>
-              <div class="line"><span class="k">Endpoint</span><span class="v">s3-cn-east-1…</span></div>
-            </div>
-          </div>
-          <button class="btn-primary" type="button">确认导入并覆盖</button>
         </div>
       </div>
     </div>

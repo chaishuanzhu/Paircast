@@ -3,7 +3,6 @@ package com.chaisz.paircast.core.usecase
 import com.chaisz.paircast.core.gateway.AuthGateway
 import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
-import com.chaisz.paircast.core.gateway.ConfigLinkCodec
 import com.chaisz.paircast.core.gateway.MetadataGateway
 import com.chaisz.paircast.core.gateway.MovieCatalogGateway
 import com.chaisz.paircast.core.gateway.PlaybackSyncGateway
@@ -19,7 +18,6 @@ import com.chaisz.paircast.core.model.PlaybackSyncSignal
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.model.WatchRoom
-import com.chaisz.paircast.core.rules.ConfigQRCodec
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
 import com.chaisz.paircast.core.rules.LoginRules
@@ -38,7 +36,7 @@ class LoginUseCase(private val configGateway: ConfigGateway, private val authGat
         LoginRules.validateAccount(account)
         LoginRules.validatePassword(password)
         val config = configGateway.load() ?: throw AppError.NotConfigured
-        if (!config.im.isComplete) throw AppError.IncompleteConfig(listOf("IM Server"))
+        if (!config.im.isComplete) throw AppError.IncompleteConfig(listOf("Server"))
         return try {
             authGateway.login(account.trim(), password)
         } catch (e: CancellationException) {
@@ -82,48 +80,6 @@ class SaveCloudConfigUseCase(private val configGateway: ConfigGateway) {
         )
         configGateway.save(stored)
         return stored
-    }
-}
-
-/**
- * Decodes a share link / encrypted args / legacy JSON. Complete configs are persisted; legacy
- * (pre-GO-IM) payloads are returned unsaved with [needsServerUrl] so the UI can ask for the
- * server address first. [droppedLegacyStorage] tells the UI that object-storage settings in an
- * old payload were ignored (the library is configured on the server). Invalid payloads never
- * overwrite the existing config.
- */
-class ImportConfigUseCase(private val configGateway: ConfigGateway, private val codec: ConfigLinkCodec) {
-    data class Result(val config: AppCloudConfig, val needsServerUrl: Boolean, val droppedLegacyStorage: Boolean = false)
-
-    @Throws(Exception::class)
-    suspend operator fun invoke(raw: String): Result {
-        val decoded = try {
-            codec.decode(raw)
-        } catch (e: AppError) {
-            throw e
-        } catch (_: Exception) {
-            throw AppError.InvalidConfigQR
-        }
-        val legacy = ConfigQRCodec.isLegacy(decoded)
-        if (ConfigQRCodec.needsServerUrl(decoded)) {
-            val existingServer = configGateway.load()?.im?.takeIf { it.isComplete }
-                ?: return Result(decoded, needsServerUrl = true, droppedLegacyStorage = legacy)
-            val merged = ConfigValidation.normalized(decoded.copy(im = existingServer, configVersion = AppCloudConfig.CURRENT_VERSION))
-            configGateway.save(merged)
-            return Result(merged, needsServerUrl = false, droppedLegacyStorage = legacy)
-        }
-        val normalized = ConfigValidation.normalized(decoded.copy(configVersion = AppCloudConfig.CURRENT_VERSION))
-        configGateway.save(normalized)
-        return Result(normalized, needsServerUrl = false, droppedLegacyStorage = legacy)
-    }
-}
-
-class ExportConfigUseCase(private val configGateway: ConfigGateway, private val codec: ConfigLinkCodec) {
-    /** Returns an encrypted share deep link: `paircast://config?args=…` */
-    @Throws(Exception::class)
-    suspend operator fun invoke(): String {
-        val config = configGateway.load() ?: throw AppError.NotConfigured
-        return codec.shareUrl(config)
     }
 }
 

@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""Upload Paircast stickers-dist to S3-compatible storage using a config share link.
+"""Upload Paircast stickers-dist to the S3-compatible bucket the server's media source reads.
 
 Usage:
-  python3 Scripts/upload-stickers.py 'paircast://config?args=…' [--src ./stickers-dist]
+  PAIRCAST_S3_ACCESS_KEY=… PAIRCAST_S3_SECRET_KEY=… \
+    python3 Scripts/upload-stickers.py --endpoint s3.cn-south-1.qiniucs.com --bucket my-bucket \
+    [--prefix media] [--src ./stickers-dist]
 
-Does not print secrets. Requires cryptography.
+Objects go to `[<prefix>/]stickers/…` in the bucket. On the server, set `media.stickers_source`
+to the source using this bucket and `media.stickers_prefix` to that same path (default
+`stickers/`). Keys are read from the environment only and never printed.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import hmac
-import json
 import mimetypes
+import os
 import re
 import sys
 import urllib.request
@@ -23,25 +26,22 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-
-def b64url_decode(s: str) -> bytes:
-    s = s.replace("-", "+").replace("_", "/")
-    pad = (-len(s)) % 4
-    if pad:
-        s += "=" * pad
-    return base64.b64decode(s)
-
-
-def decode_config(link: str) -> dict:
-    if "args=" not in link:
-        raise SystemExit("expected paircast://config?args=…")
-    args = link.split("args=", 1)[1].split("&", 1)[0]
-    raw = b64url_decode(args)
-    key = hashlib.sha256(b"Tandem.iOS.ConfigShare.v1").digest()
-    plaintext = AESGCM(key).decrypt(raw[:12], raw[12:], None)
-    return json.loads(plaintext.decode("utf-8"))
+def storage_from_args(args: argparse.Namespace) -> dict:
+    access_key = os.environ.get("PAIRCAST_S3_ACCESS_KEY", "")
+    secret_key = os.environ.get("PAIRCAST_S3_SECRET_KEY", "")
+    if not access_key or not secret_key:
+        raise SystemExit("set PAIRCAST_S3_ACCESS_KEY and PAIRCAST_S3_SECRET_KEY")
+    return {
+        "endpoint": args.endpoint,
+        "bucket": args.bucket,
+        "prefix": args.prefix,
+        "region": args.region,
+        "useSSL": not args.http,
+        "forcePathStyle": not args.virtual_host,
+        "accessKey": access_key,
+        "secretKey": secret_key,
+    }
 
 
 def sha256_hex(data: bytes) -> str:
@@ -150,7 +150,12 @@ def main() -> int:
     import time
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("config_link", help="paircast://config?args=…")
+    parser.add_argument("--endpoint", required=True, help="host[:port], no scheme")
+    parser.add_argument("--bucket", required=True)
+    parser.add_argument("--prefix", default="", help="folder in front of stickers/ (match media.stickers_prefix on the server)")
+    parser.add_argument("--region", default="", help="signing region (derived for Qiniu when empty)")
+    parser.add_argument("--http", action="store_true", help="use http:// (LAN MinIO)")
+    parser.add_argument("--virtual-host", action="store_true", help="bucket.endpoint addressing")
     parser.add_argument(
         "--src",
         type=Path,
@@ -175,11 +180,9 @@ def main() -> int:
         print(f"missing stickers dir: {args.src}", file=sys.stderr)
         return 1
 
-    cfg = decode_config(args.config_link)
-    storage = cfg["storage"]
+    storage = storage_from_args(args)
     base = stickers_prefix(storage)
 
-    print("provider:", storage.get("provider"), flush=True)
     print("bucket:", storage.get("bucket"), flush=True)
     print("endpoint:", storage.get("endpoint"), flush=True)
     print("prefix:", repr(storage.get("prefix")), flush=True)

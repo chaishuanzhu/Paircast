@@ -23,100 +23,82 @@
 <body>
   <p class="lang"><a href="../../en-US/guide/">English</a><a href="./">简体中文</a></p>
   <h1>Paircast 使用说明</h1>
-  <p>Paircast 是<strong>邀请制</strong>私人云同步播放工具：影片来自自托管 GO-IM 服务器管理员接入的片库（你们自己的存储），账号由自托管 <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> 服务器的管理员创建，应用内<strong>不提供注册</strong>。支持 iOS 与 Android，两端可以同房观影。</p>
+  <p>Paircast 是<strong>邀请制</strong>私人云同步播放工具，需要搭配一台自托管服务器使用：服务器负责账号、聊天、播放同步和片库（影片放在你们自己的存储里）。应用内<strong>不提供注册</strong>，账号由服务器管理员创建。支持 iOS 与 Android，两端可以同房观影。</p>
 
   <div class="note">
-    最快上手：让管理员发给你一条 <code>paircast://config?…</code> 配置链接 → 在登录页打开「服务配置」粘贴导入 → 用分配的账号和密码登录。
+    最快上手：向服务器管理员要<strong>服务器地址</strong>和<strong>账号密码</strong> → 登录页右上角打开「服务配置」，填写服务器地址并保存 → 登录。<br />
+    还没有服务器？看 <a href="../deploy/">服务端部署指南</a>，用 Docker 十分钟左右即可搭好。
   </div>
 
   <h2>1. 整体使用流程</h2>
   <ol>
-    <li>完成<strong>服务配置</strong>（导入链接或填写 IM 服务器地址）。</li>
+    <li>在<strong>服务配置</strong>填写服务器地址并保存。</li>
     <li>使用管理员分配的<strong>账号和密码</strong>登录；若管理员要求，首次登录需先设置新密码。</li>
-    <li>在<strong>片库</strong>浏览服务端片库中的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>。</li>
+    <li>在<strong>片库</strong>浏览服务器片库中的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>。</li>
     <li>点开影片创建/加入<strong>房间</strong>，同步播放，并可边看边聊。</li>
     <li>通过邀请链接把好友拉进同一房间。</li>
   </ol>
 
-  <h2>2. 服务配置从哪里填、值从哪里拿</h2>
-  <p>入口：登录页右上角 / 「我的」→ <strong>服务配置</strong>。</p>
-  <div class="warn">
-    2.1 版起 App 只需要 IM 服务器地址，「分享配置」生成的链接也只包含它，好友仍需用自己的账号登录。导入成功后请<strong>重新登录</strong>。
-  </div>
-
-  <h3>2.1 IM 服务器（必填）</h3>
+  <h2>2. 服务配置</h2>
+  <p>入口：登录页右上角，或登录后「我的」→ <strong>服务配置</strong>。App 里只需要填一项：</p>
   <table>
     <thead>
       <tr><th>App 字段</th><th>从哪里获取</th><th>说明</th></tr>
     </thead>
     <tbody>
       <tr>
-        <td>IM 服务器地址</td>
-        <td>运营 GO-IM 服务器的管理员</td>
-        <td>如 <code>im.example.com</code>；默认 HTTPS，仅局域网可写 <code>http://</code></td>
+        <td>服务器地址</td>
+        <td>部署服务器的人（你自己或好友）</td>
+        <td>如 <code>im.example.com</code>；默认 HTTPS，仅局域网可写 <code>http://192.168.1.10:8080</code> 这类地址</td>
       </tr>
       <tr>
         <td>登录账号 / 密码</td>
-        <td>由管理员创建（GO-IM <code>/admin/users/create</code>）</td>
+        <td>服务器管理员创建后发给你</td>
         <td>账号为 UID 或邮箱；可在「我的 → 修改密码」随时改密</td>
       </tr>
     </tbody>
   </table>
-  <p>服务器需运行支持瞬时群信令的 GO-IM 版本（用于播放同步）。</p>
+  <div class="warn">
+    登录后更换服务器地址会退出当前账号，需要用新服务器上的账号重新登录。
+  </div>
 
-  <h3>2.2 片库（在服务端配置）</h3>
-  <p>视频、外挂字幕、海报、在线字幕搜索和表情包都由 GO-IM 服务器提供，App 里不再填写存储密钥或第三方令牌。管理员在服务端一次性配置：</p>
-  <ul>
-    <li><strong>片源</strong>：在 <code>gateway.media.sources</code> 添加 S3 兼容存储（七牛、阿里云 OSS、腾讯云 COS、MinIO 等），密钥通过环境变量 <code>GOIM_MEDIA_&lt;ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code> 注入。只需只读权限：服务端签发短时效播放直链，视频流不经过网关。</li>
-    <li><strong>海报与简介</strong>：优先读取视频同目录的 <code>{主名}.nfo</code> / <code>{主名}-poster.jpg</code>；否则在配置了 <code>GOIM_TMDB_ACCESS_TOKEN</code> 时由服务端查询 TMDB。</li>
-    <li><strong>在线字幕</strong>：服务端配置 <code>GOIM_OPENSUBTITLES_API_KEY</code> 后开启。</li>
-    <li><strong>表情包</strong>：设置 <code>stickers_source</code> / <code>stickers_prefix</code>（默认 <code>stickers/</code>），目录下放 <code>catalog.json</code> 与 <code>{pack_id}/pack.json</code>。可用 <code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist</code> 把本地表情包整理成该结构。</li>
-  </ul>
-  <p>完整步骤见 GO-IM <a href="https://github.com/chaishuanzhu/GO-IM/blob/main/deploy/README.md">部署说明</a>的「媒体库（Paircast）」一节。存储桶里旧的 <code>_paircast/</code> 目录不再使用：房间存在服务端 MySQL，共享字幕存在服务端文件存储。</p>
-  <p>服务端配置了多个片源时，片库页会出现片源切换。</p>
+  <h3>片库在服务器上配置</h3>
+  <p>视频、外挂字幕、海报、在线字幕搜索和表情包都由服务器提供，App 里不填写任何存储密钥或第三方令牌。片源、TMDB、OpenSubtitles、表情包的配置方法见 <a href="../deploy/#media">服务端部署指南 · 片库</a>。服务器配置了多个片源时，片库页会出现片源切换。</p>
 
-  <h2>3. 导入 / 分享配置</h2>
-  <ol>
-    <li><strong>导入</strong>：服务配置 → 粘贴导入或扫描二维码 → 确认覆盖 → 按提示重新登录。</li>
-    <li>也可直接打开管理员发来的 <code>paircast://config?args=…</code> 深链。</li>
-    <li>旧版本生成的链接仍可导入，但其中的存储密钥和第三方令牌会被忽略（片库已改由服务端配置）；不含 IM 服务器地址的链接需要补填。</li>
-    <li><strong>分享</strong>：点「分享配置」，生成只含 IM 服务器地址的加密链接与二维码。</li>
-  </ol>
-
-  <h2>4. 登录与片库</h2>
+  <h2>3. 登录与片库</h2>
   <ul>
     <li>输入管理员分配的<strong>账号和密码</strong>，点登录。</li>
-    <li>若提示未完成配置，先回服务配置填写 IM 服务器地址。</li>
-    <li>提示「服务器尚未配置片库」：请管理员在 GO-IM 添加片源。片库为空：请管理员确认片源（及 prefix）下确有 <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code>。</li>
+    <li>若提示未完成配置，先回服务配置填写服务器地址。</li>
+    <li>提示「服务器尚未配置片库」：请管理员添加片源。片库为空：请管理员确认片源（及 prefix）下确有 <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code>。</li>
   </ul>
 
-  <h2>5. 同步观看与邀请</h2>
+  <h2>4. 同步观看与邀请</h2>
   <ol>
     <li>在片库点选影片 → 进入房间（房主可控制播放同步）。</li>
     <li><strong>邀请好友</strong>：房间内用系统分享或复制邀请链接（<code>https://paircast.chaisz.com/invite/?roomId=…</code>），iOS / Android 均可打开。</li>
-    <li>好友需在同一 GO-IM 服务器（同一 IM 服务器地址）上有账号，再打开邀请链接。</li>
+    <li>好友需在同一台服务器上有账号，并在服务配置里填写同一个服务器地址，再打开邀请链接。</li>
     <li>房间内可文字聊天；长按消息可<strong>屏蔽</strong>（本机）或<strong>举报</strong>。</li>
   </ol>
 
-  <h2>6. 「我的」常用功能</h2>
+  <h2>5. 「我的」常用功能</h2>
   <ul>
     <li>头像 / 昵称、修改密码、主题、语言</li>
     <li>服务配置、致谢与隐私/支持链接</li>
-    <li><strong>退出登录</strong>：保留本机云配置</li>
-    <li><strong>删除账号</strong>：清除头像与本机配置、会话；GO-IM 账号本身需管理员另行停用</li>
+    <li><strong>退出登录</strong>：保留本机服务配置</li>
+    <li><strong>删除账号</strong>：清除头像与本机配置、会话；服务器上的账号本身需管理员另行停用</li>
   </ul>
 
-  <h2>7. 常见问题</h2>
+  <h2>6. 常见问题</h2>
   <ul>
-    <li><strong>配置链接无效</strong>：确认完整复制；导入失败不会覆盖已有配置。</li>
-    <li><strong>导入后仍像旧配置</strong>：按提示重新登录。</li>
+    <li><strong>无法连接服务器</strong>：检查服务器地址拼写、是否需要 <code>http://</code>（仅局域网）以及网络；管理员可用 <code>curl https://你的域名/health</code> 确认服务在线。</li>
+    <li><strong>账号或密码错误 / 账号不存在</strong>：确认账号是在你填写的这台服务器上创建的。</li>
     <li><strong>视频播不了</strong>：播放直链几小时后过期，回到片库重新打开即可。管理员：S3 Endpoint 必须是 API 地域域名，不要填 CDN 域名。</li>
-    <li><strong>无法登录</strong>：检查 IM 服务器地址，以及账号是否已在该服务器创建；提示「无法连接 IM 服务器」说明地址或网络有误。</li>
+    <li><strong>两人进度不同步</strong>：确认两人连的是同一台服务器，且网络通畅。</li>
   </ul>
 
-  <h2>8. 更多</h2>
+  <h2>7. 更多</h2>
   <ul>
-    <li><a href="../support/">支持页</a> · <a href="../privacy/">隐私政策</a></li>
+    <li><a href="../deploy/">服务端部署指南</a> · <a href="../support/">支持页</a> · <a href="../privacy/">隐私政策</a></li>
     <li>问题与故障：<a href="https://github.com/chaishuanzhu/Paircast/issues/new">GitHub Issues</a></li>
   </ul>
 </body>

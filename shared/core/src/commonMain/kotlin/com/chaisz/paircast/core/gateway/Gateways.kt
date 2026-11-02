@@ -60,15 +60,6 @@ interface ConfigGateway {
     suspend fun clearAll()
 }
 
-/** Encrypted share link codec (`paircast://config?args=`). Lives in data (AES-GCM). */
-interface ConfigLinkCodec {
-    @Throws(Exception::class)
-    fun shareUrl(config: AppCloudConfig): String
-    /** Accepts a full share URL, raw `args`, or plaintext JSON. */
-    @Throws(Exception::class)
-    fun decode(input: String): AppCloudConfig
-}
-
 /** Server media library (`/media/…`). Video sources and their keys live on the server. */
 interface MovieCatalogGateway {
     /** Configured video sources (id + display name); empty when the server has no library. */

@@ -40,7 +40,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 | 产品 | `docs/PRD.md` | 改需求时同步版本号，并核对 `docs/TECH.md` 引用 |
 | 技术 | `docs/TECH.md` | 架构/信令/安全；开头应对齐当前 PRD 版本 |
 | 设计 | `docs/DESIGN.md` + `docs/design-preview/` | UI 约定与预览 |
-| 公开站 | `docs/en-US/`、`docs/zh-Hans/`、`invite/`… | 改完推 `main` 即发布到 Pages |
+| 公开站 | `docs/en-US/`、`docs/zh-Hans/`（隐私 / 支持 / `guide/` 使用说明 / `deploy/` 服务端部署指南）、`invite/`… | 改完推 `main` 即发布到 Pages |
 | 索引 | `docs/README.md` | 文档地图 |
 
 公开域名：**`https://paircast.chaisz.com/`**（无 `/Paircast/` 前缀）。旧 `blog.chaisz.com` / `apps.chaisz.com` 不要再写回。

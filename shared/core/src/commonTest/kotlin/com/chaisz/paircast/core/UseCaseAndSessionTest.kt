@@ -9,7 +9,6 @@ import com.chaisz.paircast.core.model.PlaybackSyncSignal
 import com.chaisz.paircast.core.model.SubtitleSource
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
-import com.chaisz.paircast.core.rules.ConfigQRCodec
 import com.chaisz.paircast.core.rules.HostTransferRules
 import com.chaisz.paircast.core.session.WatchDependencies
 import com.chaisz.paircast.core.session.WatchEvent
@@ -18,11 +17,10 @@ import com.chaisz.paircast.core.store.ChatSafetyStore
 import com.chaisz.paircast.core.store.InMemoryKeyValueStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
 import com.chaisz.paircast.core.usecase.ChangeMovieUseCase
-import com.chaisz.paircast.core.usecase.ExportConfigUseCase
-import com.chaisz.paircast.core.usecase.ImportConfigUseCase
 import com.chaisz.paircast.core.usecase.LeaveRoomUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
+import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -64,53 +62,11 @@ class LoginUseCaseTest {
 }
 
 class ConfigUseCaseTest {
-    @Test fun invalidImportDoesNotOverwrite() = runTest {
-        val existing = configFixture()
-        val gateway = FakeConfigGateway(existing)
-        assertFailsWith<AppError> { ImportConfigUseCase(gateway, PlainLinkCodec())("not-json") }
-        assertEquals(existing, gateway.config)
-    }
-
-    @Test fun validImportReplacesConfig() = runTest {
-        val gateway = FakeConfigGateway(configFixture())
-        val next = AppCloudConfig(im = IMConfig("https://other.example.com"))
-        val codec = PlainLinkCodec()
-        val result = ImportConfigUseCase(gateway, codec)(codec.shareUrl(next))
-        assertFalse(result.needsServerUrl)
-        assertFalse(result.droppedLegacyStorage)
-        assertEquals("https://other.example.com", gateway.config?.im?.serverUrl)
-    }
-
-    @Test fun v4ImportKeepsServerAndReportsDroppedStorage() = runTest {
+    @Test fun saveNormalizesServerAndStampsVersion() = runTest {
         val gateway = FakeConfigGateway(null)
-        val v4 = """{"v":4,"type":"paircast-config","im":{"serverUrl":"im.v4.com"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
-        val result = ImportConfigUseCase(gateway, PlainLinkCodec())(v4)
-        assertTrue(result.droppedLegacyStorage)
-        assertEquals("https://im.v4.com", gateway.config?.im?.serverUrl)
-        assertEquals(AppCloudConfig.CURRENT_VERSION, gateway.config?.configVersion)
-    }
-
-    @Test fun legacyImportKeepsExistingServer() = runTest {
-        val gateway = FakeConfigGateway(configFixture())
-        val legacy = """{"v":3,"type":"paircast-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"legacy","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
-        val result = ImportConfigUseCase(gateway, PlainLinkCodec())(legacy)
-        assertFalse(result.needsServerUrl)
-        assertTrue(result.droppedLegacyStorage)
+        val saved = SaveCloudConfigUseCase(gateway)(AppCloudConfig(im = IMConfig(" im.example.com/ "), configVersion = 4))
         assertEquals("https://im.example.com", gateway.config?.im?.serverUrl)
-    }
-
-    @Test fun legacyImportWithoutServerAsksForIt() = runTest {
-        val gateway = FakeConfigGateway(null)
-        val legacy = """{"v":3,"type":"paircast-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"legacy","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
-        val result = ImportConfigUseCase(gateway, PlainLinkCodec())(legacy)
-        assertTrue(result.needsServerUrl)
-        assertEquals(null, gateway.config)
-    }
-
-    @Test fun exportReturnsShareLink() = runTest {
-        val exported = ExportConfigUseCase(FakeConfigGateway(configFixture()), PlainLinkCodec())()
-        assertTrue(exported.startsWith("paircast://config?args="))
-        assertEquals("https://im.example.com", ConfigQRCodec.decode(exported.substringAfter("args=")).im.serverUrl)
+        assertEquals(AppCloudConfig.CURRENT_VERSION, saved.configVersion)
     }
 }
 

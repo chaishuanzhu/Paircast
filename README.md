@@ -8,7 +8,7 @@
 
 - Xcode 26+ / iOS 26.0+；[Tuist](https://tuist.dev) 4.x（`brew install tuist`）
 - JDK 17（Android Studio 自带 JBR 即可）+ Android SDK（compileSdk 36，minSdk 26）
-- 一台 GO-IM 服务（需包含 `CmdGroupSignal=25` 瞬时群信令）
+- 一台 GO-IM 服务（需包含 `CmdGroupSignal=25` 瞬时群信令与 `/media/…`、`/room/…` 媒体库接口），部署步骤见[服务端部署指南](https://paircast.chaisz.com/zh-Hans/deploy/)
 
 ## 快速开始
 
@@ -28,7 +28,7 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 | 模块 | 职责 |
 |------|------|
 | `shared/core` | 纯 Kotlin：实体、规则、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
-| `shared/data` | GO-IM（WebSocket protobuf + REST）、S3 兼容存储、元数据、字幕、贴纸 |
+| `shared/data` | GO-IM（WebSocket protobuf + REST）、服务端片库 / 房间 / 字幕 / 贴纸客户端（`/media/…`、`/room/…`） |
 | `shared/umbrella` | `PaircastGraph` 组装（两端共用）；iOS 导出 `PaircastShared` 框架（SKIE） |
 | `iosApp/Presentation` | iOS SwiftUI 场景、VLCKit 播放器、Keychain |
 | `iosApp/App` | iOS 入口与 Deep Link `paircast://` |
@@ -49,7 +49,7 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 ## 安全说明
 
 - 账号密码由 GO-IM 校验；会话 token 存 Keychain / EncryptedSharedPreferences
-- 客户端配置只含 GO-IM 地址；对象存储 / TMDB / OpenSubtitles 凭证只在 GO-IM 服务端（环境变量注入）。分享链接 `paircast://config?args=…` 只含服务器地址
+- 客户端配置只有服务器（GO-IM）地址，由用户手动填写；对象存储 / TMDB / OpenSubtitles 凭证只在 GO-IM 服务端（环境变量注入）。服务端部署见 [docs/zh-Hans/deploy](docs/zh-Hans/deploy/index.html)（线上 `https://paircast.chaisz.com/zh-Hans/deploy/`）
 
 ## 文档
 

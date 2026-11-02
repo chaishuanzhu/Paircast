@@ -6,7 +6,7 @@ import com.chaisz.paircast.core.model.IMConfig
 
 object ConfigValidation {
     fun missingFields(config: AppCloudConfig): List<String> = buildList {
-        if (!config.im.isComplete) add("IM Server")
+        if (!config.im.isComplete) add("Server")
     }
 
     @Throws(Exception::class)

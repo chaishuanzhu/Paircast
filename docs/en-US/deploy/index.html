@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paircast Server Deployment Guide</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1.25rem 3rem; line-height: 1.55; color: #111; }
+    h1 { font-size: 1.6rem; }
+    h2 { font-size: 1.2rem; margin-top: 2rem; }
+    h3 { font-size: 1.05rem; margin-top: 1.35rem; }
+    .lang { font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .lang a { margin-right: 0.75rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0.75rem 0 1.25rem; }
+    th, td { border: 1px solid #ddd; padding: 0.45rem 0.55rem; text-align: left; vertical-align: top; }
+    th { background: #f6f6f6; }
+    code { font-size: 0.88em; background: #f3f3f3; padding: 0.1em 0.35em; border-radius: 4px; }
+    pre { background: #f6f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.75rem 0.9rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.45; }
+    pre code { background: none; padding: 0; font-size: inherit; }
+    .note { background: #f7f9fc; border-left: 3px solid #3b82f6; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    .warn { background: #fff8f0; border-left: 3px solid #f59e0b; padding: 0.65rem 0.85rem; margin: 1rem 0; }
+    ol li, ul li { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <p class="lang"><a href="./">English</a><a href="../../zh-Hans/deploy/">简体中文</a></p>
+  <h1>Paircast Server Deployment Guide</h1>
+  <p>The Paircast server is the open-source <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a>. It handles accounts, chat, playback sync, watch rooms and the media library. This guide deploys the minimal setup on one Linux host with Docker. Once it is running, enter the server address in the app's Service Configuration.</p>
+
+  <div class="note">
+    Other setups (full Docker, Kubernetes) and every config field are documented in GO-IM's <a href="https://github.com/chaishuanzhu/GO-IM/blob/main/deploy/README.md">deploy/README.md</a>.
+  </div>
+
+  <h2>0. What you need</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Server</td><td>Linux, 2 vCPU / 2 GB or more, with Docker 20.10+ and Docker Compose v2</td></tr>
+      <tr><td>Domain (recommended)</td><td>e.g. <code>im.example.com</code> pointing at the server, for HTTPS. Not needed for LAN-only use</td></tr>
+      <tr><td>Mail account</td><td>Any mailbox with SMTP, used to send initial passwords to you and your friends</td></tr>
+      <tr><td>Video storage</td><td><code>mp4</code> / <code>m4v</code> / <code>mkv</code> files in S3-compatible storage (Alibaba Cloud OSS, Tencent Cloud COS, Qiniu, MinIO, …) plus a <strong>read-only</strong> access key</td></tr>
+    </tbody>
+  </table>
+  <p>Use a GO-IM release that includes the media library (the <code>/media</code> and <code>/room</code> APIs).</p>
+
+  <h2>1. Start the server</h2>
+<pre><code>mkdir go-im &amp;&amp; cd go-im
+base=https://raw.githubusercontent.com/chaishuanzhu/GO-IM/main/deploy/docker
+curl -fsSLO $base/docker-compose.minimal.yml
+curl -fsSLO $base/config.minimal.json
+
+# Required: JWT signing secret
+sed -i.bak "s|CHANGE_ME_run_openssl_rand_base64_48|$(openssl rand -base64 48 | tr -d '\n/+=')|" config.minimal.json
+
+docker compose -f docker-compose.minimal.yml up -d
+curl http://127.0.0.1:8080/health     # ready when it returns "status":"ok"</code></pre>
+  <p>This starts the gateway, MySQL, Redis and RustFS (which stores small files such as shared subtitles and avatars). Whenever you change <code>config.minimal.json</code> or <code>.env</code>, recreate the gateway so it reloads (“restart the gateway” below):</p>
+<pre><code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code></pre>
+
+  <h2>2. HTTPS (required on the public internet)</h2>
+  <p>Put Caddy in front of port 8080. It obtains certificates automatically and passes WebSocket through:</p>
+<pre><code># /etc/caddy/Caddyfile
+im.example.com {
+    reverse_proxy 127.0.0.1:8080
+}</code></pre>
+  <p>The server address in the app is then <code>im.example.com</code>. With nginx, forward the <code>Upgrade</code> / <code>Connection</code> headers. For LAN-only use you can skip this and enter <code>http://192.168.x.x:8080</code>.</p>
+
+  <h2>3. Mail and the admin account</h2>
+  <p>Paircast has no sign-up: the admin creates accounts and the initial passwords are emailed, so SMTP comes first. Edit <code>config.minimal.json</code>:</p>
+<pre><code>"gateway": {
+    "mail": {
+        "enabled": true,
+        "host": "smtp.example.com",
+        "port": 465,
+        "username": "no_reply@example.com",
+        "from": "Paircast &lt;no_reply@example.com&gt;"
+    },
+    ...
+},
+"admin_email": "you@example.com"</code></pre>
+  <p>Keep the SMTP password out of the config file; put it in <code>.env</code> next to it:</p>
+<pre><code>MAIL_PASSWORD=your-smtp-password</code></pre>
+  <p>After restarting the gateway, it creates an admin account for <code>admin_email</code> and mails it a random password (if mail fails, the password is in <code>docker compose -f docker-compose.minimal.yml logs gateway</code>). Sign in to the app with that email and password; you will be asked to change the password the first time.</p>
+
+  <h2>4. Create accounts for friends</h2>
+  <p>Exchange the admin credentials for a token, then create the account. The initial password is mailed to your friend, who changes it on first sign-in:</p>
+<pre><code>SERVER=https://im.example.com
+curl -s -X POST $SERVER/login -d account=you@example.com -d password='admin-password'
+# note "uid" and "token" in the response
+
+curl -s -X POST $SERVER/admin/users/create \
+  -d uid=ADMIN_UID -d token=TOKEN_FROM_ABOVE -d email=friend@example.com</code></pre>
+  <p>If the mail could not be sent, the response includes <code>initial_password</code>; pass it on privately.</p>
+
+  <h2 id="media">5. Media library</h2>
+  <h3>5.1 Connect your video storage</h3>
+  <p>Add a source under <code>gateway.media.sources</code> in <code>config.minimal.json</code> (leave the keys out; they come from the environment in the next step):</p>
+<pre><code>"media": {
+    "sources": [
+        {
+            "id": "oss",
+            "name": "My Library",
+            "type": "s3",
+            "s3": {
+                "endpoint": "oss-cn-hangzhou.aliyuncs.com",
+                "bucket": "my-videos",
+                "region": "cn-hangzhou",
+                "prefix": "films/",
+                "use_ssl": true,
+                "path_style": false
+            }
+        }
+    ]
+}</code></pre>
+  <p>Add the keys to <code>.env</code> (compose passes them to the gateway as <code>GOIM_MEDIA_OSS_ACCESS_KEY</code> / <code>GOIM_MEDIA_OSS_SECRET_KEY</code>):</p>
+<pre><code>MEDIA_OSS_ACCESS_KEY=read-only-access-key
+MEDIA_OSS_SECRET_KEY=read-only-secret-key</code></pre>
+  <p>Restart the gateway. When its log shows <code>media library enabled</code>, the app's Library lists the videos under <code>prefix</code>.</p>
+  <ul>
+    <li><code>endpoint</code> is the regional S3 API host without <code>https://</code>; <strong>do not use a CDN domain</strong>. Qiniu and MinIO usually need <code>"path_style": true</code>.</li>
+    <li>The source <code>id</code> becomes part of every movie ID, so don't change it later. If your <code>id</code> is not <code>oss</code>, add matching <code>GOIM_MEDIA_&lt;UPPERCASE_ID&gt;_ACCESS_KEY</code> entries to the gateway <code>environment</code> in the compose file.</li>
+    <li>You can add several sources; the Library screen then shows a source picker.</li>
+    <li>For playback the server issues links valid for 6 hours and the video stream bypasses the server, so a <strong>read-only</strong> key is enough.</li>
+  </ul>
+
+  <h3>5.2 Subtitles and posters</h3>
+  <ul>
+    <li><strong>Sidecar subtitles</strong>: put them next to the video with the same name, e.g. <code>Inception.2010.mkv</code> with <code>Inception.2010.srt</code>, <code>Inception.2010.zh.ass</code> or <code>Inception.2010_en.vtt</code> (srt / vtt / ass / ssa).</li>
+    <li><strong>Posters and overviews</strong>: <code>{name}.nfo</code> and <code>{name}-poster.jpg</code> next to the video are used first; otherwise the server can query TMDB.</li>
+    <li><strong>TMDB</strong> (optional): add <code>TMDB_ACCESS_TOKEN=…</code> (your TMDB API Read Access Token) to <code>.env</code>.</li>
+    <li><strong>Online subtitle search</strong> (optional): add <code>OPENSUBTITLES_API_KEY=…</code> to <code>.env</code>.</li>
+  </ul>
+
+  <h3>5.3 Stickers (optional)</h3>
+  <p>Stickers live in the bucket of one of your sources, as <code>catalog.json</code> plus <code>{pack_id}/pack.json</code>. The Paircast repo has scripts to build and upload them:</p>
+<pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
+PAIRCAST_S3_ACCESS_KEY=… PAIRCAST_S3_SECRET_KEY=… \
+  python3 Scripts/upload-stickers.py --endpoint oss-cn-hangzhou.aliyuncs.com --bucket my-videos</code></pre>
+  <p>Uploading needs a writable key; use it only on your own machine, not on the server. Then set <code>"stickers_source": "oss"</code> and <code>"stickers_prefix": "stickers/"</code> under <code>gateway.media</code>.</p>
+
+  <h2>6. Use it in the app</h2>
+  <ol>
+    <li>Open Paircast → Service Configuration (top right of the login screen) → enter <code>im.example.com</code> → Save.</li>
+    <li>Sign in with the admin or a friend's account, pick a title, open a room and send the invite link.</li>
+  </ol>
+  <p>See the <a href="../guide/">User Guide</a> for details.</p>
+
+  <h2>7. Maintenance</h2>
+<pre><code>docker compose -f docker-compose.minimal.yml logs -f gateway       # logs
+docker compose -f docker-compose.minimal.yml pull &amp;&amp; docker compose -f docker-compose.minimal.yml up -d   # upgrade
+GOIM_TAG=x.y.z docker compose -f docker-compose.minimal.yml up -d  # pin / roll back</code></pre>
+  <ul>
+    <li>In production, pin <code>GOIM_TAG</code> in <code>.env</code> and back up the MySQL and RustFS volumes regularly.</li>
+    <li>Change the default database passwords and <code>RUSTFS_SECRET_KEY</code>, and set <code>gateway.check_origin</code> to your domain.</li>
+  </ul>
+
+  <div class="warn">
+    Every secret (JWT, SMTP, storage, TMDB, OpenSubtitles) stays in the server's <code>config.minimal.json</code> / <code>.env</code>. Never send them to users or commit them to git. Users only need the server address and their own account.
+  </div>
+
+  <h2>8. More</h2>
+  <ul>
+    <li><a href="../guide/">User Guide</a> · <a href="../support/">Support</a> · <a href="../privacy/">Privacy</a></li>
+    <li>Server issues: <a href="https://github.com/chaishuanzhu/GO-IM/issues/new">GO-IM Issues</a>; app issues: <a href="https://github.com/chaishuanzhu/Paircast/issues/new">Paircast Issues</a></li>
+  </ul>
+</body>
+</html>

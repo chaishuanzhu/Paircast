@@ -296,7 +296,7 @@ public struct MeSheetView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin.")
+                Text("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The account itself must be disabled separately by the server admin.")
             }
             .sheet(isPresented: $viewModel.showChangePassword) {
                 ChangePasswordView(session: session, isForced: false)

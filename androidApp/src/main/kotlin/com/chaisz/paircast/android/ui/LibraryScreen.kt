@@ -315,7 +315,7 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(t("Delete account?")) },
-            text = { Text(t("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The GO-IM account itself must be disabled separately by an admin.")) },
+            text = { Text(t("This clears local cloud config, sign-in session, avatar, and nickname, then signs you out. The account itself must be disabled separately by the server admin.")) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false

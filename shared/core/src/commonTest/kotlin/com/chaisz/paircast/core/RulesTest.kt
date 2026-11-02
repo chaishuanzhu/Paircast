@@ -16,7 +16,6 @@ import com.chaisz.paircast.core.model.SubtitleSource
 import com.chaisz.paircast.core.model.SubtitleState
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.ChatStickerCodec
-import com.chaisz.paircast.core.rules.ConfigQRCodec
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
 import com.chaisz.paircast.core.rules.LoginRules
@@ -42,58 +41,6 @@ import kotlin.test.assertTrue
 internal fun configFixture() = AppCloudConfig(im = IMConfig("https://im.example.com"))
 
 internal fun roomFixture(host: String = "host1") = WatchRoom(id = "room1", movieId = "m1", hostUserId = host)
-
-class ConfigQRCodecTest {
-    @Test fun roundTrip() {
-        val config = configFixture()
-        val encoded = ConfigQRCodec.encode(config)
-        assertFalse("storage" in encoded, encoded)
-        val decoded = ConfigQRCodec.decode(encoded)
-        assertEquals(config.im.serverUrl, decoded.im.serverUrl)
-        assertEquals(5, decoded.configVersion)
-        assertFalse(ConfigQRCodec.isLegacy(decoded))
-    }
-
-    @Test fun invalidTypeDoesNotDecode() {
-        val raw = """{"v":5,"type":"other","im":{"serverUrl":"https://im"}}"""
-        assertEquals(AppError.InvalidConfigQR, assertFailsWith<AppError> { ConfigQRCodec.decode(raw) })
-    }
-
-    @Test fun tooLargeRejected() {
-        val config = configFixture().copy(im = IMConfig("https://" + "x".repeat(3_000)))
-        assertEquals(AppError.ConfigQRTooLarge, assertFailsWith<AppError> { ConfigQRCodec.encode(config) })
-    }
-
-    @Test fun v4PayloadKeepsServerAndDropsStorage() {
-        val raw = """{"v":4,"type":"paircast-config","im":{"serverUrl":"https://im.example.com"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true},"tmdbAccessToken":"t"}"""
-        val decoded = ConfigQRCodec.decode(raw)
-        assertEquals("https://im.example.com", decoded.im.serverUrl)
-        assertTrue(ConfigQRCodec.isLegacy(decoded))
-        assertFalse(ConfigQRCodec.needsServerUrl(decoded))
-    }
-
-    @Test fun legacyV3PayloadNeedsServer() {
-        val raw = """{"v":3,"type":"paircast-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true},"tmdbAccessToken":"t"}"""
-        val decoded = ConfigQRCodec.decode(raw)
-        assertEquals(3, decoded.configVersion)
-        assertTrue(ConfigQRCodec.needsServerUrl(decoded))
-    }
-
-    @Test fun decodesV2Payload() {
-        val raw = """{"v":2,"type":"tandem-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
-        assertEquals(2, ConfigQRCodec.decode(raw).configVersion)
-    }
-
-    @Test fun rejectsV1Payload() {
-        val raw = """{"v":1,"type":"tandem-config","im":{"sdkAppId":1,"secretKey":"x"},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
-        assertEquals(AppError.InvalidConfigQR, assertFailsWith<AppError> { ConfigQRCodec.decode(raw) })
-    }
-
-    @Test fun v4WithoutServerRejected() {
-        val raw = """{"v":4,"type":"paircast-config","im":{},"storage":{"provider":"qiniu","accessKey":"a","secretKey":"b","bucket":"c","endpoint":"s3.cn-south-1.qiniucs.com","useSSL":true,"forcePathStyle":true}}"""
-        assertEquals(AppError.InvalidConfigQR, assertFailsWith<AppError> { ConfigQRCodec.decode(raw) })
-    }
-}
 
 class LoginRulesTest {
     @Test fun emptyAccountFails() {
@@ -151,7 +98,7 @@ class ConfigValidationTest {
         val error = assertFailsWith<AppError.IncompleteConfig> {
             ConfigValidation.validate(configFixture().copy(im = IMConfig("")))
         }
-        assertEquals(listOf("IM Server"), error.missing)
+        assertEquals(listOf("Server"), error.missing)
     }
 }
 

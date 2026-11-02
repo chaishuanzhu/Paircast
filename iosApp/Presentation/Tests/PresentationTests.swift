@@ -160,17 +160,12 @@ final class AppRouteDeepLinkTests: XCTestCase {
         XCTAssertNil(session.pendingInvite)
     }
 
-    func test_configShareDeepLinkOpensConfigAfterSplash() async throws {
+    func test_configDeepLinkIsIgnored() async {
         let session = makeSession()
-        let share = URL(string: try session.graph.configLinkCodec.shareUrl(config: .fixture()))!
-        session.handleDeepLink(share)
-        XCTAssertEqual(session.route, .splash)
-
+        session.handleDeepLink(URL(string: "paircast://config?args=abc")!)
         await session.bootstrap()
-        XCTAssertEqual(session.route, .config(fromLogin: true))
-        XCTAssertEqual(session.toast, "Configuration link detected. Confirm to import")
-        XCTAssertEqual(session.consumePendingConfigImport(), share.absoluteString)
-        XCTAssertNil(session.consumePendingConfigImport())
+        XCTAssertEqual(session.route, .login)
+        XCTAssertNil(session.toast)
     }
 
     func test_bootstrapLeavesSplashForLoginWhenUnauthenticated() async {

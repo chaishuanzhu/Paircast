@@ -23,100 +23,82 @@
 <body>
   <p class="lang"><a href="./">English</a><a href="../../zh-Hans/guide/">简体中文</a></p>
   <h1>Paircast User Guide</h1>
-  <p>Paircast is an <strong>invite-only</strong> private cloud sync player. Videos come from the media library that the admin of your self-hosted GO-IM server connects to <strong>your own</strong> storage. Accounts are created by the admin of your self-hosted <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> server — there is <strong>no in-app sign-up</strong>. Available on iOS and Android; both can join the same room.</p>
+  <p>Paircast is an <strong>invite-only</strong> private cloud sync player that works with a self-hosted server. The server handles accounts, chat, playback sync and the media library (videos stay in your own storage). There is <strong>no in-app sign-up</strong>: the server admin creates accounts. Available on iOS and Android; both can join the same room.</p>
 
   <div class="note">
-    Fast path: get a <code>paircast://config?…</code> link from your admin → Login → Service Configuration → Paste to Import → sign in with your assigned account and password.
+    Fast path: ask the server admin for the <strong>server address</strong> and an <strong>account and password</strong> → on the login screen open Service Configuration (top right), enter the server address and save → sign in.<br />
+    No server yet? Follow the <a href="../deploy/">Server Deployment Guide</a>; with Docker it takes about ten minutes.
   </div>
 
   <h2>1. Typical flow</h2>
   <ol>
-    <li>Finish <strong>Service Configuration</strong> (import a link or enter the IM server address).</li>
+    <li>Enter the server address in <strong>Service Configuration</strong> and save.</li>
     <li>Sign in with the <strong>account and password</strong> your admin gave you. If the admin requires it, you must set a new password on first sign-in.</li>
     <li>Browse <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files from the server media library on the <strong>Library</strong> screen.</li>
     <li>Open a title to create/join a <strong>room</strong> for synced playback and chat.</li>
     <li>Share an invite link so friends can join the same room.</li>
   </ol>
 
-  <h2>2. Where each configuration value comes from</h2>
-  <p>Open <strong>Service Configuration</strong> from the login screen or <strong>Me</strong>.</p>
-  <div class="warn">
-    Since version 2.1 the app only needs the IM server address. Shared config links contain nothing else, and friends still sign in with their own account. After a successful import, <strong>sign in again</strong>.
-  </div>
-
-  <h3>2.1 IM server (required)</h3>
+  <h2>2. Service Configuration</h2>
+  <p>Open it from the top right of the login screen, or from <strong>Me</strong> → <strong>Service Configuration</strong> after signing in. There is a single field:</p>
   <table>
     <thead>
       <tr><th>Field in App</th><th>Where to get it</th><th>Notes</th></tr>
     </thead>
     <tbody>
       <tr>
-        <td>IM Server address</td>
-        <td>The admin who runs your GO-IM server</td>
-        <td>e.g. <code>im.example.com</code>; HTTPS is assumed unless you type <code>http://</code> (LAN only)</td>
+        <td>Server address</td>
+        <td>Whoever deployed the server (you or a friend)</td>
+        <td>e.g. <code>im.example.com</code>; HTTPS is assumed. Only on a LAN, type something like <code>http://192.168.1.10:8080</code></td>
       </tr>
       <tr>
         <td>Login account / password</td>
-        <td>Created by the admin (GO-IM <code>/admin/users/create</code>)</td>
+        <td>Created by the server admin and sent to you</td>
         <td>Account is your UID or email. Change your password any time in Me → Change Password</td>
       </tr>
     </tbody>
   </table>
-  <p>The server must run a GO-IM build that supports transient group signals (used for playback sync).</p>
+  <div class="warn">
+    Changing the server address while signed in signs you out. Sign in again with an account on the new server.
+  </div>
 
-  <h3>2.2 Media library (configured on the server)</h3>
-  <p>Videos, sidecar subtitles, posters, online subtitle search, and stickers are provided by the GO-IM server. You do not enter storage keys or API tokens in the app. Your admin sets them up once on the server:</p>
-  <ul>
-    <li><strong>Video sources</strong>: S3-compatible storage (Qiniu, Alibaba Cloud OSS, Tencent Cloud COS, MinIO, …) under <code>gateway.media.sources</code>. Keys are injected through the environment variables <code>GOIM_MEDIA_&lt;ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code>. Read-only access is enough: the server issues short-lived playback links and the video stream does not pass through it.</li>
-    <li><strong>Posters and overviews</strong>: a <code>{name}.nfo</code> / <code>{name}-poster.jpg</code> next to the video is used first. Otherwise the server queries TMDB when <code>GOIM_TMDB_ACCESS_TOKEN</code> is set.</li>
-    <li><strong>Online subtitles</strong>: enabled when <code>GOIM_OPENSUBTITLES_API_KEY</code> is set on the server.</li>
-    <li><strong>Stickers</strong>: set <code>stickers_source</code> / <code>stickers_prefix</code> (default <code>stickers/</code>) and put <code>catalog.json</code> and <code>{pack_id}/pack.json</code> there. <code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist</code> builds this layout from a local sticker dump.</li>
-  </ul>
-  <p>See the “媒体库（Paircast）” section of the GO-IM <a href="https://github.com/chaishuanzhu/GO-IM/blob/main/deploy/README.md">deploy README</a> for the full setup. The old <code>_paircast/</code> folder in the bucket is no longer used: rooms are stored in the server's MySQL and shared subtitles in its file storage.</p>
-  <p>If the server lists more than one source, the Library screen shows a source picker.</p>
+  <h3>The media library is configured on the server</h3>
+  <p>Videos, sidecar subtitles, posters, online subtitle search, and stickers all come from the server; you never enter storage keys or API tokens in the app. See <a href="../deploy/#media">Server Deployment Guide · Media library</a> for video sources, TMDB, OpenSubtitles and stickers. If the server lists more than one source, the Library screen shows a source picker.</p>
 
-  <h2>3. Import / share configuration</h2>
-  <ol>
-    <li><strong>Import:</strong> Service Configuration → Paste to Import or Scan QR Code → confirm overwrite → sign in again.</li>
-    <li>Or open a <code>paircast://config?args=…</code> deep link.</li>
-    <li>Links from older versions still import, but their storage keys and API tokens are ignored, because the library is now configured on the server. Links without an IM server address ask you to enter it.</li>
-    <li><strong>Share:</strong> Share Configuration creates an encrypted link and QR code containing the IM server address.</li>
-  </ol>
-
-  <h2>4. Login and library</h2>
+  <h2>3. Login and library</h2>
   <ul>
     <li>Enter the assigned <strong>account and password</strong>.</li>
-    <li>If config is incomplete, enter the IM server address first.</li>
-    <li>“The server has no media library configured”: ask the admin to add a video source on GO-IM. Empty library: ask the admin to check that the source (and prefix) contains <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code> files.</li>
+    <li>If config is incomplete, enter the server address first.</li>
+    <li>“The server has no media library configured”: ask the admin to add a video source. Empty library: ask the admin to check that the source (and prefix) contains <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code> files.</li>
   </ul>
 
-  <h2>5. Watch together and invites</h2>
+  <h2>4. Watch together and invites</h2>
   <ol>
     <li>Tap a title → room (host can drive sync).</li>
     <li><strong>Invite:</strong> system share or copy the invite link (<code>https://paircast.chaisz.com/invite/?roomId=…</code>); it opens Paircast on iOS or Android.</li>
-    <li>Friends need an account on the same GO-IM server (same IM server address) before opening the invite.</li>
+    <li>Friends need an account on the same server, with the same server address in Service Configuration, before opening the invite.</li>
     <li>Long-press a chat message to <strong>Block</strong> (local) or <strong>Report</strong>.</li>
   </ol>
 
-  <h2>6. Me</h2>
+  <h2>5. Me</h2>
   <ul>
     <li>Avatar, nickname, change password, theme, language</li>
     <li>Service Configuration, Acknowledgements, privacy/support links</li>
-    <li><strong>Sign out</strong> keeps local cloud config</li>
-    <li><strong>Delete Account</strong> clears your avatar and on-device config/session; the GO-IM account itself must be disabled by an admin</li>
+    <li><strong>Sign out</strong> keeps the local service configuration</li>
+    <li><strong>Delete Account</strong> clears your avatar and on-device config/session; the account on the server must be disabled by the admin</li>
   </ul>
 
-  <h2>7. Troubleshooting</h2>
+  <h2>6. Troubleshooting</h2>
   <ul>
-    <li><strong>Invalid config link:</strong> copy the full URL; failed imports do not overwrite existing config.</li>
-    <li><strong>Import looks OK but nothing changed:</strong> sign in again.</li>
+    <li><strong>Cannot reach the server:</strong> check the spelling of the address, whether it needs <code>http://</code> (LAN only), and your network. Admins can run <code>curl https://your-domain/health</code> to confirm the server is up.</li>
+    <li><strong>Wrong account or password / account not found:</strong> make sure the account was created on the server you entered.</li>
     <li><strong>Videos do not play:</strong> playback links expire after a few hours; go back to the library and open the title again. Admins: the S3 endpoint must be the regional API host, not a CDN domain.</li>
-    <li><strong>Login fails:</strong> check the IM server address and that the account exists on that server; “Cannot reach the IM server” means the address or network is wrong.</li>
+    <li><strong>Playback is out of sync:</strong> make sure both of you are on the same server and have a working connection.</li>
   </ul>
 
-  <h2>8. More</h2>
+  <h2>7. More</h2>
   <ul>
-    <li><a href="../support/">Support</a> · <a href="../privacy/">Privacy</a></li>
+    <li><a href="../deploy/">Server Deployment Guide</a> · <a href="../support/">Support</a> · <a href="../privacy/">Privacy</a></li>
     <li>Issues: <a href="https://github.com/chaishuanzhu/Paircast/issues/new">GitHub Issues</a></li>
   </ul>
 </body>

@@ -14,12 +14,12 @@ public struct AcknowledgementsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Messaging") {
-                Text("Chat and playback sync use your self-hosted GO-IM server. Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization, Wire and cryptography-kotlin (Apache 2.0).")
+                Text("Chat, playback sync and the media library run on your self-hosted server (GO-IM). Shared logic is built with Kotlin Multiplatform, Ktor, kotlinx.serialization and Wire (Apache 2.0).")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
             Section("Subtitles & Metadata") {
-                Text("Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your GO-IM server. This product uses the TMDB API but is not endorsed or certified by TMDB.")
+                Text("Online subtitle search (OpenSubtitles) and movie metadata (TMDB) are provided through your server. This product uses the TMDB API but is not endorsed or certified by TMDB.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

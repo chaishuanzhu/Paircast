@@ -3,7 +3,6 @@ package com.chaisz.paircast
 import com.chaisz.paircast.core.gateway.AuthGateway
 import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
-import com.chaisz.paircast.core.gateway.ConfigLinkCodec
 import com.chaisz.paircast.core.gateway.MetadataGateway
 import com.chaisz.paircast.core.gateway.MovieCatalogGateway
 import com.chaisz.paircast.core.gateway.PlaybackSyncGateway
@@ -19,13 +18,10 @@ import com.chaisz.paircast.core.store.KeyValueStore
 import com.chaisz.paircast.core.store.SecureStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
 import com.chaisz.paircast.core.usecase.ChangePasswordUseCase
-import com.chaisz.paircast.core.usecase.ExportConfigUseCase
-import com.chaisz.paircast.core.usecase.ImportConfigUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
 import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
 import com.chaisz.paircast.core.usecase.UpdateProfileUseCase
-import com.chaisz.paircast.data.config.ConfigShareLink
 import com.chaisz.paircast.data.files.FileStore
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
@@ -78,7 +74,6 @@ class PaircastGraph(
     private val subtitles = ServerSubtitleGateway(media, cache)
 
     val configGateway: ConfigGateway = SecureConfigStore(secureStore)
-    val configLinkCodec: ConfigLinkCodec = ConfigShareLink
     val authGateway: AuthGateway = goImAuth
     val roomGateway: RoomGateway = ServerRoomGateway(media, connection)
     val chatGateway: ChatGateway = GoImChatGateway(connection, goImAuth)
@@ -95,8 +90,6 @@ class PaircastGraph(
     val changePassword get() = ChangePasswordUseCase(authGateway)
     val updateProfile get() = UpdateProfileUseCase(authGateway)
     val saveConfig get() = SaveCloudConfigUseCase(configGateway)
-    val importConfig get() = ImportConfigUseCase(configGateway, configLinkCodec)
-    val exportConfig get() = ExportConfigUseCase(configGateway, configLinkCodec)
     val listMovies get() = ListMoviesUseCase(configGateway, catalogGateway, metadataGateway)
 
     val watchDependencies: WatchDependencies

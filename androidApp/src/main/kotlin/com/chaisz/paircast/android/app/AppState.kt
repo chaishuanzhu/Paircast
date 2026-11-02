@@ -56,7 +56,6 @@ class AppState(val graph: PaircastGraph) {
     var mustChangePassword by mutableStateOf(false)
 
     private var pendingInvite: RoomInvite? = null
-    private var pendingConfigImport: String? = null
     private var bootstrapped = false
 
     init {
@@ -84,12 +83,7 @@ class AppState(val graph: PaircastGraph) {
                     next = AppRoute.Library
                 }
             }
-            if (pendingConfigImport != null) {
-                if (currentUser == null) next = AppRoute.Config(fromLogin = true) else {
-                    next = AppRoute.Library
-                    stack = listOf(LibraryRoute.Config)
-                }
-            } else if (currentUser != null) {
+            if (currentUser != null) {
                 pendingInvite?.let {
                     pendingInvite = null
                     next = AppRoute.Library
@@ -103,7 +97,6 @@ class AppState(val graph: PaircastGraph) {
             libraryStack.clear()
             libraryStack.addAll(stack)
             if (next == AppRoute.Login && pendingInvite != null) showToast(t("Sign in to join the room"))
-            if (pendingConfigImport != null) showToast(t("Configuration link detected. Confirm to import"))
         }
     }
 
@@ -150,14 +143,6 @@ class AppState(val graph: PaircastGraph) {
     }
 
     fun handleDeepLink(uri: Uri) {
-        if (uri.scheme == "paircast" && uri.host == "config") {
-            pendingConfigImport = uri.toString()
-            if (route != AppRoute.Splash) {
-                openConfig(fromLogin = currentUser == null)
-                showToast(t("Configuration link detected. Confirm to import"))
-            }
-            return
-        }
         val invite = RoomInvite.parse(uri) ?: return
         if (currentUser == null) {
             pendingInvite = invite
@@ -170,8 +155,6 @@ class AppState(val graph: PaircastGraph) {
             openWatch(invite.roomId, invite.movieId, invite.hostUserId)
         }
     }
-
-    fun consumePendingConfigImport(): String? = pendingConfigImport.also { pendingConfigImport = null }
 
     private fun consumePendingInvite() {
         val invite = pendingInvite ?: return
@@ -208,8 +191,8 @@ class AppState(val graph: PaircastGraph) {
         route = AppRoute.Login
     }
 
-    /** After an import or server change: keep the new config, drop the session, back to login. */
-    suspend fun applyImportedConfig(newConfig: AppCloudConfig) {
+    /** After the server address changes: keep the new config, drop the session, back to login. */
+    suspend fun applyServerChange(newConfig: AppCloudConfig) {
         config = newConfig
         if (currentUser != null) {
             runCatching { graph.authGateway.logout() }
@@ -218,7 +201,7 @@ class AppState(val graph: PaircastGraph) {
         pendingInvite = null
         runCatching { graph.clearMetadataCache() }
         resetToLogin()
-        showToast(t("Configuration imported. Please sign in again"))
+        showToast(t("Server changed. Please sign in again"))
     }
 
     private fun forcedLogout(message: String) {
