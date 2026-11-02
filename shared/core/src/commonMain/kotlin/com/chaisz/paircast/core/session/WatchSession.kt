@@ -158,6 +158,8 @@ class WatchSession(
     private var listenJobs: List<Job> = emptyList()
     private var heartbeatJob: Job? = null
     private var memberProfileJob: Job? = null
+    /** Ids already looked up, so chat from a sender outside the roster triggers one fetch, not one per line. */
+    private val requestedProfileIds = mutableSetOf<String>()
     /** Last object key the host shared this session; used to clear members only when needed. */
     private var lastHostSharedSubtitleKey: String? = null
 
@@ -237,7 +239,9 @@ class WatchSession(
     // region Members
 
     fun refreshMemberProfiles() {
-        val ids = current.room?.memberIds.orEmpty()
+        // Chat senders may have left the roster; their lines still need a name and avatar.
+        val ids = (current.room?.memberIds.orEmpty() + current.messages.mapNotNull { it.senderId }).distinct()
+        requestedProfileIds += ids
         if (ids.isEmpty()) {
             _state.update { it.copy(memberProfiles = emptyMap()) }
             return
@@ -307,6 +311,12 @@ class WatchSession(
         listenJobs = listOf(
             scope.launch { deps.syncGateway.signals(room).collect { applyRemote(it) } },
             scope.launch { deps.chatGateway.messages(room).collect { ingestChat(it) } },
+            scope.launch {
+                // Own avatar / nickname edits made from the Me sheet while in the room.
+                deps.authGateway.currentUser.collect { user ->
+                    if (user != null) _state.update { it.copy(memberProfiles = it.memberProfiles + (user.id to user)) }
+                }
+            },
             scope.launch {
                 deps.roomGateway.observeRoom(room.id).collect { updated ->
                     val previousMembers = current.room?.memberIds.orEmpty()
@@ -574,6 +584,8 @@ class WatchSession(
             val next = s.messages + message
             s.copy(messages = if (ownerId != null) deps.chatSafety.visibleMessages(next, ownerId) else next)
         }
+        val senderId = message.senderId
+        if (senderId != null && senderId !in requestedProfileIds) refreshMemberProfiles()
     }
 
     // endregion

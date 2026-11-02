@@ -953,6 +953,14 @@ public struct WatchView: View {
         return text
     }
 
+    private func chatAvatar(_ message: ChatMessage) -> some View {
+        TandemAvatarView(
+            userId: message.senderNickname.isEmpty ? (message.senderId ?? "?") : message.senderNickname,
+            size: 32,
+            avatarURL: message.senderId.flatMap { viewModel.memberAvatarURL(for: $0) }
+        )
+    }
+
     @ViewBuilder
     private func chatRow(_ message: ChatMessage) -> some View {
         if message.kind == .system {
@@ -965,7 +973,7 @@ public struct WatchView: View {
             let isMe = message.senderId == session.currentUser?.id
             HStack(alignment: .top, spacing: 8) {
                 if !isMe {
-                    TandemAvatarView(userId: message.senderNickname.isEmpty ? (message.senderId ?? "?") : message.senderNickname, size: 32)
+                    chatAvatar(message)
                 }
                 VStack(alignment: isMe ? .trailing : .leading, spacing: 4) {
                     if !isMe {
@@ -1001,7 +1009,7 @@ public struct WatchView: View {
                     }
                 }
                 if isMe {
-                    TandemAvatarView(userId: message.senderNickname.isEmpty ? (message.senderId ?? "?") : message.senderNickname, size: 32)
+                    chatAvatar(message)
                 }
             }
             .frame(maxWidth: .infinity, alignment: isMe ? .trailing : .leading)

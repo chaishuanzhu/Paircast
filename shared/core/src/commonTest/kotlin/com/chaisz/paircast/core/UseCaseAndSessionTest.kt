@@ -1,6 +1,7 @@
 package com.chaisz.paircast.core
 
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.IMConfig
 import com.chaisz.paircast.core.model.PlaybackAction
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
@@ -244,6 +245,26 @@ class WatchSessionTest {
         h.session.sendChat("hi")
         runCurrent()
         assertEquals("Message failed to send", (toast.await() as WatchEvent.Toast).text.key)
+        h.session.close()
+    }
+
+    @Test fun chatFromSenderOutsideRosterLoadsTheirProfile() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.chat.incoming.emit(ChatMessage(id = "1", roomId = "room1", senderId = "carol", senderNickname = "Carol", text = "hi"))
+        runCurrent()
+        assertEquals("nick-carol", h.session.state.value.memberProfiles["carol"]?.nickname)
+        h.session.close()
+    }
+
+    @Test fun ownProfileEditUpdatesRoomProfiles() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.auth.currentUser.value = User("member", "Member", avatarUrl = "https://im/avatar/9")
+        runCurrent()
+        assertEquals("https://im/avatar/9", h.session.state.value.memberAvatarUrl("member"))
         h.session.close()
     }
 
