@@ -41,6 +41,7 @@ make android      # Debug APK
 - 注册开关：登录页打开时 `LoadAuthOptionsUseCase` 读 `GET /auth/config` → `AuthOptions(registrationOpen, emailVerification)`；两者都为真才显示「注册账号」（未配置 / 请求失败按不可注册处理）。默认开放，管理员用 `gateway.auth.disable_registration` 或 `POST /admin/settings registration_open=false` 关闭；`email_verification` 为假表示服务端没配 SMTP
 - 注册：`POST /auth/email-code`（`purpose=register`，返回 `retry_after` 冷却秒数，429 带 `Retry-After`）→ `POST /register`（email、code、password、nickname 可选）→ 与登录相同的会话持久化并连 WebSocket。校验在 `RegisterRules` / `LoginRules.validateChosenPassword`（邮箱格式、6 位验证码、密码 6–72 位且两次一致）；错误映射：403 注册关闭、409 邮箱已注册、400 验证码错误、429 过频、502 发信失败、503 未配邮件
 - 删除账号：`DeleteAccountUseCase(password)` → `POST /user/delete`（GO-IM 校验密码后删除用户并以 `account deleted` 踢下线；管理员账号 403）→ 登出、清本机配置 / 会话 / 缓存。满足 App Store 5.1.1(v)
+- 协议同意：`LoginUseCase` / `RegisterUseCase` 带 `agreedToTerms`，先过 `LegalRules.requireAgreement`（未同意抛 `Validation`，不发请求）；链接由 `LegalRules.termsUrl` / `privacyUrl` 生成（`https://paircast.chaisz.com/{zh-Hans|en-US}/terms|privacy/`）。勾选状态放在 `AppSession` / `AppState`，登录页与注册页共用，默认不勾选、不持久化
 - 登录：`POST /login`（账号 = UID 或邮箱 + 密码）→ `token` + `must_change_password`；为真时强制 `POST /change-password` 后才进片库
 - 会话（serverUrl、uid、token）存安全存储：iOS Keychain（AfterFirstUnlockThisDeviceOnly），Android EncryptedSharedPreferences
 - token 失效 / 被踢（WebSocket `KICK`）→ `SessionEvent` → 回登录页

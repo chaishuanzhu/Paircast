@@ -137,6 +137,7 @@ public struct RegisterView: View {
                             .textContentType(.newPassword)
                         TandemTextField("Nickname (optional)", text: $viewModel.nickname)
                             .textContentType(.nickname)
+                        TermsAgreementView(session: session)
                         if let error = viewModel.errorMessage {
                             Text(error)
                                 .font(.footnote)

@@ -45,24 +45,31 @@ import kotlin.test.assertTrue
 class LoginUseCaseTest {
     @Test fun requiresConfig() = runTest {
         val sut = LoginUseCase(FakeConfigGateway(null), FakeAuthGateway())
-        assertEquals(AppError.NotConfigured, assertFailsWith<AppError> { sut("alice", "secret") })
+        assertEquals(AppError.NotConfigured, assertFailsWith<AppError> { sut("alice", "secret", true) })
     }
 
     @Test fun requiresServerUrl() = runTest {
         val sut = LoginUseCase(FakeConfigGateway(configFixture().copy(im = IMConfig(""))), FakeAuthGateway())
-        assertIs<AppError.IncompleteConfig>(assertFailsWith<AppError> { sut("alice", "secret") })
+        assertIs<AppError.IncompleteConfig>(assertFailsWith<AppError> { sut("alice", "secret", true) })
     }
 
     @Test fun successLogsIn() = runTest {
         val auth = FakeAuthGateway(null)
-        val result = LoginUseCase(FakeConfigGateway(configFixture()), auth)(" alice ", "secret")
+        val result = LoginUseCase(FakeConfigGateway(configFixture()), auth)(" alice ", "secret", true)
         assertEquals("alice", result.user.id)
         assertEquals(1, auth.loginCalls)
     }
 
+    @Test fun requiresTermsAgreementBeforeNetwork() = runTest {
+        val auth = FakeAuthGateway(null)
+        val error = assertFailsWith<AppError> { LoginUseCase(FakeConfigGateway(configFixture()), auth)("alice", "secret", false) }
+        assertEquals("Please read and agree to the Terms of Service and Privacy Policy first", error.localizationKey)
+        assertEquals(0, auth.loginCalls)
+    }
+
     @Test fun wrongPasswordSurfacesInvalidCredentials() = runTest {
         val sut = LoginUseCase(FakeConfigGateway(configFixture()), FakeAuthGateway(null))
-        assertEquals(AppError.InvalidCredentials, assertFailsWith<AppError> { sut("alice", "nope") })
+        assertEquals(AppError.InvalidCredentials, assertFailsWith<AppError> { sut("alice", "nope", true) })
     }
 }
 
@@ -96,9 +103,11 @@ class RegisterUseCaseTest {
     @Test fun registerValidatesAndSignsIn() = runTest {
         val auth = FakeAuthGateway(null)
         val sut = RegisterUseCase(FakeConfigGateway(configFixture()), auth)
-        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "12345", "secret1", "secret1", "") })
-        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "123456", "secret1", "secret2", "") })
-        val result = sut("a@b.co", "123456", "secret1", "secret1", "  ")
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "12345", "secret1", "secret1", "", true) })
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "123456", "secret1", "secret2", "", true) })
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "123456", "secret1", "secret1", "", false) })
+        assertEquals(null, auth.registered)
+        val result = sut("a@b.co", "123456", "secret1", "secret1", "  ", true)
         assertEquals("100000", result.user.id)
         assertEquals(Triple("a@b.co", "secret1", null), auth.registered)
     }

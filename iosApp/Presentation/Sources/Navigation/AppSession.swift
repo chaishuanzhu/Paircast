@@ -13,6 +13,8 @@ public final class AppSession: ObservableObject {
     @Published public var mustChangePassword = false
     /// Server sign-up switch (`/auth/config`), refreshed whenever the login screen appears.
     @Published public private(set) var authOptions = AppSession.registrationUnavailable
+    /// Terms / Privacy consent checkbox, shared by the login and sign-up screens; never pre-checked.
+    @Published public var agreedToTerms = false
 
     static let registrationUnavailable = AuthOptions(registrationOpen: false, emailVerification: false)
 
@@ -87,7 +89,7 @@ public final class AppSession: ObservableObject {
 
     /// Password login. Routes into the library unless the server requires a password change first.
     public func login(account: String, password: String) async throws {
-        let result = try await graph.login.invoke(account: account, password: password)
+        let result = try await graph.login.invoke(account: account, password: password, agreedToTerms: agreedToTerms)
         currentUser = result.user
         if result.mustChangePassword {
             mustChangePassword = true
@@ -113,7 +115,8 @@ public final class AppSession: ObservableObject {
 
     public func register(email: String, code: String, password: String, confirm: String, nickname: String) async throws {
         let result = try await graph.register.invoke(
-            email: email, code: code, password: password, confirm: confirm, nickname: nickname
+            email: email, code: code, password: password, confirm: confirm, nickname: nickname,
+            agreedToTerms: agreedToTerms
         )
         currentUser = result.user
         finishLogin()

@@ -3774,6 +3774,74 @@
           }
         }
       }
+    },
+    "Terms of Service": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terms of Service"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用户协议"
+          }
+        }
+      }
+    },
+    "I have read and agree to the {{terms}} and {{privacy}}": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I have read and agree to the {{terms}} and {{privacy}}"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我已阅读并同意《{{terms}}》和《{{privacy}}》"
+          }
+        }
+      }
+    },
+    "Please read and agree to the Terms of Service and Privacy Policy first": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please read and agree to the Terms of Service and Privacy Policy first"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先阅读并同意《用户协议》和《隐私政策》"
+          }
+        }
+      }
+    },
+    "Agree to the Terms of Service and Privacy Policy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agree to the Terms of Service and Privacy Policy"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同意用户协议和隐私政策"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

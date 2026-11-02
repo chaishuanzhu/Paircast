@@ -21,6 +21,7 @@ import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
+import com.chaisz.paircast.core.rules.LegalRules
 import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.ProfileRules
 import com.chaisz.paircast.core.rules.RegisterRules
@@ -34,7 +35,8 @@ import kotlin.time.Clock
 
 class LoginUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
     @Throws(Exception::class)
-    suspend operator fun invoke(account: String, password: String): LoginResult {
+    suspend operator fun invoke(account: String, password: String, agreedToTerms: Boolean): LoginResult {
+        LegalRules.requireAgreement(agreedToTerms)
         LoginRules.validateAccount(account)
         LoginRules.validatePassword(password)
         val config = configGateway.load() ?: throw AppError.NotConfigured
@@ -78,7 +80,15 @@ class SendRegisterCodeUseCase(private val configGateway: ConfigGateway, private 
 
 class RegisterUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
     @Throws(Exception::class)
-    suspend operator fun invoke(email: String, code: String, password: String, confirm: String, nickname: String): LoginResult {
+    suspend operator fun invoke(
+        email: String,
+        code: String,
+        password: String,
+        confirm: String,
+        nickname: String,
+        agreedToTerms: Boolean,
+    ): LoginResult {
+        LegalRules.requireAgreement(agreedToTerms)
         val normalized = RegisterRules.normalizedEmail(email)
         val validCode = RegisterRules.normalizedCode(code)
         LoginRules.validateChosenPassword(password, confirm)

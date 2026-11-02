@@ -56,7 +56,7 @@ There is **no paid content / IAP** and **no public catalog**.
 1. Cold-launch Paircast.
 2. On Login, open **Service Configuration**.
 3. Enter the demo server address provided below in the **Server** field, tap **Save**, and return to Login.
-4. Enter the demo account and password and sign in.
+4. Enter the demo account and password, check "I have read and agree to the Terms of Service and Privacy Policy", and sign in.
 5. Library lists videos from the demo server’s media library. Sample files are public-domain / Creative Commons shorts only (e.g. Big Buck Bunny). Do **not** expect commercial films.
 6. Tap a title → create or join a room → use play/pause and invite/sync.
 7. Chat is invite-only. Long-press a message to **Block** (local hide) or **Report** (opens the public issue form).
@@ -68,6 +68,7 @@ There is **no paid content / IAP** and **no public catalog**.
 
 **Privacy / support:**
 
+- https://paircast.chaisz.com/en-US/terms/ (Terms of Service, linked from the consent line on Login and Create Account)
 - https://paircast.chaisz.com/en-US/privacy/
 - https://paircast.chaisz.com/en-US/support/
 - zh-Hans: `/zh-Hans/privacy/` and `/zh-Hans/support/`

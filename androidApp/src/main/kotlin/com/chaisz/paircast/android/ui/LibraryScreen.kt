@@ -59,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,6 +70,7 @@ import com.chaisz.paircast.android.app.t
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
+import com.chaisz.paircast.core.rules.LegalRules
 import com.chaisz.paircast.core.rules.ProfileRules
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -234,6 +236,7 @@ private fun MovieCard(movie: Movie, busy: Boolean, onClick: () -> Unit) {
 @Composable
 private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     val user = app.currentUser
     var nickname by remember { mutableStateOf(user?.nickname.orEmpty()) }
@@ -304,6 +307,8 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
             HorizontalDivider()
             SheetRow(t("Change Password")) { showChangePassword = true }
             SheetRow(t("Service Configuration")) { onDismiss(); app.openConfig(fromLogin = false) }
+            SheetRow(t("Terms of Service")) { uriHandler.openUri(LegalRules.termsUrl(L10n.useChinese)) }
+            SheetRow(t("Privacy Policy")) { uriHandler.openUri(LegalRules.privacyUrl(L10n.useChinese)) }
             SheetRow(t("Sign Out")) { onDismiss(); scope.launch { app.logout() } }
             SheetRow(t("Delete Account"), destructive = true) { confirmDelete = true }
             Spacer(Modifier.height(24.dp))

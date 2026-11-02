@@ -12,7 +12,7 @@
 
 | 路径 | 说明 |
 |------|------|
-| [en-US/](./en-US/)、[zh-Hans/](./zh-Hans/) | 隐私、支持、使用说明（`guide/`）、服务端部署指南（`deploy/`） |
+| [en-US/](./en-US/)、[zh-Hans/](./zh-Hans/) | 用户协议（`terms/`）、隐私、支持、使用说明（`guide/`）、服务端部署指南（`deploy/`） |
 | [invite/](./invite/) | 邀请落地页（含 App Store / TestFlight） |
 | [livecontainer/](./livecontainer/) | LiveContainer / AltStore source 说明 |
 | [source.json](./source.json) | LiveContainer source 清单 |

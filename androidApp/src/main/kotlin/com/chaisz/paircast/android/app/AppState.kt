@@ -58,6 +58,8 @@ class AppState(val graph: PaircastGraph) {
     var mustChangePassword by mutableStateOf(false)
     var authOptions by mutableStateOf(AuthOptions.Unavailable)
         private set
+    /** Terms / Privacy consent checkbox, shared by the login and sign-up screens; never pre-checked. */
+    var agreedToTerms by mutableStateOf(false)
 
     private var pendingInvite: RoomInvite? = null
     private var bootstrapped = false
@@ -109,7 +111,7 @@ class AppState(val graph: PaircastGraph) {
     }
 
     suspend fun login(account: String, password: String) {
-        val result = graph.login(account, password)
+        val result = graph.login(account, password, agreedToTerms)
         currentUser = result.user
         if (result.mustChangePassword) {
             mustChangePassword = true
@@ -131,7 +133,7 @@ class AppState(val graph: PaircastGraph) {
     suspend fun sendRegisterCode(email: String): Int = graph.sendRegisterCode(email)
 
     suspend fun register(email: String, code: String, password: String, confirm: String, nickname: String) {
-        val result = graph.register(email, code, password, confirm, nickname)
+        val result = graph.register(email, code, password, confirm, nickname, agreedToTerms)
         currentUser = result.user
         finishLogin()
     }

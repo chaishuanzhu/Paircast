@@ -18,6 +18,7 @@ import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.ChatStickerCodec
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
+import com.chaisz.paircast.core.rules.LegalRules
 import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.PlaybackSyncRules
 import com.chaisz.paircast.core.rules.PlaybackSyncRules.ApplyResult
@@ -57,6 +58,18 @@ class LoginRulesTest {
         assertFailsWith<AppError.Validation> { LoginRules.validateNewPassword("old", "abcdefg", "abcdefx") }
         assertFailsWith<AppError.Validation> { LoginRules.validateNewPassword("abcdefg", "abcdefg", "abcdefg") }
         LoginRules.validateNewPassword("old", "abcdefg", "abcdefg")
+    }
+}
+
+class LegalRulesTest {
+    @Test fun localizedPageUrls() {
+        assertEquals("https://paircast.chaisz.com/zh-Hans/terms/", LegalRules.termsUrl(chinese = true))
+        assertEquals("https://paircast.chaisz.com/en-US/privacy/", LegalRules.privacyUrl(chinese = false))
+    }
+
+    @Test fun agreementRequired() {
+        LegalRules.requireAgreement(true)
+        assertFailsWith<AppError.Validation> { LegalRules.requireAgreement(false) }
     }
 }
 

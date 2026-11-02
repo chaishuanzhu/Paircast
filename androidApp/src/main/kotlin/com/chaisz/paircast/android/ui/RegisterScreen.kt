@@ -132,6 +132,7 @@ fun RegisterScreen(app: AppState) {
         PaircastField(t("Password"), password, { password = it }, secure = true)
         PaircastField(t("Confirm password"), confirm, { confirm = it }, secure = true)
         PaircastField(t("Nickname (optional)"), nickname, { nickname = it })
+        TermsAgreementRow(app)
         error?.let {
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
         }

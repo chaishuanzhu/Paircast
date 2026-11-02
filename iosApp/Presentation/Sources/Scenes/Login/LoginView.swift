@@ -89,6 +89,7 @@ public struct LoginView: View {
                             .foregroundStyle(.orange)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    TermsAgreementView(session: session)
                     if let error = viewModel.errorMessage {
                         Text(error)
                             .font(.footnote)

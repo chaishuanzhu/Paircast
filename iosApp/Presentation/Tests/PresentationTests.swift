@@ -213,7 +213,7 @@ final class SharedBridgeTests: XCTestCase {
             appVersion: "test"
         )
         do {
-            _ = try await graph.login.invoke(account: "alice", password: "secret")
+            _ = try await graph.login.invoke(account: "alice", password: "secret", agreedToTerms: true)
             XCTFail("expected NotConfigured")
         } catch {
             XCTAssertTrue(AppErrors.from(error) is AppError.NotConfigured)

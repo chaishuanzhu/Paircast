@@ -36,6 +36,7 @@ public struct AcknowledgementsView: View {
                 Link("Kingfisher on GitHub", destination: URL(string: "https://github.com/onevcat/Kingfisher")!)
             }
             Section("Privacy") {
+                Link("Terms of Service", destination: termsURL)
                 Link("Privacy Policy", destination: privacyURL)
                 Link("Support & Reports", destination: supportURL)
             }
@@ -49,6 +50,10 @@ public struct AcknowledgementsView: View {
             return "zh-Hans"
         }
         return "en-US"
+    }
+
+    private var termsURL: URL {
+        URL(string: "https://paircast.chaisz.com/\(docsLocalePath)/terms/")!
     }
 
     private var privacyURL: URL {

@@ -210,6 +210,21 @@ object LoginRules {
     }
 }
 
+/** Terms of Service + Privacy Policy consent, required before signing in or signing up. */
+object LegalRules {
+    private const val SITE = "https://paircast.chaisz.com"
+
+    fun termsUrl(chinese: Boolean): String = page("terms", chinese)
+    fun privacyUrl(chinese: Boolean): String = page("privacy", chinese)
+
+    @Throws(Exception::class)
+    fun requireAgreement(agreed: Boolean) {
+        if (!agreed) throw AppError.Validation("Please read and agree to the Terms of Service and Privacy Policy first")
+    }
+
+    private fun page(name: String, chinese: Boolean) = "$SITE/${if (chinese) "zh-Hans" else "en-US"}/$name/"
+}
+
 /** Email sign-up: the server mails a 6-digit code (`purpose=register`), then `/register` creates the account. */
 object RegisterRules {
     const val CODE_LENGTH = 6

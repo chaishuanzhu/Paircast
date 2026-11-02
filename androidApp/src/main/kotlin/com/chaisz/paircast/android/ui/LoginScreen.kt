@@ -108,6 +108,7 @@ fun LoginScreen(app: AppState) {
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        TermsAgreementRow(app)
         error?.let {
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
         }
