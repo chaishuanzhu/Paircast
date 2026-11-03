@@ -77,9 +77,6 @@ public struct TandemTextField: View {
     @Binding var text: String
     var isSecure: Bool = false
     @State private var reveal = false
-    @FocusState private var focus: FieldFocus?
-
-    private enum FieldFocus { case secure, plain }
 
     public init(_ title: String, text: Binding<String>, isSecure: Bool = false) {
         self.title = title
@@ -90,20 +87,8 @@ public struct TandemTextField: View {
     public var body: some View {
         HStack {
             Group {
-                if isSecure {
-                    // Both fields stay mounted so toggling hands focus over instead of dismissing the keyboard.
-                    ZStack {
-                        SecureField(LocalizedStringKey(title), text: $text)
-                            .focused($focus, equals: .secure)
-                            .opacity(reveal ? 0 : 1)
-                            .allowsHitTesting(!reveal)
-                            .accessibilityHidden(reveal)
-                        TextField(LocalizedStringKey(title), text: $text)
-                            .focused($focus, equals: .plain)
-                            .opacity(reveal ? 1 : 0)
-                            .allowsHitTesting(reveal)
-                            .accessibilityHidden(!reveal)
-                    }
+                if isSecure && !reveal {
+                    SecureField(LocalizedStringKey(title), text: $text)
                 } else {
                     TextField(LocalizedStringKey(title), text: $text)
                 }
@@ -113,9 +98,7 @@ public struct TandemTextField: View {
             .autocorrectionDisabled()
             if isSecure {
                 Button {
-                    let wasEditing = focus != nil
                     reveal.toggle()
-                    if wasEditing { focus = reveal ? .plain : .secure }
                 } label: {
                     Image(systemName: reveal ? "eye.slash" : "eye")
                         .font(.system(size: 16))
