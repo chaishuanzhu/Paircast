@@ -11,13 +11,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -87,7 +91,14 @@ fun PaircastField(
             autoCorrectEnabled = false,
         ),
         trailingIcon = if (secure) {
-            { TextButton(onClick = { reveal = !reveal }) { Text(t(if (reveal) "Hide" else "Show")) } }
+            {
+                IconButton(onClick = { reveal = !reveal }) {
+                    Icon(
+                        if (reveal) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        contentDescription = t(if (reveal) "Hide" else "Show"),
+                    )
+                }
+            }
         } else null,
     )
 }

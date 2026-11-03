@@ -97,9 +97,17 @@ public struct TandemTextField: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             if isSecure {
-                Button(reveal ? "Hide" : "Show") { reveal.toggle() }
-                    .font(.footnote)
-                    .foregroundStyle(TandemColors.systemBlue)
+                Button {
+                    reveal.toggle()
+                } label: {
+                    Image(systemName: reveal ? "eye.slash" : "eye")
+                        .font(.system(size: 16))
+                        .foregroundStyle(TandemColors.secondaryLabel)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(LocalizedStringKey(reveal ? "Hide" : "Show")))
             }
         }
         .padding(.horizontal, 16)
