@@ -796,10 +796,10 @@ flowchart TD
 |------|------|
 | 服务器地址存储 | 共享层 + 平台安全存储（Keychain / EncryptedSharedPreferences） |
 | 登录、改密、资料、头像、群、聊天、播控/转让信令 | GO-IM（REST + WebSocket protobuf） |
-| 片源列表、影片列表、播放直链、外挂字幕 | GO-IM `/media/…`（服务端按片源适配；本期 S3 兼容存储） |
-| 观影房间（成员、房主、换片、共享字幕） | GO-IM `/room/…`（MySQL），变更经 `room_updated` 群信令推送 |
-| TMDB 官方元数据 | GO-IM 服务端刮削并缓存 |
-| 在线搜字幕 | GO-IM 代理 OpenSubtitles |
+| 片源列表、影片列表、播放直链、外挂字幕 | Paircast 服务 `/media/…`（`server/`，按片源适配；本期 S3 兼容存储） |
+| 观影房间（成员、房主、换片、共享字幕） | Paircast 服务 `/room/…`（MySQL，房间 = GO-IM 群），变更经 GO-IM `paircast.room_updated` 信令推送 |
+| TMDB 官方元数据 | Paircast 服务刮削并缓存 |
+| 在线搜字幕 | Paircast 服务代理 OpenSubtitles |
 | 跟房编排（心跳、远端应用、转让、换片、字幕共享） | 共享层 `WatchSession` |
 | 播放器 + 字幕渲染/时间轴偏移 | 各端原生（VLCKit / libVLC） |
 
@@ -813,7 +813,7 @@ flowchart TD
 | 观看成员 | 房间 `members` + `/user/profiles` |
 | 聊天 | `CmdChat` 群文本 / 贴纸（`msg_type=6`） |
 | 邀请 | 邀请链接 + Deep Link |
-| 进度同步 | `CmdGroupSignal` 瞬时群信令（不落库、不计未读） |
+| 进度同步 | `CmdSignal` 瞬时信令 `paircast.playback`（不落库、不计未读） |
 | **页内换片** | 信令 `movie_change` + `/room/update`（`movie_id`） |
 | **房主转让** | 信令 `host_transfer` + `/room/leave` 由服务端按加入顺序转让 |
 
@@ -983,7 +983,7 @@ flowchart TD
 | # | 问题 | 建议 |
 |---|------|------|
 | A | mkv 播放引擎 | VLCKit / libVLC（已采用） |
-| B | 同步/转让通道 | GO-IM `CmdGroupSignal`（已采用） |
+| B | 同步/转让通道 | GO-IM `CmdSignal`（类型 `paircast.playback`，已采用） |
 | C | 在线字幕提供方 | OpenSubtitles（API Key 在服务端配置） |
 | D | 账号体系 | GO-IM 管理员建号（已采用） |
 | E | 配置链接体积 | AES-GCM args；过长则短链 |

@@ -4,9 +4,10 @@ import com.chaisz.paircast.core.gateway.RoomGateway
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.RoomStatus
 import com.chaisz.paircast.core.model.WatchRoom
-import com.chaisz.paircast.core.support.PaircastJson
 import com.chaisz.paircast.data.goim.Cmd
 import com.chaisz.paircast.data.goim.GoImConnection
+import com.chaisz.paircast.data.goim.PaircastSignal
+import com.chaisz.paircast.data.goim.SignalCodec
 import com.chaisz.paircast.data.support.PaircastLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.BufferOverflow
@@ -23,7 +24,7 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Rooms live on GO-IM (`/room/…`): the server owns roster, host transfer and revision. Observers
- * get `room_updated` group signals in realtime plus a slow poll as a safety net; only newer
+ * get `paircast.room_updated` group signals in realtime plus a slow poll as a safety net; only newer
  * revisions are emitted.
  */
 class ServerRoomGateway(
@@ -81,7 +82,7 @@ class ServerRoomGateway(
             launch { local.collect { offer(it) } }
             launch {
                 connection.inbound
-                    .filter { it.cmd == Cmd.GROUP_SIGNAL }
+                    .filter { it.cmd == Cmd.SIGNAL }
                     .mapNotNull { parseRoomUpdated(it.content) }
                     .collect { offer(remember(it)) }
             }
@@ -118,10 +119,8 @@ class ServerRoomGateway(
 
     companion object {
         internal fun parseRoomUpdated(content: String): WatchRoom? {
-            if (!content.contains("room_updated")) return null
-            val dto = runCatching { PaircastJson.default.decodeFromString(RoomUpdatedDto.serializer(), content) }.getOrNull()
-            if (dto?.type != "room_updated") return null
-            return dto.room?.toDomain()
+            val data = SignalCodec.decode(content, PaircastSignal.ROOM_UPDATED, RoomUpdatedDto.serializer()) ?: return null
+            return data.room?.toDomain()
         }
     }
 }

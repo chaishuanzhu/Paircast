@@ -1,0 +1,41 @@
+# Paircast 服务端 —— 部署到 GO-IM 所在的命名空间（默认 go-im），在 GO-IM 之后应用：
+#   kubectl apply -k server/deploy/k8s
+#   kubectl -n go-im rollout restart deployment/gateway   # 让网关读到 goim-paircast 里的接入方密钥
+# Ingress 与 GO-IM 同域名，把 /media、/room 转到 paircast，其余路径仍由 GO-IM 网关处理。
+# GO-IM 侧：config.json 的 gateway.server_api.apps 登记 app_id "paircast"（webhook_url http://paircast:8090/im/webhook），
+# gateway Deployment 的 env 从 Secret goim-paircast 读 GOIM_APP_PAIRCAST_SECRET / GOIM_APP_PAIRCAST_WEBHOOK_SECRET（GO-IM 的 deploy/k8s 已配置）。
+# 上线前修改：
+#   - 下方 IM_SECRET / IM_WEBHOOK_SECRET（网关与 paircast 共用同一个 Secret）
+#   - paircast.json 的 media.sources，以及下方 MEDIA_* 密钥
+#   - ingress.yaml 的域名（与 GO-IM 的 ingress 相同）
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: go-im
+
+resources:
+  - paircast.yaml
+  - ingress.yaml
+
+secretGenerator:
+  - name: goim-paircast-config
+    files:
+      - paircast.json
+  # 网关也引用它，名字不能带内容哈希；修改后需手动重启 gateway 与 paircast。
+  - name: goim-paircast
+    options:
+      disableNameSuffixHash: true
+    literals:
+      - IM_SECRET=change-me-paircast-secret
+      - IM_WEBHOOK_SECRET=change-me-paircast-webhook-secret
+      - MYSQL_DSN=im:im-dev@tcp(mysql:3306)/im?parseTime=true&charset=utf8mb4
+      - MEDIA_OSS_ACCESS_KEY=
+      - MEDIA_OSS_SECRET_KEY=
+      - BLOB_ACCESS_KEY=rustfsadmin
+      - BLOB_SECRET_KEY=rustfsadmin
+      - TMDB_ACCESS_TOKEN=
+      - OPENSUBTITLES_API_KEY=
+
+images:
+  - name: 870027381/paircast-server
+    newTag: "latest"

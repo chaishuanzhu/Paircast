@@ -6,6 +6,10 @@ import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImChatGateway
 import com.chaisz.paircast.data.goim.GoImConnection
 import com.chaisz.paircast.data.goim.MsgType
+import com.chaisz.paircast.data.goim.PaircastSignal
+import com.chaisz.paircast.data.goim.SignalCodec
+import com.chaisz.paircast.core.model.PlaybackAction
+import com.chaisz.paircast.core.model.PlaybackSyncSignal
 import im.Message
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -13,6 +17,8 @@ import io.ktor.client.engine.mock.respondOk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -41,5 +47,16 @@ class GoImMessagingTest {
         val second = connection.nextSeq()
         assertTrue(first >= before)
         assertTrue(second > first)
+    }
+
+    @Test
+    fun playbackSignalUsesTypedEnvelope() {
+        val signal = PlaybackSyncSignal(action = PlaybackAction.PLAY, positionMs = 1_000, seq = 3, senderId = "alice")
+        val content = SignalCodec.encode(PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer(), signal)
+        assertTrue(content.startsWith("""{"type":"paircast.playback","data":{"""), content)
+        assertEquals(signal, SignalCodec.decode(content, PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer()))
+        assertNull(SignalCodec.decode(content, PaircastSignal.ROOM_UPDATED, PlaybackSyncSignal.serializer()))
+        // Untyped legacy payloads are ignored.
+        assertNull(SignalCodec.decode("""{"action":"play","positionMs":1,"seq":2}""", PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer()))
     }
 }

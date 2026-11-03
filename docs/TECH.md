@@ -62,9 +62,9 @@ make android      # Debug APK
 - 回前台 `PaircastGraph.onAppForeground()`：已连接则立即探活（5s 无 pong 断开重连），退避等待中则立即重连
 - 群生命周期：由服务端房间接口托管——`POST /room/create` 同时建群（`groupId` = `g_…`），`/room/join` 入群，`/room/leave` 退群（最后一人离开结束房间并删群）
 - 聊天：`CmdChat=1`，`chat_type=2`（群）；文本 `msg_type=1`（系统消息前缀 `[sys]`）；贴纸 `msg_type=6` + JSON `StickerRef`；本人消息收到 Ack 后本地回显
-- 播控：`CmdGroupSignal=25` 瞬时群信令（服务端校验成员身份、跨网关转发，不落库、不计未读、不回显给发送者），`content` 为下方信令 JSON
+- 播控：`CmdSignal=25` 瞬时信令（`chat_type=2`、`to`=群 ID；服务端校验成员身份、跨网关转发，不落库、不计未读、不回显给发送者），`content` 为 `{"type":"paircast.playback","data":<下方信令 JSON>}`；GO-IM 丢弃没有 `type` 的信令，客户端也只解析自己认识的类型（`SignalCodec`）
 
-## 播控信令 JSON
+## 播控信令 JSON（`paircast.playback` 的 `data`）
 
 ```json
 {
@@ -107,7 +107,7 @@ make android      # Debug APK
 
 ## 服务端片库与房间（GO-IM，v2.1）
 
-客户端只连 GO-IM。片源、TMDB、OpenSubtitles 凭证都在 GO-IM 配置文件的 `media` 段（密钥走环境变量 `GOIM_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`GOIM_TMDB_ACCESS_TOKEN`、`GOIM_OPENSUBTITLES_API_KEY`，见 GO-IM `deploy/README.md`）。所有接口都要 `uid` + `token`；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
+接口由本仓库的 Paircast 服务（`server/`，定义见 `server/api/openapi.yaml`）提供，与 GO-IM 同域名（反向代理按 `/media`、`/room` 分流），客户端仍只填一个服务器地址。片源、TMDB、OpenSubtitles 凭证都在 Paircast 服务配置的 `media` 段（密钥走环境变量 `PAIRCAST_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`PAIRCAST_TMDB_ACCESS_TOKEN`、`PAIRCAST_OPENSUBTITLES_API_KEY`，见 `server/README.md`）。所有接口都要 GO-IM 的 `uid` + `token`（Paircast 服务经 GO-IM `tokens/verify` 校验）；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
 
 | 接口 | 说明 |
 |------|------|
@@ -125,7 +125,7 @@ make android      # Debug APK
 
 - **影片 ID**：`<sourceId>:<nativeId>`（如 `oss:films/A.mkv`），为后续 openlist / Emby / Jellyfin 片源预留；无前缀的旧 ID 归入默认片源
 - **字幕 ref**：`src:<sourceId>:<key>`（片源外挂）、`blob:paircast/subtitles/…`（共享 / 在线下载后存入 GO-IM 文件存储）、`os:<fileId>`（在线搜索结果）
-- **房间**：服务端维护成员、`joinOrder`、房主、`movieId`、`subtitle_ref`、两个 seq 与 `revision`。仅房主可改片 / 转让 / 结束（传未变化的值不算越权）；换片清空共享字幕。每次变更通过 `CmdGroupSignal` 推送 `{"type":"room_updated","group_id":…,"room":{…}}`（不回给操作者）；客户端另以 15s 轮询 `GET /room` 兜底，只接受更大的 `revision`。播控信令解析会忽略这类 JSON
+- **房间**：服务端维护成员、`joinOrder`、房主、`movieId`、`subtitle_ref`、两个 seq 与 `revision`。仅房主可改片 / 转让 / 结束（传未变化的值不算越权）；换片清空共享字幕。每次变更由 Paircast 服务经 GO-IM 服务端 API（`signals/send`）推送 `CmdSignal` `{"type":"paircast.room_updated","data":{"group_id":…,"room":{…}}}`（不回给操作者）；客户端另以 15s 轮询 `GET /room` 兜底，只接受更大的 `revision`。房间是 GO-IM 群：建房 / 进出房由服务端调用 `groups/*`，GO-IM 侧的退群 / 解散经 webhook（`group.member_left` / `group.dismissed`）同步回房间
 - **元数据**：服务端刮削——同目录 `{base}.nfo` / `-poster` / `-fanart` 优先 → TMDB → 文件名；结果（含无结果）缓存，无海报的结果 1 小时后重试；不再写回片源目录。客户端只对无海报的影片调用 `/media/item`
 - 对象存储里不再需要 `_paircast/` 目录（房间改存 MySQL，共享字幕存 GO-IM 文件存储）
 
@@ -140,7 +140,8 @@ make android      # Debug APK
 ## 测试
 
 ```bash
-make shared-test   # core 规则/用例/WatchSession + data（服务端 DTO / 错误映射 / room_updated、GO-IM 协议、配置清理）
+make shared-test   # core 规则/用例/WatchSession + data（服务端 DTO / 错误映射 / room_updated、GO-IM 协议与类型化信令、配置清理）
+make server-test   # Paircast 服务端（Go）
 make test          # + iOS（Paircast scheme：PaircastTests + PresentationTests）
 make android-test
 ```

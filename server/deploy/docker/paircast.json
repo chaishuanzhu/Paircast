@@ -1,0 +1,36 @@
+{
+    "_comment": "Paircast 服务配置(Docker,字段说明见 server/configs/paircast.example.json)。密钥全部来自 docker-compose.paircast.yml 注入的环境变量,不要写在这里。",
+    "http_addr": ":8090",
+    "im": {
+        "base_url": "http://gateway:8080",
+        "app_id": "paircast"
+    },
+    "media": {
+        "sources": [
+            {
+                "id": "oss",
+                "name": "我的片库",
+                "type": "s3",
+                "s3": {
+                    "endpoint": "oss-cn-hangzhou.aliyuncs.com",
+                    "bucket": "my-videos",
+                    "region": "cn-hangzhou",
+                    "prefix": "films/",
+                    "use_ssl": true,
+                    "path_style": false
+                }
+            }
+        ],
+        "tmdb_language": "zh-CN",
+        "stickers_source": "",
+        "stickers_prefix": "stickers/",
+        "room_retention": "72h"
+    },
+    "blob_store": {
+        "endpoint": "rustfs:9000",
+        "bucket": "im-files",
+        "region": "us-east-1",
+        "use_ssl": false,
+        "path_style": true
+    }
+}

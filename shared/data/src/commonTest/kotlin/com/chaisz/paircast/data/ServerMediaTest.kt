@@ -8,11 +8,12 @@ import com.chaisz.paircast.core.model.RoomStatus
 import com.chaisz.paircast.core.model.SubtitleSource
 import com.chaisz.paircast.core.model.VideoFormat
 import com.chaisz.paircast.core.store.InMemorySecureStore
-import com.chaisz.paircast.core.support.PaircastJson
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImConnection
 import com.chaisz.paircast.data.goim.GoImHttpException
+import com.chaisz.paircast.data.goim.PaircastSignal
+import com.chaisz.paircast.data.goim.SignalCodec
 import com.chaisz.paircast.data.media.ServerCatalogGateway
 import com.chaisz.paircast.data.media.ServerMediaApi
 import com.chaisz.paircast.data.media.ServerRoomGateway
@@ -40,7 +41,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ServerMediaTest {
     private val json = headersOf(HttpHeaders.ContentType, "application/json")
@@ -125,9 +125,9 @@ class ServerMediaTest {
 
     @Test
     fun parsesRoomUpdatedAndIgnoresOtherSignals() {
-        val content = """{"type":"room_updated","group_id":"g_1","room":{"id":"r1","group_id":"g_1","movie_id":"oss:a.mp4","host_uid":"u2",""" +
+        val content = """{"type":"paircast.room_updated","data":{"group_id":"g_1","room":{"id":"r1","group_id":"g_1","movie_id":"oss:a.mp4","host_uid":"u2",""" +
             """"members":["u1","u2"],"join_order":["u1","u2"],"status":"active","last_applied_seq":3,"host_transfer_seq":9,""" +
-            """"subtitle_ref":"blob:paircast/subtitles/r1/x.srt","subtitle_label":"ZH","revision":7,"created_at":1,"updated_at":2}}"""
+            """"subtitle_ref":"blob:paircast/subtitles/r1/x.srt","subtitle_label":"ZH","revision":7,"created_at":1,"updated_at":2}}}"""
         val room = ServerRoomGateway.parseRoomUpdated(content)!!
         assertEquals("u2", room.hostUserId)
         assertEquals(7, room.revision)
@@ -135,9 +135,10 @@ class ServerMediaTest {
         assertEquals("g_1", room.groupId)
         assertEquals("blob:paircast/subtitles/r1/x.srt", room.subtitleRef)
         assertEquals(RoomStatus.ACTIVE, room.status)
-        assertNull(ServerRoomGateway.parseRoomUpdated("""{"action":"play","positionMs":1,"seq":2}"""))
-        // The playback channel shares CmdGroupSignal; room snapshots must not decode as signals.
-        assertTrue(runCatching { PaircastJson.default.decodeFromString(PlaybackSyncSignal.serializer(), content) }.isFailure)
+        assertNull(ServerRoomGateway.parseRoomUpdated("""{"type":"paircast.playback","data":{"action":"play","positionMs":1,"seq":2}}"""))
+        assertNull(ServerRoomGateway.parseRoomUpdated("""{"type":"room_updated","room":{"id":"r1"}}"""))
+        // The playback channel shares CmdSignal; room snapshots must not decode as playback signals.
+        assertNull(SignalCodec.decode(content, PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer()))
     }
 
     @Test

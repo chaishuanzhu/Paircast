@@ -42,3 +42,6 @@ iosApp/fastlane/test_output/
 .agent-state/
 Scripts/publish-*-testflight.sh
 docs/soft-copyright/generated/
+# Go server
+server/paircast
+server/configs/paircast.json

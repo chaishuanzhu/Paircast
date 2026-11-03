@@ -52,7 +52,8 @@ object Cmd {
     const val OFFLINE = 5
     const val HEARTBEAT = 6
     const val KICK = 7
-    const val GROUP_SIGNAL = 25
+    /** Transient online-only signal; content is `{"type","data"}` (see [SignalCodec]). */
+    const val SIGNAL = 25
 }
 
 object ChatType {
@@ -97,7 +98,7 @@ class GoImConnection(
     val state: StateFlow<ConnectionState> = _state.asStateFlow()
 
     private val _inbound = MutableSharedFlow<Message>(extraBufferCapacity = 256)
-    /** CHAT / GROUP_SIGNAL frames (ACK / HEARTBEAT / KICK are consumed here). */
+    /** CHAT / SIGNAL frames (ACK / HEARTBEAT / KICK are consumed here). */
     val inbound: SharedFlow<Message> = _inbound.asSharedFlow()
 
     private val _events = MutableSharedFlow<SessionEvent>(extraBufferCapacity = 4)

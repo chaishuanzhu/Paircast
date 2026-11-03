@@ -1,0 +1,46 @@
+# Paircast 服务端 — Docker 部署（与 GO-IM 最小化部署在同一台机器）
+# 先按 GO-IM deploy/docker/docker-compose.minimal.yml 启动 IM（compose 项目名 go-im），本服务加入它的网络，
+# 用服务名访问 gateway / mysql / rustfs；GO-IM 用 http://paircast:8090/im/webhook 回调本服务。
+#
+#   cd go-im    # 与 GO-IM 的 compose 文件放在同一目录，共用 .env
+#   base=https://raw.githubusercontent.com/chaishuanzhu/Paircast/main/server/deploy/docker
+#   curl -fsSLO $base/docker-compose.paircast.yml
+#   curl -fsSLO $base/paircast.json
+#   docker compose -f docker-compose.paircast.yml up -d
+#
+# 反向代理把 /media、/room 转到 127.0.0.1:${PAIRCAST_PORT:-8090}，其余转 GO-IM 网关。
+#
+# .env（与 GO-IM 共用）:
+#   PAIRCAST_IM_SECRET / PAIRCAST_IM_WEBHOOK_SECRET  必填，GO-IM gateway 读取同一对值
+#   MEDIA_OSS_ACCESS_KEY / MEDIA_OSS_SECRET_KEY      片源 oss 的只读密钥；其它源 id 按 PAIRCAST_MEDIA_<大写ID>_* 自行添加
+#   TMDB_ACCESS_TOKEN / OPENSUBTITLES_API_KEY        可选
+#   PAIRCAST_TAG    镜像版本，默认 latest
+#   MYSQL_PASSWORD / RUSTFS_SECRET_KEY  与 GO-IM 保持一致
+
+name: paircast
+
+services:
+  paircast:
+    restart: unless-stopped
+    image: 870027381/paircast-server:${PAIRCAST_TAG:-latest}
+    mem_limit: 256m
+    environment:
+      PAIRCAST_IM_SECRET: ${PAIRCAST_IM_SECRET:?set PAIRCAST_IM_SECRET in .env}
+      PAIRCAST_IM_WEBHOOK_SECRET: ${PAIRCAST_IM_WEBHOOK_SECRET:-}
+      PAIRCAST_MYSQL_DSN: im:${MYSQL_PASSWORD:-im-dev}@tcp(mysql:3306)/im?parseTime=true&loc=UTC
+      PAIRCAST_BLOB_ACCESS_KEY: rustfsadmin
+      PAIRCAST_BLOB_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      PAIRCAST_MEDIA_OSS_ACCESS_KEY: ${MEDIA_OSS_ACCESS_KEY:-}
+      PAIRCAST_MEDIA_OSS_SECRET_KEY: ${MEDIA_OSS_SECRET_KEY:-}
+      PAIRCAST_TMDB_ACCESS_TOKEN: ${TMDB_ACCESS_TOKEN:-}
+      PAIRCAST_OPENSUBTITLES_API_KEY: ${OPENSUBTITLES_API_KEY:-}
+    ports:
+      - "127.0.0.1:${PAIRCAST_PORT:-8090}:8090"
+    volumes:
+      - ./paircast.json:/etc/paircast/paircast.json:ro
+    networks: [goim]
+
+networks:
+  goim:
+    name: go-im_default
+    external: true

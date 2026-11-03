@@ -113,9 +113,9 @@ internal data class RoomDto(
     )
 }
 
-/** `room_updated` content pushed over CmdGroupSignal by the server. */
+/** `data` of the `paircast.room_updated` signal pushed by the Paircast server. */
 @Serializable
-internal data class RoomUpdatedDto(val type: String, @SerialName("group_id") val groupId: String? = null, val room: RoomDto? = null)
+internal data class RoomUpdatedDto(@SerialName("group_id") val groupId: String? = null, val room: RoomDto? = null)
 
 /**
  * GO-IM media library (`/media/…`) and watch rooms (`/room/…`). Uses the signed-in session;

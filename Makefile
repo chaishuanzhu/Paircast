@@ -1,4 +1,4 @@
-.PHONY: setup shared shared-test generate test android android-test open graph clean
+.PHONY: setup shared shared-test generate test android android-test server server-test open graph clean
 
 DESTINATION ?= platform=iOS Simulator,name=iPhone 17,OS=26.5
 GRADLE ?= ./gradlew
@@ -25,6 +25,12 @@ android: ## Debug APK
 
 android-test:
 	$(GRADLE) :androidApp:testDebugUnitTest
+
+server: ## Run the Go server (server/configs/paircast.json + PAIRCAST_IM_SECRET)
+	cd server && go run ./cmd/paircast/
+
+server-test: ## Go server vet + unit tests
+	cd server && go vet ./... && go test ./... -count=1
 
 open:
 	cd $(IOS) && tuist generate

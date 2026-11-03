@@ -121,17 +121,17 @@ class GoImChatGateway(
     }
 }
 
-/** Playback signals over the transient `CmdGroupSignal` (never stored, no unread, no echo). */
+/** Playback signals ([PaircastSignal.PLAYBACK]) over the transient group `CmdSignal` (never stored, no unread, no echo). */
 class GoImPlaybackSyncGateway(private val connection: GoImConnection) : PlaybackSyncGateway {
     override suspend fun send(room: WatchRoom, signal: PlaybackSyncSignal) {
         val groupId = room.groupId ?: throw AppError.RoomNotFound
         connection.send(
             Message(
-                cmd = Cmd.GROUP_SIGNAL,
+                cmd = Cmd.SIGNAL,
                 seq = connection.nextSeq(),
                 to = groupId,
                 chat_type = ChatType.GROUP,
-                content = PaircastJson.default.encodeToString(PlaybackSyncSignal.serializer(), signal),
+                content = SignalCodec.encode(PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer(), signal),
                 timestamp = Clock.System.now().toEpochMilliseconds(),
             ),
         )
@@ -140,9 +140,9 @@ class GoImPlaybackSyncGateway(private val connection: GoImConnection) : Playback
     override fun signals(room: WatchRoom): Flow<PlaybackSyncSignal> {
         val groupId = room.groupId
         return connection.inbound
-            .filter { it.cmd == Cmd.GROUP_SIGNAL && it.to == groupId }
+            .filter { it.cmd == Cmd.SIGNAL && it.to == groupId }
             .mapNotNull { m ->
-                runCatching { PaircastJson.default.decodeFromString(PlaybackSyncSignal.serializer(), m.content) }.getOrNull()
+                SignalCodec.decode(m.content, PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer())
                     // Trust the server-stamped sender over the payload.
                     ?.let { it.copy(senderId = m.from.ifEmpty { it.senderId }) }
             }

@@ -10,7 +10,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 ```
 
 - **shared:core**：纯 Kotlin（commonMain），无 Ktor / 平台 SDK；Entities、Rules、Gateway 接口、UseCases、`WatchSession` + `PlayerPort`
-- **shared:data**：GO-IM（WebSocket protobuf + REST）、服务端片库 / 房间 / 字幕 / 贴纸客户端（`/media/…`、`/room/…`；存储与第三方密钥只在服务端）
+- **shared:data**：GO-IM（WebSocket protobuf + REST）、Paircast 服务端片库 / 房间 / 字幕 / 贴纸客户端（`/media/…`、`/room/…`；存储与第三方密钥只在服务端）
 - **shared:umbrella**：`PaircastGraph` 组装（iOS / Android 共用的组合根）；iOS 导出 `PaircastShared` 框架（SKIE）
 - **Presentation**（iOS）：SwiftUI Scenes / ViewModel 适配层、VLCKit 播放器（实现 `PlayerPort`）、Keychain
 - **App**（iOS）：组装 `PaircastGraph`、Deep Link（`paircast://`）
@@ -51,7 +51,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 - APK：`.github/workflows/android.yaml`（PR / main 出 Debug；tag 出 Release，签名走 `PAIRCAST_KEYSTORE_*` secrets）
 - TestFlight / ASC：本机 `asc` + keychain；Agent 环境若无完整网络则在本机终端执行
 - LiveContainer：`Scripts/update-livecontainer-source.sh` + `docs/source.json`
-- 服务端：依赖 GO-IM 的 `CmdGroupSignal=25`，以及 2.1 起的媒体库 / 房间接口（`/media/…`、`/room/…`，GO-IM `deploy/README.md`「媒体库（Paircast）」）
+- 服务端：`server/`（Go 模块 `github.com/chaishuanzhu/Paircast/server`，`/media/…`、`/room/…`，接口定义 `server/api/openapi.yaml`），作为 GO-IM 接入方运行（服务端 API + webhook，SDK `github.com/chaishuanzhu/GO-IM/pkg/imserver`）；`make server-test`。依赖 GO-IM 的 `CmdSignal=25` 类型化信令：播控 `paircast.playback`（客户端互发）、房间快照 `paircast.room_updated`（服务端推送），`content` 为 `{"type","data"}`
 
 ## Agent Skills
 
