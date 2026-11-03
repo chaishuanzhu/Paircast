@@ -1,7 +1,7 @@
 import SwiftUI
 import PaircastShared
 
-/// Admin-only hub: user management, adding users and chat reports.
+/// Admin-only hub: user management (incl. adding users) and chat reports.
 struct AdminView: View {
     let session: AppSession
     @State private var pendingReports = 0
@@ -13,11 +13,6 @@ struct AdminView: View {
                     UsersView(session: session)
                 } label: {
                     row("User Management", systemImage: "person.2.fill", color: TandemColors.systemBlue)
-                }
-                NavigationLink {
-                    AddUserView(session: session)
-                } label: {
-                    row("Add User", systemImage: "person.badge.plus", color: .green)
                 }
                 NavigationLink {
                     ReportsView(session: session)

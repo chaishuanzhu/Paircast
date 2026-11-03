@@ -18,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,11 +45,10 @@ import com.chaisz.paircast.android.app.AppState
 import com.chaisz.paircast.android.app.t
 import com.chaisz.paircast.core.model.ReportFilter
 
-/** Admin-only hub: user management, adding users and chat reports. */
+/** Admin-only hub: user management (incl. adding users) and chat reports. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminScreen(app: AppState) {
-    var showAddUser by remember { mutableStateOf(false) }
     var pendingReports by remember { mutableStateOf(0) }
 
     BackHandler { app.popLibrary() }
@@ -75,15 +73,11 @@ fun AdminScreen(app: AppState) {
                 Column {
                     AdminRow(Icons.Outlined.Group, PaircastColors.blue, t("User Management")) { app.openUsers() }
                     HorizontalDivider(Modifier.padding(start = 60.dp))
-                    AdminRow(Icons.Outlined.PersonAdd, PaircastColors.green, t("Add User")) { showAddUser = true }
-                    HorizontalDivider(Modifier.padding(start = 60.dp))
                     AdminRow(Icons.Outlined.Flag, MaterialTheme.colorScheme.error, t("Reports"), badge = pendingReports) { app.openReports() }
                 }
             }
         }
     }
-
-    if (showAddUser) AddUserDialog(app) { showAddUser = false }
 }
 
 @Composable
