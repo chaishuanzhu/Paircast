@@ -108,15 +108,6 @@ public struct LoginView: View {
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(viewModel.isLoading)
 
-                    if viewModel.isConfigured && session.authOptions.canRegister {
-                        Button("Create Account") {
-                            viewModel.errorMessage = nil
-                            session.openRegister()
-                        }
-                        .font(.system(size: 17))
-                        .foregroundStyle(TandemColors.systemBlue)
-                    }
-
                     Button("Service Configuration") {
                         session.route = .config(fromLogin: true)
                     }
@@ -124,7 +115,7 @@ public struct LoginView: View {
                     .foregroundStyle(TandemColors.systemBlue)
                     .accessibilityLabel("Service Configuration")
 
-                    if viewModel.isConfigured && !session.authOptions.canRegister {
+                    if viewModel.isConfigured {
                         Text("Accounts are assigned by an admin · No sign-up")
                             .font(.system(size: 13))
                             .foregroundStyle(TandemColors.tertiaryLabel)
@@ -138,7 +129,6 @@ public struct LoginView: View {
             .padding(.top, 32)
             .padding(.bottom, 40)
         }
-        .task(id: session.config?.im.serverUrl) { await session.refreshAuthOptions() }
         .alert("Finish service configuration first", isPresented: $viewModel.showConfigAlert) {
             Button("Configure") { session.route = .config(fromLogin: true) }
             Button("Cancel", role: .cancel) {}

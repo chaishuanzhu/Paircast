@@ -20,9 +20,6 @@ public struct RootView: View {
             case .login:
                 LoginView(session: session)
                     .transition(.opacity)
-            case .register:
-                RegisterView(session: session)
-                    .transition(.opacity)
             case .config(let fromLogin):
                 ServiceConfigView(session: session, fromLogin: fromLogin)
                     .transition(.opacity)

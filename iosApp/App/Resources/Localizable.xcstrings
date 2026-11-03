@@ -3350,40 +3350,6 @@
         }
       }
     },
-    "Registration is closed on this server. Contact an admin for an account": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registration is closed on this server. Contact an admin for an account"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该服务器已关闭注册，请联系管理员分配账号"
-          }
-        }
-      }
-    },
-    "Email verification is not configured on the server": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Email verification is not configured on the server"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务器未配置邮件验证码，暂时无法注册"
-          }
-        }
-      }
-    },
     "This email is already registered": {
       "extractionState": "manual",
       "localizations": {
@@ -3397,57 +3363,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "该邮箱已注册"
-          }
-        }
-      }
-    },
-    "Invalid or expired verification code": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid or expired verification code"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "验证码错误或已过期"
-          }
-        }
-      }
-    },
-    "Too many code requests. Please try again later": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Too many code requests. Please try again later"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "验证码请求过于频繁，请稍后再试"
-          }
-        }
-      }
-    },
-    "Failed to send the email. Please try again later": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to send the email. Please try again later"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "邮件发送失败，请稍后再试"
           }
         }
       }
@@ -3503,23 +3418,6 @@
         }
       }
     },
-    "Please enter your email": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Please enter your email"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请输入邮箱"
-          }
-        }
-      }
-    },
     "Please enter a valid email address": {
       "extractionState": "manual",
       "localizations": {
@@ -3533,57 +3431,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请输入有效的邮箱地址"
-          }
-        }
-      }
-    },
-    "Enter the {{count}}-digit code from the email": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter the {{count}}-digit code from the email"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请输入邮件中的 {{count}} 位验证码"
-          }
-        }
-      }
-    },
-    "Create Account": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Create Account"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "注册账号"
-          }
-        }
-      }
-    },
-    "Sign up with your email. We'll send you a verification code.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sign up with your email. We'll send you a verification code."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用邮箱注册，我们会发送一封验证码邮件。"
           }
         }
       }
@@ -3605,91 +3452,6 @@
         }
       }
     },
-    "Verification code": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verification code"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "验证码"
-          }
-        }
-      }
-    },
-    "Resend in {{count}}s": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resend in {{count}}s"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "{{count}} 秒后重发"
-          }
-        }
-      }
-    },
-    "Resend": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resend"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新发送"
-          }
-        }
-      }
-    },
-    "Send Code": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Send Code"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发送验证码"
-          }
-        }
-      }
-    },
-    "Confirm password": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirm password"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确认密码"
-          }
-        }
-      }
-    },
     "Nickname (optional)": {
       "extractionState": "manual",
       "localizations": {
@@ -3703,40 +3465,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "昵称（可选）"
-          }
-        }
-      }
-    },
-    "Already have an account? Sign In": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Already have an account? Sign In"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已有账号？去登录"
-          }
-        }
-      }
-    },
-    "Verification code sent": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verification code sent"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "验证码已发送"
           }
         }
       }
@@ -4247,6 +3975,159 @@
           "stringUnit": {
             "state": "translated",
             "value": "刷新"
+          }
+        }
+      }
+    },
+    "Add User": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add User"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加用户"
+          }
+        }
+      }
+    },
+    "Add": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加"
+          }
+        }
+      }
+    },
+    "User added": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User added"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加用户"
+          }
+        }
+      }
+    },
+    "Initial password": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Initial password"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "初始密码"
+          }
+        }
+      }
+    },
+    "Add Another": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Another"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续添加"
+          }
+        }
+      }
+    },
+    "Please enter an email": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please enter an email"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入邮箱"
+          }
+        }
+      }
+    },
+    "A random initial password is created. If the server can send email, it goes to this address; otherwise it's shown here for you to pass on. The user must change it at first sign-in.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A random initial password is created. If the server can send email, it goes to this address; otherwise it's shown here for you to pass on. The user must change it at first sign-in."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统会生成随机初始密码：服务器配置了邮件时发到这个邮箱，否则显示在这里由你转交。用户首次登录时必须修改密码。"
+          }
+        }
+      }
+    },
+    "Send this password to the user yourself. It isn't shown again; they must change it at first sign-in.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send this password to the user yourself. It isn't shown again; they must change it at first sign-in."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请自行把密码转交给对方。离开此页后不会再显示；对方首次登录时必须修改密码。"
+          }
+        }
+      }
+    },
+    "The initial password was emailed to {{email}}. They must change it at first sign-in.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The initial password was emailed to {{email}}. They must change it at first sign-in."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "初始密码已发送到 {{email}}，对方首次登录时必须修改密码。"
           }
         }
       }

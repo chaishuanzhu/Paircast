@@ -1,8 +1,8 @@
 package com.chaisz.paircast.core.gateway
 
 import com.chaisz.paircast.core.model.AppCloudConfig
-import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.model.ChatMessage
+import com.chaisz.paircast.core.model.CreatedAccount
 import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
@@ -49,15 +49,6 @@ interface AuthGateway {
     /** Batch profile lookup (nickname + avatar URL). Preserves request order. */
     @Throws(Exception::class)
     suspend fun fetchUsers(userIds: List<String>): List<User>
-    /** Server sign-up options; [AuthOptions.Unavailable] when unconfigured or unreachable. */
-    @Throws(Exception::class)
-    suspend fun authOptions(): AuthOptions
-    /** Mails a sign-up code to [email]; returns the seconds before another code may be requested. */
-    @Throws(Exception::class)
-    suspend fun sendRegisterCode(email: String): Int
-    /** Creates the account and signs in (same session handling as [login]). */
-    @Throws(Exception::class)
-    suspend fun register(email: String, code: String, password: String, nickname: String?): LoginResult
     /** Deletes the account on the server (password re-check), then logout and local cleanup. */
     @Throws(Exception::class)
     suspend fun deleteAccount(password: String)
@@ -79,6 +70,13 @@ interface ModerationGateway {
     /** Admin only. [ReportAction.BAN] disables the reported account and closes its other pending reports. */
     @Throws(Exception::class)
     suspend fun resolveReport(reportId: Long, action: ReportAction)
+}
+
+/** Admin account management (GO-IM `/admin/users/create`). Accounts exist only when an admin adds them. */
+interface AccountAdminGateway {
+    /** Creates a regular user with a random initial password. [nickname] null → derived from the email. */
+    @Throws(Exception::class)
+    suspend fun createUser(email: String, nickname: String?): CreatedAccount
 }
 
 interface ConfigGateway {

@@ -25,8 +25,8 @@ A screen recording captured on a physical iPhone running the latest iOS is attac
 4. Browse private library (sample public-domain shorts only)
 5. Open a title → create/join watch room → synced playback controls
 6. In-room chat → long-press a message → Block / Report (both stored on the server)
-7. Login → Create Account → email + verification code sign-up (optional; the demo account works without it)
-8. Me → Delete Account → enter password (permanently deletes the account on the server, clears on-device data, signs out)
+7. Me → Add User (admin only) → create a throwaway account by email; the initial password is shown on screen
+8. Sign in with the throwaway account (forced password change) → Me → Delete Account → enter password (permanently deletes the account on the server, clears on-device data, signs out)
 
 There is **no paid content / IAP** and **no public catalog**.
 
@@ -60,15 +60,15 @@ There is **no paid content / IAP** and **no public catalog**.
 5. Library lists videos from the demo server’s media library. Sample files are public-domain / Creative Commons shorts only (e.g. Big Buck Bunny). Do **not** expect commercial films.
 6. Tap a title → create or join a room → use play/pause and invite/sync.
 7. Chat is invite-only. Long-press a message to **Block** (hides that user’s messages immediately; the block list is stored on the server with your account) or **Report** (sends the message to the server’s moderation queue). Server admins review reports in Me → **Reports** and can ignore a report or ban the reported user, which disables the account and signs it out immediately.
-8. Optional: sign out, tap **Create Account** on Login, enter any email you can read, tap **Send Code**, enter the 6-digit code from the email, choose a password, and tap **Create Account** — you land in the Library signed in.
-9. Me → **Delete Account** asks for the current password, then permanently deletes the account on the GO-IM server (the session is revoked and the email can register again) and clears the Keychain config (server address), session token and caches. Please use a freshly registered account for this step so the demo accounts stay available.
+8. There is no sign-up in the app; accounts are created by the server admin. The demo account is an admin, so Me shows **Add User**: enter any email (nickname optional) and tap **Add**. The initial password is shown on screen (tap **Copy**). Sign out, sign in with that email and password, and set a new password when asked.
+9. Me → **Delete Account** asks for the current password, then permanently deletes the account on the GO-IM server (the session is revoked and the admin can add the email again) and clears the Keychain config (server address), session token and caches. Please use the account created in step 8 so the demo account stays available.
 
 **Demo server address:**  
 *(Keep the live server address and demo passwords only in App Store Connect Notes / Resolution Center — do not commit them to git.)*
 
 **Privacy / support:**
 
-- https://paircast.chaisz.com/en-US/terms/ (Terms of Service, linked from the consent line on Login and Create Account)
+- https://paircast.chaisz.com/en-US/terms/ (Terms of Service, linked from the consent line on Login)
 - https://paircast.chaisz.com/en-US/privacy/
 - https://paircast.chaisz.com/en-US/support/
 - zh-Hans: `/zh-Hans/privacy/` and `/zh-Hans/support/`
@@ -79,7 +79,7 @@ There is **no paid content / IAP** and **no public catalog**.
 
 | Service | Role |
 |---------|------|
-| **GO-IM (self-hosted)** | Email sign-up (verification code mailed by the server), account sign-in (account + password), account deletion, invite-only room messaging, avatars, and transient sync signaling; server address comes from the user-supplied config |
+| **GO-IM (self-hosted)** | Admin-created accounts (Me → Add User), account sign-in (account + password), account deletion, invite-only room messaging, avatars, and transient sync signaling; server address comes from the user-supplied config |
 | **S3-compatible object storage** (configured on the GO-IM server) | Private media library; the server lists videos and issues short-lived presigned playback URLs. The app stores no storage keys |
 | **VLCKit (MobileVLCKit)** | Local playback of common containers/codecs |
 | **OpenSubtitles API** *(optional, server-side key)* | Online subtitle search, proxied by the GO-IM server when its operator enables it |
@@ -105,7 +105,7 @@ It does **not** license or redistribute commercial film/TV catalogs. Reviewer de
 
 ## Additional clarifications (common Guideline 2.1 / 1.2 items)
 
-- **Account creation:** In-app email sign-up (Login → Create Account), open by default. The operator of a self-hosted server may close registration; the button is then hidden and the operator creates accounts instead. The demo server keeps registration open with working email.
+- **Account creation:** No sign-up in the app. The admin of each self-hosted server creates accounts in Me → Add User (or via the server admin API); the initial password is emailed or shown to the admin to pass on, and must be changed on first sign-in. The demo account is an admin so you can create a test account yourself.
 - **Account deletion (Guideline 5.1.1(v)):** Me → Delete Account → enter password. The server permanently deletes the account record and revokes its sessions; the app then clears all on-device data.
 - **UGC / messaging (Guideline 1.2):** Invite-only room chat. Long-press any message to Block (server-synced, takes effect instantly) or Report. Reports go to a server-side queue; admins act on them in Me → Reports (ignore, or ban the user — the account is disabled and signed out at once).
 - **IAP / paid features:** None.

@@ -15,6 +15,7 @@ import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.SubtitleSource
 import com.chaisz.paircast.core.model.SubtitleState
 import com.chaisz.paircast.core.model.WatchRoom
+import com.chaisz.paircast.core.rules.AccountRules
 import com.chaisz.paircast.core.rules.ChatStickerCodec
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
@@ -23,7 +24,6 @@ import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.PlaybackSyncRules
 import com.chaisz.paircast.core.rules.PlaybackSyncRules.ApplyResult
 import com.chaisz.paircast.core.rules.ProfileRules
-import com.chaisz.paircast.core.rules.RegisterRules
 import com.chaisz.paircast.core.rules.StringTemplate
 import com.chaisz.paircast.core.store.ChatSafetyStore
 import com.chaisz.paircast.core.store.InMemoryKeyValueStore
@@ -73,18 +73,12 @@ class LegalRulesTest {
     }
 }
 
-class RegisterRulesTest {
+class AccountRulesTest {
     @Test fun emailNormalizedAndValidated() {
-        assertEquals("dana@example.com", RegisterRules.normalizedEmail("  Dana@Example.COM "))
-        assertFailsWith<AppError.Validation> { RegisterRules.normalizedEmail("") }
-        assertFailsWith<AppError.Validation> { RegisterRules.normalizedEmail("dana@localhost") }
-        assertFailsWith<AppError.Validation> { RegisterRules.normalizedEmail("a b@c.de") }
-    }
-
-    @Test fun codeMustBeSixDigits() {
-        assertEquals("012345", RegisterRules.normalizedCode(" 012345 "))
-        assertFailsWith<AppError.Validation> { RegisterRules.normalizedCode("12345") }
-        assertFailsWith<AppError.Validation> { RegisterRules.normalizedCode("12a456") }
+        assertEquals("dana@example.com", AccountRules.normalizedEmail("  Dana@Example.COM "))
+        assertFailsWith<AppError.Validation> { AccountRules.normalizedEmail("") }
+        assertFailsWith<AppError.Validation> { AccountRules.normalizedEmail("dana@localhost") }
+        assertFailsWith<AppError.Validation> { AccountRules.normalizedEmail("a b@c.de") }
     }
 
     @Test fun chosenPasswordBounds() {
@@ -96,8 +90,8 @@ class RegisterRulesTest {
     }
 
     @Test fun blankNicknameIsOptional() {
-        assertNull(RegisterRules.normalizedNickname("   "))
-        assertEquals("Dana", RegisterRules.normalizedNickname(" Dana "))
+        assertNull(AccountRules.normalizedNickname("   "))
+        assertEquals("Dana", AccountRules.normalizedNickname(" Dana "))
     }
 }
 

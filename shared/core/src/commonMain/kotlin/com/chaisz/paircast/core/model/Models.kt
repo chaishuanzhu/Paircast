@@ -54,15 +54,16 @@ data class ReportPage(val reports: List<UserReport>, val total: Int, val pending
 data class LoginResult(val user: User, val mustChangePassword: Boolean)
 
 /**
- * Public sign-in options of the configured server (`/auth/config`). Registration is open by default;
- * an admin can close it. Email sign-up also needs SMTP on the server ([emailVerification]).
+ * Account an admin just added. The user must change [initialPassword] on first sign-in. It is null
+ * when the server mailed the password to [email]; otherwise the admin hands it over.
  */
-data class AuthOptions(val registrationOpen: Boolean, val emailVerification: Boolean) {
-    val canRegister: Boolean get() = registrationOpen && emailVerification
-
-    companion object {
-        val Unavailable = AuthOptions(registrationOpen = false, emailVerification = false)
-    }
+data class CreatedAccount(
+    val uid: String,
+    val email: String,
+    val nickname: String,
+    val initialPassword: String?,
+) {
+    val mailed: Boolean get() = initialPassword == null
 }
 
 enum class RoomStatus(val rawValue: String) {

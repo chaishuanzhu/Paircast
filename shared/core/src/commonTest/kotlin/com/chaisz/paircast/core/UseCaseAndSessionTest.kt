@@ -16,16 +16,13 @@ import com.chaisz.paircast.core.session.WatchSession
 import com.chaisz.paircast.core.store.ChatSafetyStore
 import com.chaisz.paircast.core.store.InMemoryKeyValueStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
-import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.usecase.ChangeMovieUseCase
+import com.chaisz.paircast.core.usecase.CreateUserUseCase
 import com.chaisz.paircast.core.usecase.DeleteAccountUseCase
 import com.chaisz.paircast.core.usecase.LeaveRoomUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
-import com.chaisz.paircast.core.usecase.LoadAuthOptionsUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
-import com.chaisz.paircast.core.usecase.RegisterUseCase
 import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
-import com.chaisz.paircast.core.usecase.SendRegisterCodeUseCase
 import com.chaisz.paircast.core.usecase.BlockUserUseCase
 import com.chaisz.paircast.core.usecase.LoadReportsUseCase
 import com.chaisz.paircast.core.usecase.ReportMessageUseCase
@@ -82,43 +79,35 @@ class LoginUseCaseTest {
     }
 }
 
-class RegisterUseCaseTest {
-    @Test fun optionsUnavailableWithoutServer() = runTest {
-        val sut = LoadAuthOptionsUseCase(FakeConfigGateway(null), FakeAuthGateway())
-        assertEquals(AuthOptions.Unavailable, sut())
+class AccountUseCaseTest {
+    private fun admin() = FakeAuthGateway().apply { currentUser.value = User("1", "root", isAdmin = true) }
+
+    @Test fun createUserRequiresAdmin() = runTest {
+        val accounts = FakeAccountAdminGateway()
+        val auth = FakeAuthGateway().apply { currentUser.value = User("2", "bob") }
+        assertEquals(AppError.AdminRequired, assertFailsWith<AppError> { CreateUserUseCase(auth, accounts)("a@b.co", "") })
+        assertTrue(accounts.created.isEmpty())
     }
 
-    @Test fun optionsFromServer() = runTest {
-        val auth = FakeAuthGateway().apply { options = AuthOptions(registrationOpen = false, emailVerification = true) }
-        val options = LoadAuthOptionsUseCase(FakeConfigGateway(configFixture()), auth)()
-        assertFalse(options.canRegister)
+    @Test fun createUserValidatesBeforeNetwork() = runTest {
+        val accounts = FakeAccountAdminGateway()
+        val sut = CreateUserUseCase(admin(), accounts)
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("not-an-email", "") })
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "x".repeat(17)) })
+        assertTrue(accounts.created.isEmpty())
     }
 
-    @Test fun sendCodeNormalizesEmail() = runTest {
-        val auth = FakeAuthGateway(null)
-        val cooldown = SendRegisterCodeUseCase(FakeConfigGateway(configFixture()), auth)(" Dana@Example.com ")
-        assertEquals(60, cooldown)
-        assertEquals(listOf("dana@example.com"), auth.sentCodes)
-    }
-
-    @Test fun sendCodeRejectsBadEmailBeforeNetwork() = runTest {
-        val auth = FakeAuthGateway(null)
-        assertIs<AppError.Validation>(assertFailsWith<AppError> {
-            SendRegisterCodeUseCase(FakeConfigGateway(configFixture()), auth)("not-an-email")
-        })
-        assertTrue(auth.sentCodes.isEmpty())
-    }
-
-    @Test fun registerValidatesAndSignsIn() = runTest {
-        val auth = FakeAuthGateway(null)
-        val sut = RegisterUseCase(FakeConfigGateway(configFixture()), auth)
-        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "12345", "secret1", "secret1", "", true) })
-        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "123456", "secret1", "secret2", "", true) })
-        assertIs<AppError.Validation>(assertFailsWith<AppError> { sut("a@b.co", "123456", "secret1", "secret1", "", false) })
-        assertEquals(null, auth.registered)
-        val result = sut("a@b.co", "123456", "secret1", "secret1", "  ", true)
-        assertEquals("100000", result.user.id)
-        assertEquals(Triple("a@b.co", "secret1", null), auth.registered)
+    @Test fun createUserNormalizesAndReturnsPassword() = runTest {
+        val accounts = FakeAccountAdminGateway()
+        val sut = CreateUserUseCase(admin(), accounts)
+        val created = sut(" Dana@Example.com ", "  ")
+        assertEquals(listOf<Pair<String, String?>>("dana@example.com" to null), accounts.created)
+        assertEquals("Init1234", created.initialPassword)
+        assertFalse(created.mailed)
+        accounts.mailer = true
+        assertTrue(sut("eve@example.com", " Eve ").mailed)
+        assertEquals("Eve", accounts.created.last().second)
+        assertEquals(AppError.EmailAlreadyRegistered, assertFailsWith<AppError> { sut("dana@example.com", "") })
     }
 
     @Test fun deleteAccountNeedsPassword() = runTest {

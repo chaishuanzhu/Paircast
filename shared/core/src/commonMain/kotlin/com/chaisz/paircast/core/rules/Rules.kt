@@ -225,30 +225,17 @@ object LegalRules {
     private fun page(name: String, chinese: Boolean) = "$SITE/${if (chinese) "zh-Hans" else "en-US"}/$name/"
 }
 
-/** Email sign-up: the server mails a 6-digit code (`purpose=register`), then `/register` creates the account. */
-object RegisterRules {
-    const val CODE_LENGTH = 6
-    /** Matches the server's per-email cooldown between code requests. */
-    const val RESEND_COOLDOWN_SECONDS = 60
-
+/** Admin "Add User" form: accounts are keyed by email; there is no self sign-up. */
+object AccountRules {
     private val emailPattern = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 
     /** Trimmed, lower-cased email; throws when it doesn't look like an address. */
     @Throws(Exception::class)
     fun normalizedEmail(raw: String): String {
         val email = raw.trim().lowercase()
-        if (email.isEmpty()) throw AppError.Validation("Please enter your email")
+        if (email.isEmpty()) throw AppError.Validation("Please enter an email")
         if (email.length > 254 || !emailPattern.matches(email)) throw AppError.Validation("Please enter a valid email address")
         return email
-    }
-
-    @Throws(Exception::class)
-    fun normalizedCode(raw: String): String {
-        val code = raw.trim()
-        if (code.length != CODE_LENGTH || !code.all { it in '0'..'9' }) {
-            throw AppError.Validation("Enter the {{count}}-digit code from the email", mapOf("count" to "$CODE_LENGTH"))
-        }
-        return code
     }
 
     /** Optional nickname: blank → null (the server derives one from the email). */

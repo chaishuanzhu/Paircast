@@ -3,6 +3,7 @@ package com.chaisz.paircast.data
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.IMConfig
+import com.chaisz.paircast.data.goim.GoImAccountAdminGateway
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImConnection
@@ -100,62 +101,43 @@ class GoImAuthTest {
     }
 
     @Test
-    fun authOptionsDefaultsWhenFieldMissing() = runTest {
-        val h = harness { respond("""{"registration_open":false}""", HttpStatusCode.OK, json) }
-        val options = h.auth.authOptions()
-        assertEquals(false, options.registrationOpen)
-        assertEquals(true, options.emailVerification)
-        assertEquals("https://im.example.com/auth/config", h.requests.single().url.toString())
-        h.scope.cancel()
-    }
-
-    @Test
-    fun sendRegisterCodeMapsErrors() = runTest {
-        var status = HttpStatusCode.OK
-        val h = harness {
-            when (status) {
-                HttpStatusCode.OK -> respond("""{"status":"ok","expires_in":600,"retry_after":60}""", status, json)
-                HttpStatusCode.TooManyRequests -> respond("too frequent", status, headersOf(HttpHeaders.RetryAfter, "42"))
-                else -> respond("x", status)
-            }
-        }
-        assertEquals(60, h.auth.sendRegisterCode("a@b.co"))
-        val body = formBody(h.requests.single())
-        assertTrue(body.contains("purpose=register") && body.contains("email=a%40b.co"))
-        status = HttpStatusCode.TooManyRequests
-        assertEquals(42, assertFailsWith<AppError.TooManyCodeRequests> { h.auth.sendRegisterCode("a@b.co") }.retryAfterSeconds)
-        status = HttpStatusCode.Forbidden
-        assertFailsWith<AppError.RegistrationClosed> { h.auth.sendRegisterCode("a@b.co") }
-        status = HttpStatusCode.Conflict
-        assertFailsWith<AppError.EmailAlreadyRegistered> { h.auth.sendRegisterCode("a@b.co") }
-        status = HttpStatusCode.ServiceUnavailable
-        assertFailsWith<AppError.EmailVerificationUnavailable> { h.auth.sendRegisterCode("a@b.co") }
-        h.scope.cancel()
-    }
-
-    @Test
-    fun registerPersistsSession() = runTest {
+    fun adminCreateUserReturnsPasswordWhenNotMailed() = runTest {
+        var mailed = false
+        var createStatus = HttpStatusCode.OK
         val h = harness { req ->
-            if (req.url.encodedPath.endsWith("/register")) {
-                respond("""{"uid":"100000","token":"jwt","nickname":"dana","email":"dana@example.com"}""", HttpStatusCode.OK, json)
-            } else {
-                respond("", HttpStatusCode.NotFound)
+            val path = req.url.encodedPath
+            when {
+                path.endsWith("/login") -> respond("""{"uid":"1","token":"t","role":"admin"}""", HttpStatusCode.OK, json)
+                path.endsWith("/admin/users/create") -> when (createStatus) {
+                    HttpStatusCode.OK -> respond(
+                        """{"status":"ok","user":{"uid":"100002","nickname":"dana","email":"dana@example.com","role":"user"},""" +
+                            if (mailed) """"mailed":true}""" else """"mailed":false,"initial_password":"Abc123xyz"}""",
+                        HttpStatusCode.OK,
+                        json,
+                    )
+                    else -> respond("email already registered", createStatus)
+                }
+                else -> respond("""{"status":"ok"}""", HttpStatusCode.OK, json)
             }
         }
-        val result = h.auth.register("dana@example.com", "123456", "secret1", null)
-        assertEquals("100000", result.user.id)
-        assertEquals("dana@example.com", result.user.email)
-        assertEquals(GoImSession("https://im.example.com", "100000", "jwt"), h.sessions.load())
-        assertTrue(!formBody(h.requests.first()).contains("nickname"))
-        h.auth.logout()
-        h.scope.cancel()
-    }
+        h.auth.login("root", "pw")
+        val accounts = GoImAccountAdminGateway(h.auth, h.api)
 
-    @Test
-    fun registerMapsBadCode() = runTest {
-        val h = harness { respond("invalid or expired verification code", HttpStatusCode.BadRequest) }
-        assertFailsWith<AppError.InvalidVerificationCode> { h.auth.register("a@b.co", "000000", "secret1", null) }
-        assertNull(h.sessions.load())
+        val created = accounts.createUser("dana@example.com", null)
+        assertEquals("100002", created.uid)
+        assertEquals("Abc123xyz", created.initialPassword)
+        val body = formBody(h.requests.last { it.url.encodedPath.endsWith("/admin/users/create") })
+        assertTrue(body.contains("email=dana%40example.com") && !body.contains("nickname"))
+
+        mailed = true
+        assertTrue(accounts.createUser("dana@example.com", "Dana").mailed)
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/admin/users/create") }).contains("nickname=Dana"))
+
+        createStatus = HttpStatusCode.Conflict
+        assertFailsWith<AppError.EmailAlreadyRegistered> { accounts.createUser("dana@example.com", null) }
+        createStatus = HttpStatusCode.Forbidden
+        assertFailsWith<AppError.AdminRequired> { accounts.createUser("x@example.com", null) }
+        h.auth.logout()
         h.scope.cancel()
     }
 

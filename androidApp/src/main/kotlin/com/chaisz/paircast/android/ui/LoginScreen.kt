@@ -19,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,7 +50,6 @@ fun LoginScreen(app: AppState) {
     var showConfigAlert by remember { mutableStateOf(false) }
     val config = app.config
     val configured = config?.isComplete == true
-    LaunchedEffect(config?.im?.serverUrl) { app.refreshAuthOptions() }
 
     fun submit() {
         error = null
@@ -113,15 +111,10 @@ fun LoginScreen(app: AppState) {
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
         }
         PrimaryButton(t("Sign In"), ::submit, loading = loading)
-        if (configured && app.authOptions.canRegister) {
-            TextButton(onClick = { error = null; app.openRegister() }) {
-                Text(t("Create Account"), fontSize = 17.sp)
-            }
-        }
         TextButton(onClick = { app.openConfig(fromLogin = true) }) {
             Text(t("Service Configuration"), fontSize = 17.sp)
         }
-        if (configured && !app.authOptions.canRegister) {
+        if (configured) {
             Text(
                 t("Accounts are assigned by an admin · No sign-up"),
                 style = MaterialTheme.typography.bodySmall,

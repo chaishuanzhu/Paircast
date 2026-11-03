@@ -1,5 +1,6 @@
 package com.chaisz.paircast
 
+import com.chaisz.paircast.core.gateway.AccountAdminGateway
 import com.chaisz.paircast.core.gateway.AuthGateway
 import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
@@ -22,15 +23,14 @@ import com.chaisz.paircast.core.store.KeyValueStore
 import com.chaisz.paircast.core.store.SecureStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
 import com.chaisz.paircast.core.usecase.ChangePasswordUseCase
+import com.chaisz.paircast.core.usecase.CreateUserUseCase
 import com.chaisz.paircast.core.usecase.DeleteAccountUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
-import com.chaisz.paircast.core.usecase.LoadAuthOptionsUseCase
 import com.chaisz.paircast.core.usecase.LoginUseCase
-import com.chaisz.paircast.core.usecase.RegisterUseCase
-import com.chaisz.paircast.core.usecase.SendRegisterCodeUseCase
 import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
 import com.chaisz.paircast.core.usecase.UpdateProfileUseCase
 import com.chaisz.paircast.data.files.FileStore
+import com.chaisz.paircast.data.goim.GoImAccountAdminGateway
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImChatGateway
@@ -94,11 +94,9 @@ class PaircastGraph(
     val subtitleOffsets = SubtitleOffsetStore(keyValueStore)
     val chatSafety = ChatSafetyStore(keyValueStore)
     val moderationGateway: ModerationGateway = GoImModerationGateway(goImAuth, api)
+    val accountAdminGateway: AccountAdminGateway = GoImAccountAdminGateway(goImAuth, api)
 
     val login get() = LoginUseCase(configGateway, authGateway)
-    val authOptions get() = LoadAuthOptionsUseCase(configGateway, authGateway)
-    val sendRegisterCode get() = SendRegisterCodeUseCase(configGateway, authGateway)
-    val register get() = RegisterUseCase(configGateway, authGateway)
     val deleteAccount get() = DeleteAccountUseCase(authGateway)
     val changePassword get() = ChangePasswordUseCase(authGateway)
     val updateProfile get() = UpdateProfileUseCase(authGateway)
@@ -106,6 +104,7 @@ class PaircastGraph(
     val listMovies get() = ListMoviesUseCase(configGateway, catalogGateway, metadataGateway)
     val loadReports get() = LoadReportsUseCase(authGateway, moderationGateway)
     val resolveReport get() = ResolveReportUseCase(authGateway, moderationGateway)
+    val createUser get() = CreateUserUseCase(authGateway, accountAdminGateway)
 
     val watchDependencies: WatchDependencies
         get() = WatchDependencies(

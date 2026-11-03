@@ -246,6 +246,17 @@ public struct MeSheetView: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            Divider().padding(.leading, 16)
+                            NavigationLink {
+                                AddUserView(session: session)
+                            } label: {
+                                meRow(title: "Add User") {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(TandemColors.tertiaryLabel)
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                         Divider().padding(.leading, 16)
                         NavigationLink {

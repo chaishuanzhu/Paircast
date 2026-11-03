@@ -37,7 +37,7 @@
     <tbody>
       <tr><td>Server</td><td>Linux, 2 vCPU / 2 GB or more, with Docker 20.10+ and Docker Compose v2</td></tr>
       <tr><td>Domain (recommended)</td><td>e.g. <code>im.example.com</code> pointing at the server, for HTTPS. Not needed for LAN-only use</td></tr>
-      <tr><td>Mail account</td><td>Any mailbox with SMTP, used to send initial passwords to you and your friends</td></tr>
+      <tr><td>Mail account (optional)</td><td>Any mailbox with SMTP, used to send initial passwords to you and your friends; without it the passwords show up in the log / app</td></tr>
       <tr><td>Video storage</td><td><code>mp4</code> / <code>m4v</code> / <code>mkv</code> files in S3-compatible storage (Alibaba Cloud OSS, Tencent Cloud COS, Qiniu, MinIO, …) plus a <strong>read-only</strong> access key</td></tr>
     </tbody>
   </table>
@@ -65,8 +65,8 @@ im.example.com {
 }</code></pre>
   <p>The server address in the app is then <code>im.example.com</code>. With nginx, forward the <code>Upgrade</code> / <code>Connection</code> headers. For LAN-only use you can skip this and enter <code>http://192.168.x.x:8080</code>.</p>
 
-  <h2>3. Mail and the admin account</h2>
-  <p>In-app email sign-up sends verification codes, and admin-created accounts get their initial password by email, so SMTP comes first (without it the app hides sign-up). Edit <code>config.minimal.json</code>:</p>
+  <h2>3. The admin account and mail</h2>
+  <p>Set the admin email in <code>config.minimal.json</code>. Mail (SMTP) is optional: with it, the initial passwords for you and new users are emailed to each address; without it, the admin's initial password goes to the gateway log and new users' passwords are shown in the app for the admin to pass on.</p>
 <pre><code>"gateway": {
     "mail": {
         "enabled": true,
@@ -78,29 +78,32 @@ im.example.com {
     ...
 },
 "admin_email": "you@example.com"</code></pre>
-  <p>Keep the SMTP password out of the config file; put it in <code>.env</code> next to it:</p>
+  <p>Without mail, drop the <code>mail</code> block or set <code>"enabled": false</code>. With mail, keep the SMTP password out of the config file; put it in <code>.env</code> next to it:</p>
 <pre><code>MAIL_PASSWORD=your-smtp-password</code></pre>
-  <p>After restarting the gateway, it creates an admin account for <code>admin_email</code> and mails it a random password (if mail fails, the password is in <code>docker compose -f docker-compose.minimal.yml logs gateway</code>). Sign in to the app with that email and password; you will be asked to change the password the first time.</p>
+  <p>After restarting the gateway, it creates an admin account for <code>admin_email</code> and mails it a random password (without mail, or if sending fails, the password is in <code>docker compose -f docker-compose.minimal.yml logs gateway</code>). Sign in to the app with that email and password; you will be asked to change the password the first time.</p>
 
   <h2>4. User accounts</h2>
-  <h3>4.1 Self sign-up (open by default)</h3>
-  <p>Once SMTP works, friends tap Create Account on the app's login screen and sign up with an emailed code; no admin action needed. Code requests are rate-limited: one per email every 60 seconds, 10 per email per day, 20 per IP per hour.</p>
-  <p>Want to keep it private? Close registration in either of two ways:</p>
+  <p>The Paircast app has no sign-up; the admin creates every account.</p>
+
+  <h3>4.1 Close self sign-up (recommended)</h3>
+  <p>The GO-IM server leaves its <code>/register</code> endpoint open by default. The app doesn't use it, so close it in either of two ways:</p>
   <ul>
     <li>Config file: set <code>"disable_registration": true</code> under <code>gateway.auth</code> in <code>config.minimal.json</code>, then <code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code>.</li>
-    <li>At runtime: with an admin token, <code>curl -s -X POST $SERVER/admin/settings -d uid=ADMIN_UID -d token=TOKEN -d registration_open=false</code> (send <code>true</code> to reopen). Once changed this way, the database value wins over the config file.</li>
+    <li>At runtime: with an admin token, <code>curl -s -X POST $SERVER/admin/settings -d uid=ADMIN_UID -d token=TOKEN -d registration_open=false</code>. Once changed this way, the database value wins over the config file.</li>
   </ul>
-  <p>When closed, the app hides the sign-up button; admins can still create accounts as below. Users can delete their own account in the app under Me → Delete Account after entering their password (admin accounts excepted).</p>
 
-  <h3>4.2 Admin-created accounts</h3>
-  <p>Exchange the admin credentials for a token, then create the account. The initial password is mailed to your friend, who changes it on first sign-in:</p>
+  <h3>4.2 Add users in the app</h3>
+  <p>Sign in to the app as the admin → Me → Add User → enter your friend's email (nickname optional) → Add. With mail set up, the initial password is emailed to them; otherwise (or if sending fails) it is shown on screen — tap Copy and pass it on privately (it isn't shown again). They must change it on first sign-in.</p>
+  <p>Users can delete their own account in the app under Me → Delete Account after entering their password (admin accounts excepted). For a forgotten password, the admin can delete the old account with <code>/admin/users/delete</code> and add the same email again.</p>
+
+  <h3>4.3 From the command line (optional)</h3>
 <pre><code>SERVER=https://im.example.com
 curl -s -X POST $SERVER/login -d account=you@example.com -d password='admin-password'
 # note "uid" and "token" in the response
 
 curl -s -X POST $SERVER/admin/users/create \
-  -d uid=ADMIN_UID -d token=TOKEN_FROM_ABOVE -d email=friend@example.com</code></pre>
-  <p>If the mail could not be sent, the response includes <code>initial_password</code>; pass it on privately.</p>
+  -d uid=ADMIN_UID -d token=TOKEN_FROM_ABOVE -d email=friend@example.com -d nickname=Sam</code></pre>
+  <p>Without mail, or if the mail could not be sent, the response includes <code>initial_password</code>; pass it on privately.</p>
 
   <h2 id="media">5. Media library</h2>
   <h3>5.1 Connect your video storage</h3>

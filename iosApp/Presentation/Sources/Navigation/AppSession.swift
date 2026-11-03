@@ -11,12 +11,8 @@ public final class AppSession: ObservableObject {
     @Published public var toast: String?
     /// Set after a login that requires a password change before entering the library.
     @Published public var mustChangePassword = false
-    /// Server sign-up switch (`/auth/config`), refreshed whenever the login screen appears.
-    @Published public private(set) var authOptions = AppSession.registrationUnavailable
-    /// Terms / Privacy consent checkbox, shared by the login and sign-up screens; never pre-checked.
+    /// Terms / Privacy consent checkbox on the login screen; never pre-checked.
     @Published public var agreedToTerms = false
-
-    static let registrationUnavailable = AuthOptions(registrationOpen: false, emailVerification: false)
 
     public let graph: PaircastGraph
     public var configGateway: ConfigGateway { graph.configGateway }
@@ -98,28 +94,9 @@ public final class AppSession: ObservableObject {
         finishLogin()
     }
 
-    /// Re-reads the server's sign-up switch; the login screen offers "Create Account" only when open.
-    public func refreshAuthOptions() async {
-        authOptions = (try? await graph.authOptions.invoke()) ?? Self.registrationUnavailable
-    }
-
-    public func openRegister() {
-        route = .register
-    }
-
-    /// Mails a sign-up code; returns the seconds before another code can be requested.
-    public func sendRegisterCode(email: String) async throws -> Int {
-        let cooldown = try await graph.sendRegisterCode.invoke(email: email)
-        return Int(truncating: cooldown)
-    }
-
-    public func register(email: String, code: String, password: String, confirm: String, nickname: String) async throws {
-        let result = try await graph.register.invoke(
-            email: email, code: code, password: password, confirm: confirm, nickname: nickname,
-            agreedToTerms: agreedToTerms
-        )
-        currentUser = result.user
-        finishLogin()
+    /// Admin only: adds an account with a random initial password the user must change at first sign-in.
+    public func createUser(email: String, nickname: String) async throws -> CreatedAccount {
+        try await graph.createUser.invoke(email: email, nickname: nickname)
     }
 
     /// Deletes the account on the server, then wipes local config / caches and returns to login.
@@ -277,7 +254,6 @@ public struct RoomInvite: Equatable, Sendable {
 public enum AppRoute: Equatable, Hashable {
     case splash
     case login
-    case register
     case config(fromLogin: Bool)
     case library
 }

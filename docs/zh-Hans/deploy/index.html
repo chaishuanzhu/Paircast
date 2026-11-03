@@ -37,7 +37,7 @@
     <tbody>
       <tr><td>服务器</td><td>Linux，2 核 2 GB 起；已装 Docker 20.10+ 与 Docker Compose v2</td></tr>
       <tr><td>域名（推荐）</td><td>如 <code>im.example.com</code>，解析到服务器，用于 HTTPS。仅局域网使用可以不要</td></tr>
-      <tr><td>发件邮箱</td><td>任意支持 SMTP 的邮箱，用来给管理员和好友发初始密码</td></tr>
+      <tr><td>发件邮箱（可选）</td><td>任意支持 SMTP 的邮箱，用来给管理员和好友发初始密码；不配时初始密码在日志 / App 里显示</td></tr>
       <tr><td>视频存储</td><td>S3 兼容对象存储（阿里云 OSS、腾讯云 COS、七牛、MinIO 等）里放好的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>，以及一对<strong>只读</strong>的访问密钥</td></tr>
     </tbody>
   </table>
@@ -65,8 +65,8 @@ im.example.com {
 }</code></pre>
   <p>完成后 App 里的服务器地址填 <code>im.example.com</code>。用 nginx 时记得透传 <code>Upgrade</code> / <code>Connection</code> 头。只在局域网用可跳过这一步，地址填 <code>http://192.168.x.x:8080</code>。</p>
 
-  <h2>3. 邮件与管理员账号</h2>
-  <p>App 内邮箱注册要发验证码，管理员创建账号要把初始密码发到对方邮箱，所以需要先配置 SMTP（不配时 App 不显示注册入口）。编辑 <code>config.minimal.json</code>：</p>
+  <h2>3. 管理员账号与邮件</h2>
+  <p>在 <code>config.minimal.json</code> 里设置管理员邮箱。邮件（SMTP）可选：配了之后，管理员和新用户的初始密码会发到各自邮箱；不配也能用，管理员初始密码写在网关日志里，新用户的初始密码直接显示在 App 里由管理员转交。</p>
 <pre><code>"gateway": {
     "mail": {
         "enabled": true,
@@ -78,29 +78,32 @@ im.example.com {
     ...
 },
 "admin_email": "you@example.com"</code></pre>
-  <p>SMTP 密码不要写进配置文件，放在同目录的 <code>.env</code>：</p>
+  <p>不用邮件时去掉 <code>mail</code> 段或设 <code>"enabled": false</code>。用邮件时 SMTP 密码不要写进配置文件，放在同目录的 <code>.env</code>：</p>
 <pre><code>MAIL_PASSWORD=你的SMTP密码</code></pre>
-  <p>重启 gateway 后，网关会用 <code>admin_email</code> 自动创建管理员账号，并把随机密码发到该邮箱（邮件发送失败时写在 <code>docker compose -f docker-compose.minimal.yml logs gateway</code> 里）。用这个邮箱和密码在 App 登录，首次登录会要求改密码。</p>
+  <p>重启 gateway 后，网关会用 <code>admin_email</code> 自动创建管理员账号，并把随机密码发到该邮箱（没配邮件或发送失败时写在 <code>docker compose -f docker-compose.minimal.yml logs gateway</code> 里）。用这个邮箱和密码在 App 登录，首次登录会要求改密码。</p>
 
   <h2>4. 用户账号</h2>
-  <h3>4.1 自助注册（默认开放）</h3>
-  <p>配好 SMTP 后，好友在 App 登录页点「注册账号」，用邮箱验证码即可注册，无需管理员操作。发码有频率限制：同一邮箱 60 秒一次、每天 10 次，同一 IP 每小时 20 次。</p>
-  <p>只想让认识的人用？关闭注册，二选一：</p>
+  <p>Paircast App 不提供注册，账号都由管理员创建。</p>
+
+  <h3>4.1 关闭自助注册（建议）</h3>
+  <p>GO-IM 服务端默认开放 <code>/register</code> 注册接口。App 用不到它，建议关掉，二选一：</p>
   <ul>
     <li>配置文件：在 <code>config.minimal.json</code> 的 <code>gateway.auth</code> 里设 <code>"disable_registration": true</code>，然后 <code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code>。</li>
-    <li>运行时：用管理员令牌调用 <code>curl -s -X POST $SERVER/admin/settings -d uid=管理员UID -d token=令牌 -d registration_open=false</code>（改回 <code>true</code> 即重新开放）。后台改过之后以数据库里的值为准，配置文件里的值不再生效。</li>
+    <li>运行时：用管理员令牌调用 <code>curl -s -X POST $SERVER/admin/settings -d uid=管理员UID -d token=令牌 -d registration_open=false</code>。后台改过之后以数据库里的值为准，配置文件里的值不再生效。</li>
   </ul>
-  <p>关闭后 App 登录页自动隐藏注册入口，管理员仍可按下面的方法创建账号。用户可在 App「我的 → 删除账号」输入密码后自行注销（管理员账号除外）。</p>
 
-  <h3>4.2 管理员创建账号</h3>
-  <p>先用管理员账号换一个令牌，再创建账号；新账号的初始密码会发到对方邮箱，对方首次登录时修改：</p>
+  <h3>4.2 在 App 里添加用户</h3>
+  <p>用管理员账号登录 App →「我的 → 添加用户」→ 填好友的邮箱（昵称可不填）→ 添加。配了邮件时初始密码自动发到对方邮箱；没配或发送失败时页面直接显示初始密码，点「复制」后私下转交（离开页面后不再显示）。对方首次登录时必须修改密码。</p>
+  <p>用户可在 App「我的 → 删除账号」输入密码后自行注销（管理员账号除外）。忘记密码时，管理员可用 <code>/admin/users/delete</code> 删除旧账号后用同一邮箱重新添加。</p>
+
+  <h3>4.3 用命令行创建（可选）</h3>
 <pre><code>SERVER=https://im.example.com
 curl -s -X POST $SERVER/login -d account=you@example.com -d password='管理员密码'
 # 记下返回中的 "uid" 和 "token"
 
 curl -s -X POST $SERVER/admin/users/create \
-  -d uid=管理员UID -d token=上一步的token -d email=friend@example.com</code></pre>
-  <p>如果邮件没发出去，响应里会带 <code>initial_password</code>，请私下转交给好友。</p>
+  -d uid=管理员UID -d token=上一步的token -d email=friend@example.com -d nickname=小明</code></pre>
+  <p>没配邮件或邮件没发出去时，响应里会带 <code>initial_password</code>，请私下转交给好友。</p>
 
   <h2 id="media">5. 片库</h2>
   <h3>5.1 接入视频存储</h3>

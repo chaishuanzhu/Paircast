@@ -245,6 +245,7 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var showChangePassword by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var showAddUser by remember { mutableStateOf(false) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -307,7 +308,10 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
             HorizontalDivider()
             SheetRow(t("Change Password")) { showChangePassword = true }
             SheetRow(t("Service Configuration")) { onDismiss(); app.openConfig(fromLogin = false) }
-            if (user?.isAdmin == true) SheetRow(t("Reports")) { onDismiss(); app.openReports() }
+            if (user?.isAdmin == true) {
+                SheetRow(t("Reports")) { onDismiss(); app.openReports() }
+                SheetRow(t("Add User")) { showAddUser = true }
+            }
             SheetRow(t("Terms of Service")) { uriHandler.openUri(LegalRules.termsUrl(L10n.useChinese)) }
             SheetRow(t("Privacy Policy")) { uriHandler.openUri(LegalRules.privacyUrl(L10n.useChinese)) }
             SheetRow(t("Sign Out")) { onDismiss(); scope.launch { app.logout() } }
@@ -318,6 +322,7 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
 
     if (showChangePassword) ChangePasswordDialog(app, forced = false) { showChangePassword = false }
     if (confirmDelete) DeleteAccountDialog(app, onDismiss = { confirmDelete = false }, onDeleted = onDismiss)
+    if (showAddUser) AddUserDialog(app) { showAddUser = false }
 }
 
 /** Permanent server-side deletion; the password is re-checked by the server. */

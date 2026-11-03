@@ -23,17 +23,17 @@
 <body>
   <p class="lang"><a href="./">English</a><a href="../../zh-Hans/guide/">简体中文</a></p>
   <h1>Paircast User Guide</h1>
-  <p>Paircast is an <strong>invite-only</strong> private cloud sync player that works with a self-hosted server. The server handles accounts, chat, playback sync and the media library (videos stay in your own storage). You can <strong>sign up with your email</strong> in the app (registration is open by default; the admin can close it), or the server admin can create an account for you. Available on iOS and Android; both can join the same room.</p>
+  <p>Paircast is an <strong>invite-only</strong> private cloud sync player that works with a self-hosted server. The server handles accounts, chat, playback sync and the media library (videos stay in your own storage). Accounts are created by the server admin; there is no sign-up in the app. Available on iOS and Android; both can join the same room.</p>
 
   <div class="note">
-    Fast path: ask the server admin for the <strong>server address</strong> → on the login screen open Service Configuration, enter the server address and save → tap Create Account to sign up with your email (or sign in with an account the admin gave you).<br />
+    Fast path: ask the server admin for the <strong>server address</strong> → on the login screen open Service Configuration, enter the server address and save → sign in with the account the admin gave you.<br />
     No server yet? Follow the <a href="../deploy/">Server Deployment Guide</a>; with Docker it takes about ten minutes.
   </div>
 
   <h2>1. Typical flow</h2>
   <ol>
     <li>Enter the server address in <strong>Service Configuration</strong> and save.</li>
-    <li><strong>Create an account</strong> with your email, or sign in with the <strong>account and password</strong> your admin gave you. If the admin requires it, you must set a new password on first sign-in.</li>
+    <li>Sign in with the <strong>account and password</strong> your admin gave you. You set a new password on first sign-in.</li>
     <li>Browse <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files from the server media library on the <strong>Library</strong> screen.</li>
     <li>Open a title to create/join a <strong>room</strong> for synced playback and chat.</li>
     <li>Share an invite link so friends can join the same room.</li>
@@ -53,7 +53,7 @@
       </tr>
       <tr>
         <td>Login account / password</td>
-        <td>Sign up in the app with your email, or get one from the server admin</td>
+        <td>Created by the server admin: the initial password is emailed to you, or the admin passes it on</td>
         <td>Account is your UID or email. Change your password any time in Me → Change Password</td>
       </tr>
     </tbody>
@@ -65,12 +65,11 @@
   <h3>The media library is configured on the server</h3>
   <p>Videos, sidecar subtitles, posters, online subtitle search, and stickers all come from the server; you never enter storage keys or API tokens in the app. See <a href="../deploy/#media">Server Deployment Guide · Media library</a> for video sources, TMDB, OpenSubtitles and stickers. If the server lists more than one source, the Library screen shows a source picker.</p>
 
-  <h2>3. Sign-up, login and library</h2>
+  <h2>3. Accounts, login and library</h2>
   <ul>
-    <li><strong>Sign up:</strong> on the login screen tap Create Account → enter your email and tap Send Code → type the 6-digit code from the email (valid for 10 minutes), choose a password (at least 6 characters), nickname optional → you land in the library.</li>
-    <li>No Create Account button: the admin has closed registration or the server has no email (SMTP) set up yet. Ask the admin for an account.</li>
-    <li>No code arriving: check your spam folder. One code per email every 60 seconds, at most 10 per day.</li>
-    <li>Existing account: enter your <strong>account (UID or email) and password</strong>.</li>
+    <li><strong>Getting an account:</strong> there is no sign-up in the app; ask the server admin to add you. The admin enters your email under Me → Add User; the initial password is emailed to you (check spam) or the admin passes it on.</li>
+    <li><strong>Sign in</strong> with your <strong>account (email or UID) and password</strong>, then set a new password when prompted on first sign-in.</li>
+    <li><strong>Admins adding users:</strong> Me → Add User → enter the email (nickname optional) → Add. If the server has email set up, the initial password is sent automatically; otherwise it is shown on screen — tap Copy and send it yourself (it isn't shown again).</li>
     <li>If config is incomplete, enter the server address first.</li>
     <li>“The server has no media library configured”: ask the admin to add a video source. Empty library: ask the admin to check that the source (and prefix) contains <code>.mp4</code> / <code>.m4v</code> / <code>.mkv</code> files.</li>
   </ul>
@@ -87,8 +86,9 @@
   <ul>
     <li>Avatar, nickname, change password, theme, language</li>
     <li>Service Configuration, Acknowledgements, privacy/support links</li>
+    <li>Admins also get <strong>Reports</strong> and <strong>Add User</strong></li>
     <li><strong>Sign out</strong> keeps the local service configuration</li>
-    <li><strong>Delete Account</strong> asks for your current password, permanently deletes the account from the server, and clears on-device config, session and caches. The email can be used to sign up again. Admin accounts can't be deleted in the app</li>
+    <li><strong>Delete Account</strong> asks for your current password, permanently deletes the account from the server, and clears on-device config, session and caches. An admin can later create a new account with the same email. Admin accounts can't be deleted in the app</li>
   </ul>
 
   <h2>6. Troubleshooting</h2>

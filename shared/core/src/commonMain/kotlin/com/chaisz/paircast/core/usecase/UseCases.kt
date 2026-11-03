@@ -1,5 +1,6 @@
 package com.chaisz.paircast.core.usecase
 
+import com.chaisz.paircast.core.gateway.AccountAdminGateway
 import com.chaisz.paircast.core.gateway.AuthGateway
 import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
@@ -11,8 +12,8 @@ import com.chaisz.paircast.core.gateway.RoomGateway
 import com.chaisz.paircast.core.gateway.SubtitleGateway
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
-import com.chaisz.paircast.core.model.AuthOptions
 import com.chaisz.paircast.core.model.ChatMessage
+import com.chaisz.paircast.core.model.CreatedAccount
 import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
@@ -25,12 +26,12 @@ import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.model.UserReport
 import com.chaisz.paircast.core.model.WatchRoom
+import com.chaisz.paircast.core.rules.AccountRules
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
 import com.chaisz.paircast.core.rules.LegalRules
 import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.ProfileRules
-import com.chaisz.paircast.core.rules.RegisterRules
 import com.chaisz.paircast.core.store.ChatSafetyStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -60,48 +61,14 @@ class LoginUseCase(private val configGateway: ConfigGateway, private val authGat
     }
 }
 
-/** Whether the login screen should offer email sign-up. Never throws. */
-class LoadAuthOptionsUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
-    suspend operator fun invoke(): AuthOptions {
-        val config = runCatching { configGateway.load() }.getOrNull() ?: return AuthOptions.Unavailable
-        if (!config.im.isComplete) return AuthOptions.Unavailable
-        return try {
-            authGateway.authOptions()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            AuthOptions.Unavailable
-        }
-    }
-}
-
-class SendRegisterCodeUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
-    /** Returns the cooldown (seconds) before the next code request. */
+/** Admin "Add User": accounts exist only when an admin creates them (no self sign-up). */
+class CreateUserUseCase(private val authGateway: AuthGateway, private val accounts: AccountAdminGateway) {
     @Throws(Exception::class)
-    suspend operator fun invoke(email: String): Int {
-        val normalized = RegisterRules.normalizedEmail(email)
-        requireServer(configGateway)
-        return mapNetwork { authGateway.sendRegisterCode(normalized) }
-    }
-}
-
-class RegisterUseCase(private val configGateway: ConfigGateway, private val authGateway: AuthGateway) {
-    @Throws(Exception::class)
-    suspend operator fun invoke(
-        email: String,
-        code: String,
-        password: String,
-        confirm: String,
-        nickname: String,
-        agreedToTerms: Boolean,
-    ): LoginResult {
-        LegalRules.requireAgreement(agreedToTerms)
-        val normalized = RegisterRules.normalizedEmail(email)
-        val validCode = RegisterRules.normalizedCode(code)
-        LoginRules.validateChosenPassword(password, confirm)
-        val name = RegisterRules.normalizedNickname(nickname)
-        requireServer(configGateway)
-        return mapNetwork { authGateway.register(normalized, validCode, password, name) }
+    suspend operator fun invoke(email: String, nickname: String): CreatedAccount {
+        if (authGateway.currentUser.value?.isAdmin != true) throw AppError.AdminRequired
+        val normalized = AccountRules.normalizedEmail(email)
+        val name = AccountRules.normalizedNickname(nickname)
+        return mapNetwork { accounts.createUser(normalized, name) }
     }
 }
 
@@ -111,11 +78,6 @@ class DeleteAccountUseCase(private val authGateway: AuthGateway) {
         LoginRules.validatePassword(password)
         mapNetwork { authGateway.deleteAccount(password) }
     }
-}
-
-private suspend fun requireServer(configGateway: ConfigGateway) {
-    val config = configGateway.load() ?: throw AppError.NotConfigured
-    if (!config.im.isComplete) throw AppError.IncompleteConfig(listOf("Server"))
 }
 
 private suspend fun <T> mapNetwork(block: suspend () -> T): T = try {

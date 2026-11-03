@@ -33,19 +33,6 @@ class GoImHttpException(
 ) : Exception("HTTP $status: $body")
 
 @Serializable
-internal data class AuthConfigDto(
-    @SerialName("registration_open") val registrationOpen: Boolean = true,
-    /** Missing on older gateways — assume available and let `/auth/email-code` report 503. */
-    @SerialName("email_verification") val emailVerification: Boolean = true,
-)
-
-@Serializable
-internal data class EmailCodeDto(
-    @SerialName("expires_in") val expiresIn: Int = 0,
-    @SerialName("retry_after") val retryAfter: Int = 0,
-)
-
-@Serializable
 internal data class LoginResponseDto(
     val uid: String,
     val token: String,
@@ -87,35 +74,6 @@ class GoImApi(private val client: HttpClient) {
     internal suspend fun login(serverUrl: String, account: String, password: String): LoginResponseDto =
         decode(
             send { client.submitForm(url(serverUrl, "login"), Parameters.build { append("account", account); append("password", password) }) { short() } },
-            LoginResponseDto.serializer(),
-        )
-
-    internal suspend fun authConfig(serverUrl: String): AuthConfigDto =
-        decode(send { client.get(url(serverUrl, "auth/config")) { short() } }, AuthConfigDto.serializer())
-
-    internal suspend fun sendEmailCode(serverUrl: String, email: String, purpose: String): EmailCodeDto =
-        decode(
-            send {
-                client.submitForm(url(serverUrl, "auth/email-code"), Parameters.build { append("email", email); append("purpose", purpose) }) {
-                    timeout { requestTimeoutMillis = 30_000 }
-                }
-            },
-            EmailCodeDto.serializer(),
-        )
-
-    internal suspend fun register(serverUrl: String, email: String, code: String, password: String, nickname: String?): LoginResponseDto =
-        decode(
-            send {
-                client.submitForm(
-                    url(serverUrl, "register"),
-                    Parameters.build {
-                        append("email", email)
-                        append("code", code)
-                        append("password", password)
-                        if (!nickname.isNullOrEmpty()) append("nickname", nickname)
-                    },
-                ) { short() }
-            },
             LoginResponseDto.serializer(),
         )
 
