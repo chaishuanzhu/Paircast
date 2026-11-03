@@ -44,7 +44,7 @@ make android      # Debug APK
 - 协议同意：`LoginUseCase` 带 `agreedToTerms`，先过 `LegalRules.requireAgreement`（未同意抛 `Validation`，不发请求）；链接由 `LegalRules.termsUrl` / `privacyUrl` 生成（`https://paircast.chaisz.com/{zh-Hans|en-US}/terms|privacy/`）。勾选状态放在 `AppSession` / `AppState`，默认不勾选、不持久化
 - 登录：`POST /login`（账号 = UID 或邮箱 + 密码）→ `token` + `must_change_password`；为真时强制 `POST /change-password` 后才进片库
 - 会话（serverUrl、uid、token）存安全存储：iOS Keychain（AfterFirstUnlockThisDeviceOnly），Android EncryptedSharedPreferences
-- token 失效 / 被踢（WebSocket `KICK`）→ `SessionEvent` → 回登录页
+- token 失效 / 被踢（WebSocket `KICK`）→ 先清掉本机保存的会话（`GoImConnection.onSessionEnded` → `SessionStore.clear`），再发 `SessionEvent` → 回登录页；重开 App 不会用旧 token 自动登录（否则会把另一台设备踢回去）
 - 配置只有 GO-IM 服务器地址：不含 IM 密钥，也不含对象存储 / TMDB / OpenSubtitles 凭证（v2.1 起全部在服务端）
 
 ## 服务配置

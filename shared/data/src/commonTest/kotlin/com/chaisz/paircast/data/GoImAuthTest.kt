@@ -28,6 +28,10 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -70,6 +74,24 @@ class GoImAuthTest {
         val h = harness { respond("invalid credentials", HttpStatusCode.Unauthorized) }
         assertFailsWith<AppError.InvalidCredentials> { h.auth.login("alice", "bad") }
         assertNull(h.sessions.load())
+        h.scope.cancel()
+    }
+
+    @Test
+    fun expiredSessionIsClearedFromStorage() = runTest {
+        val h = harness { req ->
+            when {
+                req.url.encodedPath.endsWith("/login") -> respond("""{"uid":"u1","token":"jwt"}""", HttpStatusCode.OK, json)
+                else -> respond("invalid token", HttpStatusCode.Unauthorized)
+            }
+        }
+        h.auth.login("alice", "pw")
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (h.sessions.load() != null) delay(20) }
+        }
+        assertNull(h.auth.session)
+        assertNull(h.auth.currentUser.value)
+        assertNull(h.auth.restoreSession())
         h.scope.cancel()
     }
 

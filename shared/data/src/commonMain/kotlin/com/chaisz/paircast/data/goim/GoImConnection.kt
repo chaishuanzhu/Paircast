@@ -103,6 +103,9 @@ class GoImConnection(
     private val _events = MutableSharedFlow<SessionEvent>(extraBufferCapacity = 4)
     val events: SharedFlow<SessionEvent> = _events.asSharedFlow()
 
+    /** Runs before a kick / expiry is emitted so the stored session is gone before any UI reacts. */
+    internal var onSessionEnded: (suspend (GoImSession) -> Unit)? = null
+
     /** All mutable link state is confined to this serial dispatcher. */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val serial = Dispatchers.Default.limitedParallelism(1)
@@ -237,12 +240,14 @@ class GoImConnection(
             if (kicked) {
                 this.session = null
                 _state.value = ConnectionState.DISCONNECTED
+                onSessionEnded?.invoke(session)
                 _events.emit(SessionEvent.KickedOffline)
                 return
             }
             if (api.validateToken(session) == false) {
                 this.session = null
                 _state.value = ConnectionState.DISCONNECTED
+                onSessionEnded?.invoke(session)
                 _events.emit(SessionEvent.TokenExpired)
                 return
             }

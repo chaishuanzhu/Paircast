@@ -38,6 +38,18 @@ class GoImAuthGateway(
     var session: GoImSession? = null
         private set
 
+    init {
+        // Kicked / expired: drop the stored token too, or the next launch would restore it and
+        // kick the other device back.
+        connectionLink.onSessionEnded = { ended ->
+            if (sessions.load()?.token == ended.token) sessions.clear()
+            if (session?.token == ended.token) {
+                session = null
+                _currentUser.value = null
+            }
+        }
+    }
+
     override suspend fun login(account: String, password: String): LoginResult {
         val serverUrl = configuredServerUrl()
         val dto = try {
