@@ -14,6 +14,10 @@ import com.chaisz.paircast.core.session.PlayerPort
 import com.chaisz.paircast.core.session.WatchDependencies
 import com.chaisz.paircast.core.session.WatchSession
 import com.chaisz.paircast.core.store.ChatSafetyStore
+import com.chaisz.paircast.core.gateway.ModerationGateway
+import com.chaisz.paircast.core.usecase.LoadReportsUseCase
+import com.chaisz.paircast.core.usecase.ResolveReportUseCase
+import com.chaisz.paircast.data.goim.GoImModerationGateway
 import com.chaisz.paircast.core.store.KeyValueStore
 import com.chaisz.paircast.core.store.SecureStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
@@ -89,6 +93,7 @@ class PaircastGraph(
     val stickerCatalog: StickerCatalogGateway = ServerStickerCatalog(media, http, support)
     val subtitleOffsets = SubtitleOffsetStore(keyValueStore)
     val chatSafety = ChatSafetyStore(keyValueStore)
+    val moderationGateway: ModerationGateway = GoImModerationGateway(goImAuth, api)
 
     val login get() = LoginUseCase(configGateway, authGateway)
     val authOptions get() = LoadAuthOptionsUseCase(configGateway, authGateway)
@@ -99,6 +104,8 @@ class PaircastGraph(
     val updateProfile get() = UpdateProfileUseCase(authGateway)
     val saveConfig get() = SaveCloudConfigUseCase(configGateway)
     val listMovies get() = ListMoviesUseCase(configGateway, catalogGateway, metadataGateway)
+    val loadReports get() = LoadReportsUseCase(authGateway, moderationGateway)
+    val resolveReport get() = ResolveReportUseCase(authGateway, moderationGateway)
 
     val watchDependencies: WatchDependencies
         get() = WatchDependencies(
@@ -113,6 +120,7 @@ class PaircastGraph(
             sharedSubtitleStorage = sharedSubtitleStorage,
             subtitleOffsets = subtitleOffsets,
             chatSafety = chatSafety,
+            moderation = moderationGateway,
         )
 
     /** Starts a watch screen session; call [WatchSession.start] / [WatchSession.close] from the UI. */

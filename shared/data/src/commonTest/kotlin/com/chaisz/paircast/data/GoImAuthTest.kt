@@ -6,6 +6,10 @@ import com.chaisz.paircast.core.model.IMConfig
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImConnection
+import com.chaisz.paircast.data.goim.GoImModerationGateway
+import com.chaisz.paircast.core.model.ReportAction
+import com.chaisz.paircast.core.model.ReportFilter
+import com.chaisz.paircast.core.model.ReportStatus
 import com.chaisz.paircast.data.net.createHttpClient
 import com.chaisz.paircast.data.secure.GoImSession
 import com.chaisz.paircast.core.store.InMemorySecureStore
@@ -39,6 +43,7 @@ class GoImAuthTest {
         val sessions: SessionStore,
         val requests: MutableList<HttpRequestData>,
         val scope: CoroutineScope,
+        val api: GoImApi,
     )
 
     private suspend fun harness(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData): Harness {
@@ -53,7 +58,7 @@ class GoImAuthTest {
         val scope = CoroutineScope(SupervisorJob())
         val connection = GoImConnection(client, api, scope, deviceId = "dev", platform = "test")
         val sessions = SessionStore(store)
-        return Harness(GoImAuthGateway(config, sessions, api, connection), sessions, requests, scope)
+        return Harness(GoImAuthGateway(config, sessions, api, connection), sessions, requests, scope, api)
     }
 
     private fun formBody(req: HttpRequestData): String =
@@ -218,6 +223,53 @@ class GoImAuthTest {
         h.auth.fetchUsers(listOf("b"))
         assertEquals(1, calls)
         h.auth.logout()
+        h.scope.cancel()
+    }
+
+    @Test
+    fun adminRoleAndModerationCalls() = runTest {
+        var resolveStatus = HttpStatusCode.Forbidden
+        val h = harness { req ->
+            val path = req.url.encodedPath
+            when {
+                path.endsWith("/login") -> respond("""{"uid":"root","token":"t","role":"admin"}""", HttpStatusCode.OK, json)
+                path.endsWith("/user/blocks") -> respond("""{"blocked":["b1"]}""", HttpStatusCode.OK, json)
+                path.endsWith("/admin/reports") -> respond(
+                    """{"reports":[{"id":3,"reporter_uid":"a","reporter_nickname":"A","target_uid":"b","target_nickname":"",""" +
+                        """"target_disabled":true,"context":"room1","content":"rude","status":"banned","created_at":5,"handled_at":0}],""" +
+                        """"total":1,"pending":0}""",
+                    HttpStatusCode.OK,
+                    json,
+                )
+                path.endsWith("/admin/reports/resolve") ->
+                    respond(if (resolveStatus == HttpStatusCode.OK) """{"status":"ok"}""" else "cannot ban an admin", resolveStatus, json)
+                path.endsWith("/user/report") -> respond("moderation not available", HttpStatusCode.ServiceUnavailable)
+                else -> respond("""{"status":"ok"}""", HttpStatusCode.OK, json)
+            }
+        }
+        val user = h.auth.login("root", "pw").user
+        assertTrue(user.isAdmin)
+        val moderation = GoImModerationGateway(h.auth, h.api)
+
+        assertEquals(listOf("b1"), moderation.blockedUserIds())
+        moderation.block("b2")
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/user/block") }).contains("target_uid=b2"))
+
+        val page = moderation.reports(ReportFilter.HANDLED, 0, 30)
+        assertTrue(h.requests.last { it.url.encodedPath.endsWith("/admin/reports") }.url.encodedQuery.contains("status=handled"))
+        val report = page.reports.single()
+        assertEquals("b", report.targetName)
+        assertEquals(ReportStatus.BANNED, report.status)
+        assertTrue(report.targetBanned)
+        assertNull(report.handledAtMs)
+        assertEquals("room1", report.roomId)
+
+        assertIs<AppError.CannotBanAdmin>(assertFailsWith<AppError> { moderation.resolveReport(3, ReportAction.BAN) })
+        resolveStatus = HttpStatusCode.OK
+        moderation.resolveReport(3, ReportAction.IGNORE)
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/resolve") }).contains("action=ignore"))
+
+        assertIs<AppError.ModerationUnavailable>(assertFailsWith<AppError> { moderation.report("b", "x", "1", null) })
         h.scope.cancel()
     }
 }

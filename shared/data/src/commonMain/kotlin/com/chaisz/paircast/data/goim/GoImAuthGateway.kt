@@ -113,6 +113,7 @@ class GoImAuthGateway(
             avatarUrl = GoImApi.absoluteUrl(serverUrl, dto.avatarUrl),
             username = dto.username,
             email = dto.email,
+            isAdmin = dto.role == ADMIN_ROLE,
         )
         _currentUser.value = user
         // First login with an admin-issued password: link comes up after the forced change.
@@ -134,7 +135,7 @@ class GoImAuthGateway(
         }
         session = stored
         val user = runCatching { api.myProfile(stored) }.getOrNull()
-            ?.let { User(it.uid, it.nickname.ifEmpty { it.uid }, GoImApi.absoluteUrl(stored.serverUrl, it.avatarUrl), email = it.email) }
+            ?.let { ownUser(stored, it) }
             ?: User(stored.uid, stored.uid)
         _currentUser.value = user
         connectionLink.connect(stored)
@@ -176,7 +177,7 @@ class GoImAuthGateway(
             }
         }
         val dto = authed { api.updateProfile(s, nickname, fileId) }
-        val user = User(dto.uid, dto.nickname.ifEmpty { nickname }, GoImApi.absoluteUrl(s.serverUrl, dto.avatarUrl), email = dto.email)
+        val user = ownUser(s, dto, fallbackNickname = nickname)
         _currentUser.value = user
         remember(user)
         return user
@@ -185,7 +186,7 @@ class GoImAuthGateway(
     override suspend fun fetchProfile(): User {
         val s = requireSession()
         val dto = authed { api.myProfile(s) }
-        val user = User(dto.uid, dto.nickname.ifEmpty { dto.uid }, GoImApi.absoluteUrl(s.serverUrl, dto.avatarUrl), email = dto.email)
+        val user = ownUser(s, dto)
         _currentUser.value = user
         remember(user)
         return user
@@ -236,7 +237,16 @@ class GoImAuthGateway(
         profileLock.withLock { profileCache[user.id] = user to Clock.System.now().toEpochMilliseconds() }
     }
 
-    private fun requireSession(): GoImSession = session ?: throw AppError.SessionExpired
+    internal fun requireSession(): GoImSession = session ?: throw AppError.SessionExpired
+
+    /** Own profile → [User]; a response without `role` keeps the admin flag we already had. */
+    private fun ownUser(s: GoImSession, dto: ProfileDto, fallbackNickname: String = dto.uid) = User(
+        id = dto.uid,
+        nickname = dto.nickname.ifEmpty { fallbackNickname },
+        avatarUrl = GoImApi.absoluteUrl(s.serverUrl, dto.avatarUrl),
+        email = dto.email,
+        isAdmin = dto.role?.let { it == ADMIN_ROLE } ?: (_currentUser.value?.isAdmin == true),
+    )
 
     private suspend fun <T> authed(block: suspend () -> T): T = try {
         block()
@@ -247,5 +257,6 @@ class GoImAuthGateway(
 
     private companion object {
         const val PROFILE_TTL_MS = 5 * 60_000L
+        const val ADMIN_ROLE = "admin"
     }
 }

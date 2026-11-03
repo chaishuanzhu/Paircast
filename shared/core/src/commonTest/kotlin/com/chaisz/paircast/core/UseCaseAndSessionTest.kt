@@ -26,6 +26,15 @@ import com.chaisz.paircast.core.usecase.LoginUseCase
 import com.chaisz.paircast.core.usecase.RegisterUseCase
 import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
 import com.chaisz.paircast.core.usecase.SendRegisterCodeUseCase
+import com.chaisz.paircast.core.usecase.BlockUserUseCase
+import com.chaisz.paircast.core.usecase.LoadReportsUseCase
+import com.chaisz.paircast.core.usecase.ReportMessageUseCase
+import com.chaisz.paircast.core.usecase.ResolveReportUseCase
+import com.chaisz.paircast.core.usecase.SyncBlockListUseCase
+import com.chaisz.paircast.core.model.ReportAction
+import com.chaisz.paircast.core.model.ReportFilter
+import com.chaisz.paircast.core.model.ReportStatus
+import com.chaisz.paircast.core.model.UserReport
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -180,6 +189,8 @@ class WatchSessionTest {
         val catalog = FakeCatalog(listOf(movieFixture("m1", "One"), movieFixture("m2", "Two")))
         val subtitles = FakeSubtitles()
         val player = FakePlayer()
+        val moderation = FakeModerationGateway()
+        val safety = ChatSafetyStore(InMemoryKeyValueStore())
         val session = WatchSession(
             WatchDependencies(
                 authGateway = auth,
@@ -192,7 +203,8 @@ class WatchSessionTest {
                 subtitleGateway = subtitles,
                 sharedSubtitleStorage = subtitles,
                 subtitleOffsets = SubtitleOffsetStore(InMemoryKeyValueStore()),
-                chatSafety = ChatSafetyStore(InMemoryKeyValueStore()),
+                chatSafety = safety,
+                moderation = moderation,
             ),
             player,
             initialRoomId = "room1",
@@ -412,5 +424,73 @@ class WatchSessionTest {
         assertTrue(left.isCompleted)
         assertEquals(listOf("member"), h.rooms.left)
         h.session.close()
+    }
+
+    @Test fun blockAndReportGoToTheServer() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.moderation.remote += "spammer"
+        h.session.start()
+        runCurrent()
+        h.chat.incoming.emit(ChatMessage(id = "1", roomId = "room1", senderId = "spammer", senderNickname = "S", text = "buy"))
+        h.chat.incoming.emit(ChatMessage(id = "2", roomId = "room1", senderId = "carol", senderNickname = "Carol", text = "rude"))
+        runCurrent()
+        assertEquals(listOf("2"), h.session.state.value.messages.map { it.id })
+
+        val rude = h.session.state.value.messages.single()
+        h.session.report(rude)
+        runCurrent()
+        assertEquals(Triple("carol", "rude", "2"), h.moderation.reported.single())
+
+        h.session.blockSender(rude)
+        runCurrent()
+        assertTrue(h.session.state.value.messages.isEmpty())
+        assertTrue("carol" in h.moderation.remote)
+        assertTrue(h.safety.pendingUploads("member").isEmpty())
+        h.session.close()
+    }
+}
+
+class ModerationUseCaseTest {
+    @Test fun firstSyncUploadsLegacyLocalBlocksAndKeepsFailedOnesPending() = runTest {
+        val safety = ChatSafetyStore(InMemoryKeyValueStore())
+        val server = FakeModerationGateway().apply { remote += "fromOtherDevice" }
+        safety.block("legacy", ownerId = "me")
+        safety.markUploaded("legacy", ownerId = "me")
+
+        val merged = SyncBlockListUseCase(server, safety)("me")
+        assertEquals(setOf("legacy", "fromOtherDevice"), merged)
+        assertTrue("legacy" in server.remote)
+
+        server.failing = true
+        BlockUserUseCase(server, safety)("offline", ownerId = "me")
+        assertTrue(safety.isBlocked("offline", ownerId = "me"))
+        assertEquals(setOf("offline"), safety.pendingUploads("me"))
+
+        server.failing = false
+        server.remote -= "legacy"
+        SyncBlockListUseCase(server, safety)("me")
+        assertEquals(setOf("fromOtherDevice", "offline"), safety.blockedUserIds("me"))
+        assertTrue(safety.pendingUploads("me").isEmpty())
+    }
+
+    @Test fun reportListNeedsAdmin() = runTest {
+        val server = FakeModerationGateway()
+        val auth = FakeAuthGateway(User("u", "U"))
+        assertIs<AppError.AdminRequired>(assertFailsWith<AppError> { LoadReportsUseCase(auth, server)(ReportFilter.PENDING) })
+        auth.currentUser.value = User("root", "Root", isAdmin = true)
+        LoadReportsUseCase(auth, server)(ReportFilter.PENDING)
+        val report = UserReport(7, "a", "A", "root", "Root", false, "x", null, ReportStatus.PENDING, 0, null)
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { ResolveReportUseCase(auth, server)(report, ReportAction.BAN) })
+        ResolveReportUseCase(auth, server)(report.copy(targetId = "b"), ReportAction.BAN)
+        assertEquals(listOf(7L to ReportAction.BAN), server.resolved)
+    }
+
+    @Test fun reportUploadFailureSurfacesAsError() = runTest {
+        val server = FakeModerationGateway().apply { failing = true }
+        val message = ChatMessage(id = "1", roomId = "r", senderId = "x", senderNickname = "X", text = "")
+        assertIs<AppError.ServerUnreachable>(assertFailsWith<AppError> { ReportMessageUseCase(server)(message) })
+        server.failing = false
+        ReportMessageUseCase(server)(message.copy(sticker = null))
+        assertEquals("", server.reported.single().second)
     }
 }

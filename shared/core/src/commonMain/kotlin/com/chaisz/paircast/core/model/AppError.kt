@@ -36,6 +36,10 @@ sealed class AppError(key: String) : Exception(key) {
     data object EmailSendFailed : AppError("Failed to send the email. Please try again later")
     data object AdminAccountDeletion : AppError("Admin accounts cannot be deleted in the app")
     data object AccountDeletionFailed : AppError("Failed to delete account")
+    data object ModerationUnavailable : AppError("The server does not support reports yet. Ask an admin to update it")
+    data object AdminRequired : AppError("Only admins can do this")
+    data object CannotBanAdmin : AppError("Admin accounts cannot be banned")
+    data object ReportNotFound : AppError("This report no longer exists")
 
     /** Localization template key (may contain `{{name}}`) plus replacement values. */
     data class Validation(val key: String, val args: Map<String, String> = emptyMap()) : AppError(key)

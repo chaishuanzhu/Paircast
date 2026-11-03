@@ -14,8 +14,40 @@ data class User(
     val avatarUrl: String? = null,
     val username: String? = null,
     val email: String? = null,
+    /** GO-IM `role == "admin"`: may review chat reports and ban users. */
+    val isAdmin: Boolean = false,
 ) {
     val displayName: String get() = nickname.ifBlank { id }
+}
+
+enum class ReportStatus { PENDING, IGNORED, BANNED }
+
+/** Admin report list tabs: waiting for review, or already ignored / banned. */
+enum class ReportFilter { PENDING, HANDLED }
+
+enum class ReportAction { IGNORE, BAN }
+
+/** A chat report as seen by an admin (`/admin/reports`). */
+data class UserReport(
+    val id: Long,
+    val reporterId: String,
+    val reporterName: String,
+    val targetId: String,
+    val targetName: String,
+    /** The reported account is currently disabled on the server. */
+    val targetBanned: Boolean,
+    /** Reported message text (or a sticker placeholder), at most 500 characters. */
+    val content: String,
+    val roomId: String?,
+    val status: ReportStatus,
+    val createdAtMs: Long,
+    val handledAtMs: Long?,
+) {
+    val isPending: Boolean get() = status == ReportStatus.PENDING
+}
+
+data class ReportPage(val reports: List<UserReport>, val total: Int, val pending: Int) {
+    val hasMore: Boolean get() = reports.size < total
 }
 
 /** Result of `/login`. When [mustChangePassword] is true the UI must force a password change. */

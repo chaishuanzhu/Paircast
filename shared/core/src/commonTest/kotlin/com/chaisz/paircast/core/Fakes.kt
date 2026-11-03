@@ -5,6 +5,7 @@ import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
 import com.chaisz.paircast.core.gateway.ConnectionState
 import com.chaisz.paircast.core.gateway.MetadataGateway
+import com.chaisz.paircast.core.gateway.ModerationGateway
 import com.chaisz.paircast.core.gateway.MovieCatalogGateway
 import com.chaisz.paircast.core.gateway.PlaybackSyncGateway
 import com.chaisz.paircast.core.gateway.RoomGateway
@@ -20,6 +21,9 @@ import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
+import com.chaisz.paircast.core.model.ReportAction
+import com.chaisz.paircast.core.model.ReportFilter
+import com.chaisz.paircast.core.model.ReportPage
 import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
@@ -198,4 +202,26 @@ internal class FakePlayer : PlayerPort {
     override fun loadExternalSubtitle(filePath: String) = true
     override fun disableSubtitles() {}
     override fun applySubtitleOffsetMs(offsetMs: Int) {}
+}
+
+internal class FakeModerationGateway : ModerationGateway {
+    val remote = mutableSetOf<String>()
+    val reported = mutableListOf<Triple<String, String, String?>>()
+    val resolved = mutableListOf<Pair<Long, ReportAction>>()
+    var failing = false
+    var page = ReportPage(emptyList(), 0, 0)
+
+    private fun check() {
+        if (failing) throw AppError.ServerUnreachable
+    }
+
+    override suspend fun blockedUserIds(): List<String> { check(); return remote.sorted() }
+    override suspend fun block(userId: String) { check(); remote += userId }
+    override suspend fun unblock(userId: String) { check(); remote -= userId }
+    override suspend fun report(targetUserId: String, content: String, messageId: String?, roomId: String?) {
+        check()
+        reported += Triple(targetUserId, content, messageId)
+    }
+    override suspend fun reports(filter: ReportFilter, offset: Int, limit: Int): ReportPage { check(); return page }
+    override suspend fun resolveReport(reportId: Long, action: ReportAction) { check(); resolved += reportId to action }
 }

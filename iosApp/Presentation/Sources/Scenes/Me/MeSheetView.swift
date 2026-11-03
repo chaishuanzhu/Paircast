@@ -234,6 +234,19 @@ public struct MeSheetView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        if session.currentUser?.isAdmin == true {
+                            Divider().padding(.leading, 16)
+                            NavigationLink {
+                                ReportsView(session: session)
+                            } label: {
+                                meRow(title: "Reports") {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(TandemColors.tertiaryLabel)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
                         Divider().padding(.leading, 16)
                         NavigationLink {
                             ThemeSettingsView(theme: theme)

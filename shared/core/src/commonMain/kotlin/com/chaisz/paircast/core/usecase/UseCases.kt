@@ -4,6 +4,7 @@ import com.chaisz.paircast.core.gateway.AuthGateway
 import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
 import com.chaisz.paircast.core.gateway.MetadataGateway
+import com.chaisz.paircast.core.gateway.ModerationGateway
 import com.chaisz.paircast.core.gateway.MovieCatalogGateway
 import com.chaisz.paircast.core.gateway.PlaybackSyncGateway
 import com.chaisz.paircast.core.gateway.RoomGateway
@@ -11,13 +12,18 @@ import com.chaisz.paircast.core.gateway.SubtitleGateway
 import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.AuthOptions
+import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackAction
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
+import com.chaisz.paircast.core.model.ReportAction
+import com.chaisz.paircast.core.model.ReportFilter
+import com.chaisz.paircast.core.model.ReportPage
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
+import com.chaisz.paircast.core.model.UserReport
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.ConfigValidation
 import com.chaisz.paircast.core.rules.HostTransferRules
@@ -25,6 +31,7 @@ import com.chaisz.paircast.core.rules.LegalRules
 import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.ProfileRules
 import com.chaisz.paircast.core.rules.RegisterRules
+import com.chaisz.paircast.core.store.ChatSafetyStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -137,6 +144,80 @@ class UpdateProfileUseCase(private val authGateway: AuthGateway) {
         avatarJpeg?.let(ProfileRules::validatedAvatarData)
         return authGateway.updateProfile(name, avatarJpeg)
     }
+}
+
+// endregion
+
+// region Moderation
+
+/**
+ * Brings the local block list in line with the server: uploads blocks that never reached it
+ * (offline, or made before blocks were stored server-side), then adopts the server list.
+ */
+class SyncBlockListUseCase(private val moderation: ModerationGateway, private val chatSafety: ChatSafetyStore) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(ownerId: String): Set<String> {
+        val stillPending = chatSafety.pendingUploads(ownerId).filterTo(mutableSetOf()) { id ->
+            !uploaded { moderation.block(id) }
+        }
+        val remote = mapNetwork { moderation.blockedUserIds() }.toSet()
+        chatSafety.applyServerList(ownerId, remote, stillPending)
+        return chatSafety.blockedUserIds(ownerId)
+    }
+}
+
+/** Hides the sender locally right away; the server copy is retried by [SyncBlockListUseCase] if this upload fails. */
+class BlockUserUseCase(private val moderation: ModerationGateway, private val chatSafety: ChatSafetyStore) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(userId: String, ownerId: String) {
+        if (!chatSafety.block(userId, ownerId)) return
+        if (uploaded { moderation.block(userId) }) chatSafety.markUploaded(userId, ownerId)
+    }
+}
+
+class ReportMessageUseCase(private val moderation: ModerationGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(message: ChatMessage) {
+        val target = message.senderId?.takeIf { it.isNotBlank() } ?: throw AppError.Validation("This message can't be reported")
+        val content = message.text.ifBlank { if (message.sticker != null) "[Sticker]" else "" }.take(REPORT_CONTENT_MAX)
+        mapNetwork { moderation.report(target, content, message.id, message.roomId.ifBlank { null }) }
+    }
+
+    private companion object {
+        const val REPORT_CONTENT_MAX = 500
+    }
+}
+
+class LoadReportsUseCase(private val authGateway: AuthGateway, private val moderation: ModerationGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(filter: ReportFilter, offset: Int = 0, limit: Int = PAGE_SIZE): ReportPage {
+        if (authGateway.currentUser.value?.isAdmin != true) throw AppError.AdminRequired
+        return mapNetwork { moderation.reports(filter, offset, limit) }
+    }
+
+    companion object {
+        const val PAGE_SIZE = 30
+    }
+}
+
+class ResolveReportUseCase(private val authGateway: AuthGateway, private val moderation: ModerationGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(report: UserReport, action: ReportAction) {
+        if (authGateway.currentUser.value?.isAdmin != true) throw AppError.AdminRequired
+        if (action == ReportAction.BAN && report.targetId == authGateway.currentUser.value?.id) {
+            throw AppError.Validation("You can't ban yourself")
+        }
+        mapNetwork { moderation.resolveReport(report.id, action) }
+    }
+}
+
+private suspend fun uploaded(block: suspend () -> Unit): Boolean = try {
+    block()
+    true
+} catch (e: CancellationException) {
+    throw e
+} catch (_: Exception) {
+    false
 }
 
 // endregion

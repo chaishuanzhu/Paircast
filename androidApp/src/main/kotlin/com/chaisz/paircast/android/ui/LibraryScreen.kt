@@ -307,6 +307,7 @@ private fun MeSheet(app: AppState, onDismiss: () -> Unit) {
             HorizontalDivider()
             SheetRow(t("Change Password")) { showChangePassword = true }
             SheetRow(t("Service Configuration")) { onDismiss(); app.openConfig(fromLogin = false) }
+            if (user?.isAdmin == true) SheetRow(t("Reports")) { onDismiss(); app.openReports() }
             SheetRow(t("Terms of Service")) { uriHandler.openUri(LegalRules.termsUrl(L10n.useChinese)) }
             SheetRow(t("Privacy Policy")) { uriHandler.openUri(LegalRules.privacyUrl(L10n.useChinese)) }
             SheetRow(t("Sign Out")) { onDismiss(); scope.launch { app.logout() } }

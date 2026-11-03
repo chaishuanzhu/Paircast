@@ -129,6 +129,14 @@ make android      # Debug APK
 - **元数据**：服务端刮削——同目录 `{base}.nfo` / `-poster` / `-fanart` 优先 → TMDB → 文件名；结果（含无结果）缓存，无海报的结果 1 小时后重试；不再写回片源目录。客户端只对无海报的影片调用 `/media/item`
 - 对象存储里不再需要 `_paircast/` 目录（房间改存 MySQL，共享字幕存 GO-IM 文件存储）
 
+## 聊天屏蔽与举报（v2.1）
+
+- GO-IM `internal/moderation`：`user_blocks`（owner_uid, target_uid）与 `user_reports`（reporter / target / message_id / context=房间 ID / content ≤500 字 / status `pending|ignored|banned`）两张表，启动自动建表；无 MySQL 时存内存
+- 用户接口：`POST /user/block`、`/user/unblock`（幂等）、`GET /user/blocks`、`POST /user/report`（同一举报人对同一条消息的待处理举报去重）
+- 管理接口：`GET /admin/reports?status=pending|handled|all`（附双方昵称、`target_disabled`、`pending` 总数）、`POST /admin/reports/resolve`（`action=ignore|ban`；`ban` = `UpdateUserDisabled` + CmdKick `account disabled` + 关闭该用户其余待处理举报；不能封禁管理员 / 自己）
+- 客户端：`ModerationGateway`（`GoImModerationGateway`）；`ChatSafetyStore` 是服务端屏蔽名单的本机副本（离线也能隐藏消息），未上传成功的屏蔽记为 pending。`WatchSession.start` 调 `SyncBlockListUseCase`：先补传 pending（首次同步时把旧版本机屏蔽全部上传），再以服务端名单为准；`BlockUserUseCase` 先本机隐藏再上传；`ReportMessageUseCase` 直接提交服务器（不再打开 GitHub Issues）
+- 管理员身份：`/login` 与 `/user/profile` 的 `role == "admin"` → `User.isAdmin`；「我的」里仅管理员可见「举报处理」（`LoadReportsUseCase` / `ResolveReportUseCase` 也会校验）
+
 ## 测试
 
 ```bash

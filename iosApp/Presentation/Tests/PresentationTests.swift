@@ -128,7 +128,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
 
     func test_watchDeepLinkOpensWatchWhenLoggedIn() async {
         let session = makeSession()
-        session.currentUser = User(id: "bob", nickname: "bob", avatarUrl: nil, username: nil, email: nil)
+        session.currentUser = User(id: "bob", nickname: "bob", avatarUrl: nil, username: nil, email: nil, isAdmin: false)
         session.handleDeepLink(URL(string: "paircast://watch?roomId=r1&movieId=m1&hostUserId=host")!)
         XCTAssertEqual(session.route, .library)
         XCTAssertEqual(
@@ -150,7 +150,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
     func test_consumePendingInvitePushesLibraryWatch() {
         let session = makeSession()
         session.handleDeepLink(URL(string: "paircast://watch?roomId=r1&movieId=m1&hostUserId=host")!)
-        session.currentUser = User(id: "bob", nickname: "bob", avatarUrl: nil, username: nil, email: nil)
+        session.currentUser = User(id: "bob", nickname: "bob", avatarUrl: nil, username: nil, email: nil, isAdmin: false)
         session.consumePendingInviteIfPossible()
         XCTAssertEqual(session.route, .library)
         XCTAssertEqual(

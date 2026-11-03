@@ -7,6 +7,9 @@ import com.chaisz.paircast.core.model.LoginResult
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
+import com.chaisz.paircast.core.model.ReportAction
+import com.chaisz.paircast.core.model.ReportFilter
+import com.chaisz.paircast.core.model.ReportPage
 import com.chaisz.paircast.core.model.StickerPack
 import com.chaisz.paircast.core.model.StickerPackSummary
 import com.chaisz.paircast.core.model.StickerRef
@@ -58,6 +61,24 @@ interface AuthGateway {
     /** Deletes the account on the server (password re-check), then logout and local cleanup. */
     @Throws(Exception::class)
     suspend fun deleteAccount(password: String)
+}
+
+/** Server-side block list, chat reports, and admin report review (GO-IM `/user/block*`, `/user/report`, `/admin/reports*`). */
+interface ModerationGateway {
+    @Throws(Exception::class)
+    suspend fun blockedUserIds(): List<String>
+    @Throws(Exception::class)
+    suspend fun block(userId: String)
+    @Throws(Exception::class)
+    suspend fun unblock(userId: String)
+    @Throws(Exception::class)
+    suspend fun report(targetUserId: String, content: String, messageId: String?, roomId: String?)
+    /** Admin only. Newest first. */
+    @Throws(Exception::class)
+    suspend fun reports(filter: ReportFilter, offset: Int, limit: Int): ReportPage
+    /** Admin only. [ReportAction.BAN] disables the reported account and closes its other pending reports. */
+    @Throws(Exception::class)
+    suspend fun resolveReport(reportId: Long, action: ReportAction)
 }
 
 interface ConfigGateway {

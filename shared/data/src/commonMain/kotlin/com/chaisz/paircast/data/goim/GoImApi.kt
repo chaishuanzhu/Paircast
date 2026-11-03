@@ -54,6 +54,7 @@ internal data class LoginResponseDto(
     val email: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("must_change_password") val mustChangePassword: Boolean = false,
+    val role: String? = null,
 )
 
 @Serializable
@@ -62,6 +63,8 @@ internal data class ProfileDto(
     val nickname: String = "",
     @SerialName("avatar_url") val avatarUrl: String? = null,
     val email: String? = null,
+    /** Present on the caller's own profile only. */
+    val role: String? = null,
 )
 
 @Serializable

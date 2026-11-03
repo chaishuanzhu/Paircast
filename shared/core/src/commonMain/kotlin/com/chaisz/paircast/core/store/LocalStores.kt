@@ -3,9 +3,6 @@ package com.chaisz.paircast.core.store
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.ChatMessageKind
 import com.chaisz.paircast.core.model.SubtitleState
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Clock
 
 /**
  * Plain (non-secret) key/value persistence: `UserDefaults` on iOS, `SharedPreferences` on Android.
@@ -56,25 +53,45 @@ class SubtitleOffsetStore(private val store: KeyValueStore) {
     }
 }
 
-/** Local block list and report log for invite-only room chat (App Store Guideline 1.2). */
+/**
+ * Device copy of the server block list (App Store Guideline 1.2), so blocked senders stay hidden offline.
+ * Blocks that have not reached the server yet are kept as pending uploads.
+ */
 class ChatSafetyStore(private val store: KeyValueStore) {
     fun blockedUserIds(ownerId: String): Set<String> = readList(blockKey(ownerId)).toSet()
 
     fun isBlocked(userId: String, ownerId: String): Boolean = userId in blockedUserIds(ownerId)
 
-    fun block(userId: String, ownerId: String) {
+    /** Adds [userId] locally and queues it for upload; false when invalid or already blocked. */
+    fun block(userId: String, ownerId: String): Boolean {
         val trimmed = userId.trim()
-        if (trimmed.isEmpty() || trimmed == ownerId) return
+        if (trimmed.isEmpty() || trimmed == ownerId || isBlocked(trimmed, ownerId)) return false
         writeList(blockKey(ownerId), (blockedUserIds(ownerId) + trimmed).sorted())
+        writeList(pendingKey(ownerId), (readList(pendingKey(ownerId)) + trimmed).distinct())
+        return true
     }
 
-    fun recordReport(targetUserId: String, ownerId: String, snippet: String) {
-        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-        val line = "${now}Z|$ownerId|$targetUserId|${snippet.take(80)}"
-        writeList(REPORTS_KEY, (readList(REPORTS_KEY) + line).takeLast(50))
+    fun markUploaded(userId: String, ownerId: String) {
+        writeList(pendingKey(ownerId), readList(pendingKey(ownerId)) - userId)
     }
 
-    fun clear(ownerId: String) = store.remove(blockKey(ownerId))
+    /** Blocks the server doesn't know about; before the first sync that is every local block. */
+    fun pendingUploads(ownerId: String): Set<String> {
+        val pending = readList(pendingKey(ownerId)).toSet()
+        return if (store.getString(syncedKey(ownerId)) == null) pending + blockedUserIds(ownerId) else pending
+    }
+
+    fun applyServerList(ownerId: String, remote: Set<String>, stillPending: Set<String>) {
+        writeList(blockKey(ownerId), (remote + stillPending - ownerId).sorted())
+        writeList(pendingKey(ownerId), stillPending.toList())
+        store.putString(syncedKey(ownerId), "1")
+    }
+
+    fun clear(ownerId: String) {
+        store.remove(blockKey(ownerId))
+        store.remove(pendingKey(ownerId))
+        store.remove(syncedKey(ownerId))
+    }
 
     fun visibleMessages(messages: List<ChatMessage>, ownerId: String): List<ChatMessage> {
         val blocked = blockedUserIds(ownerId)
@@ -84,6 +101,8 @@ class ChatSafetyStore(private val store: KeyValueStore) {
     }
 
     private fun blockKey(ownerId: String) = BLOCK_PREFIX + ownerId
+    private fun pendingKey(ownerId: String) = PENDING_PREFIX + ownerId
+    private fun syncedKey(ownerId: String) = SYNCED_PREFIX + ownerId
 
     private fun readList(key: String): List<String> =
         store.getString(key)?.split(SEPARATOR)?.filter { it.isNotEmpty() } ?: emptyList()
@@ -92,13 +111,10 @@ class ChatSafetyStore(private val store: KeyValueStore) {
         store.putString(key, values.joinToString(SEPARATOR))
     }
 
-    companion object {
-        private const val BLOCK_PREFIX = "paircast.chat.blocked."
-        private const val REPORTS_KEY = "paircast.chat.reports"
-        private const val SEPARATOR = "\u001E"
-
-        const val REPORT_URL =
-            "https://github.com/chaishuanzhu/Paircast/issues/new?title=Chat%20content%20report&body=" +
-                "Please%20describe%20the%20violation%20(rooms%20are%20invite-only%3B%20we%20only%20handle%20rooms%20you%20joined)."
+    private companion object {
+        const val BLOCK_PREFIX = "paircast.chat.blocked."
+        const val PENDING_PREFIX = "paircast.chat.blockPending."
+        const val SYNCED_PREFIX = "paircast.chat.blockSynced."
+        const val SEPARATOR = "\u001E"
     }
 }

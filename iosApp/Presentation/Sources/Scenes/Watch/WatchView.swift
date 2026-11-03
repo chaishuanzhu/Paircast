@@ -230,10 +230,6 @@ public final class WatchViewModel: ObservableObject {
         watch.report(message: message)
     }
 
-    public var chatReportURL: URL {
-        URL(string: ChatSafetyStore.companion.REPORT_URL)!
-    }
-
     public func refreshSubtitles(autoSelectChinese: Bool = false) async {
         watch.refreshSubtitles(autoSelectChinese: autoSelectChinese)
     }
@@ -299,7 +295,6 @@ public struct WatchView: View {
     @State private var composerFocusRequest = 0
     @StateObject private var keyboardInset = KeyboardInsetObserver()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.openURL) private var openURL
     @Environment(\.locale) private var locale
     @Environment(\.scenePhase) private var scenePhase
 
@@ -1033,7 +1028,6 @@ public struct WatchView: View {
                     }
                     Button("Report") {
                         viewModel.report(message)
-                        openURL(viewModel.chatReportURL)
                     }
                 }
             }

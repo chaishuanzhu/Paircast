@@ -4,6 +4,7 @@ import com.chaisz.paircast.core.gateway.AuthGateway
 import com.chaisz.paircast.core.gateway.ChatGateway
 import com.chaisz.paircast.core.gateway.ConfigGateway
 import com.chaisz.paircast.core.gateway.MetadataGateway
+import com.chaisz.paircast.core.gateway.ModerationGateway
 import com.chaisz.paircast.core.gateway.MovieCatalogGateway
 import com.chaisz.paircast.core.gateway.PlaybackSyncGateway
 import com.chaisz.paircast.core.gateway.RoomGateway
@@ -36,6 +37,9 @@ import com.chaisz.paircast.core.usecase.LeaveRoomUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
 import com.chaisz.paircast.core.usecase.ListSubtitleTracksUseCase
 import com.chaisz.paircast.core.usecase.SearchOnlineSubtitlesUseCase
+import com.chaisz.paircast.core.usecase.BlockUserUseCase
+import com.chaisz.paircast.core.usecase.ReportMessageUseCase
+import com.chaisz.paircast.core.usecase.SyncBlockListUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -70,6 +74,7 @@ class WatchDependencies(
     val sharedSubtitleStorage: SharedSubtitleStorageGateway,
     val subtitleOffsets: SubtitleOffsetStore,
     val chatSafety: ChatSafetyStore,
+    val moderation: ModerationGateway,
 )
 
 data class WatchUiState(
@@ -148,6 +153,9 @@ class WatchSession(
     private val leaveRoom = LeaveRoomUseCase(deps.roomGateway, deps.chatGateway, deps.syncGateway)
     private val listTracks = ListSubtitleTracksUseCase(deps.configGateway, deps.subtitleGateway)
     private val searchSubtitles = SearchOnlineSubtitlesUseCase(deps.subtitleGateway)
+    private val syncBlocks = SyncBlockListUseCase(deps.moderation, deps.chatSafety)
+    private val blockUser = BlockUserUseCase(deps.moderation, deps.chatSafety)
+    private val reportMessage = ReportMessageUseCase(deps.moderation)
 
     /**
      * Signal sequence. Clock-seeded so a host that re-opens the room (new session, app relaunch)
@@ -175,6 +183,7 @@ class WatchSession(
             try {
                 val user = me ?: return@launch
                 _state.update { it.copy(selfId = user.id) }
+                syncBlockList()
                 initialRoomId?.let { roomId ->
                     val joined = deps.roomGateway.joinRoom(roomId, user.id, initialMovieId, initialHostUserId)
                     _state.update { it.copy(room = joined) }
@@ -613,16 +622,36 @@ class WatchSession(
     fun blockSender(message: ChatMessage) {
         val ownerId = me?.id ?: return
         val senderId = message.senderId ?: return
-        deps.chatSafety.block(senderId, ownerId)
-        _state.update { it.copy(messages = deps.chatSafety.visibleMessages(it.messages, ownerId)) }
+        _state.update { s -> s.copy(messages = s.messages.filter { it.senderId != senderId }) }
         toast("Blocked {{name}}", mapOf("name" to message.senderNickname.ifEmpty { senderId }))
+        scope.launch { runCatching { blockUser(senderId, ownerId) } }
     }
 
     fun report(message: ChatMessage) {
+        if (message.senderId == null) return
+        scope.launch {
+            try {
+                reportMessage(message)
+                toast("Report submitted. An admin will review it")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val error = AppError.from(e)
+                _events.tryEmit(WatchEvent.Toast(error.toUiText()))
+            }
+        }
+    }
+
+    private fun syncBlockList() {
         val ownerId = me?.id ?: return
-        val senderId = message.senderId ?: return
-        deps.chatSafety.recordReport(senderId, ownerId, message.text)
-        toast("Report recorded — opening feedback")
+        scope.launch {
+            runCatching { syncBlocks(ownerId) }
+            refilterBlocked(ownerId)
+        }
+    }
+
+    private fun refilterBlocked(ownerId: String) {
+        _state.update { it.copy(messages = deps.chatSafety.visibleMessages(it.messages, ownerId)) }
     }
 
     private fun reportChatFailure(e: Throwable) {
