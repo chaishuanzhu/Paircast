@@ -4,11 +4,16 @@ import com.chaisz.paircast.core.model.AppCloudConfig
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.IMConfig
+import com.chaisz.paircast.core.model.ManagedUser
 import com.chaisz.paircast.core.model.PlaybackAction
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
+import com.chaisz.paircast.core.model.ReportAction
+import com.chaisz.paircast.core.model.ReportFilter
+import com.chaisz.paircast.core.model.ReportStatus
 import com.chaisz.paircast.core.model.SubtitleSource
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
+import com.chaisz.paircast.core.model.UserReport
 import com.chaisz.paircast.core.rules.HostTransferRules
 import com.chaisz.paircast.core.session.WatchDependencies
 import com.chaisz.paircast.core.session.WatchEvent
@@ -16,22 +21,27 @@ import com.chaisz.paircast.core.session.WatchSession
 import com.chaisz.paircast.core.store.ChatSafetyStore
 import com.chaisz.paircast.core.store.InMemoryKeyValueStore
 import com.chaisz.paircast.core.store.SubtitleOffsetStore
+import com.chaisz.paircast.core.usecase.BlockUserUseCase
 import com.chaisz.paircast.core.usecase.ChangeMovieUseCase
 import com.chaisz.paircast.core.usecase.CreateUserUseCase
 import com.chaisz.paircast.core.usecase.DeleteAccountUseCase
+import com.chaisz.paircast.core.usecase.DeleteUserUseCase
 import com.chaisz.paircast.core.usecase.LeaveRoomUseCase
 import com.chaisz.paircast.core.usecase.ListMoviesUseCase
-import com.chaisz.paircast.core.usecase.LoginUseCase
-import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
-import com.chaisz.paircast.core.usecase.BlockUserUseCase
 import com.chaisz.paircast.core.usecase.LoadReportsUseCase
+import com.chaisz.paircast.core.usecase.LoadUsersUseCase
+import com.chaisz.paircast.core.usecase.LoginUseCase
 import com.chaisz.paircast.core.usecase.ReportMessageUseCase
 import com.chaisz.paircast.core.usecase.ResolveReportUseCase
+import com.chaisz.paircast.core.usecase.SaveCloudConfigUseCase
+import com.chaisz.paircast.core.usecase.SetUserDisabledUseCase
 import com.chaisz.paircast.core.usecase.SyncBlockListUseCase
-import com.chaisz.paircast.core.model.ReportAction
-import com.chaisz.paircast.core.model.ReportFilter
-import com.chaisz.paircast.core.model.ReportStatus
-import com.chaisz.paircast.core.model.UserReport
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -41,12 +51,6 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 class LoginUseCaseTest {
     @Test fun requiresConfig() = runTest {
@@ -108,6 +112,39 @@ class AccountUseCaseTest {
         assertTrue(sut("eve@example.com", " Eve ").mailed)
         assertEquals("Eve", accounts.created.last().second)
         assertEquals(AppError.EmailAlreadyRegistered, assertFailsWith<AppError> { sut("dana@example.com", "") })
+    }
+
+    private fun managed(id: String, admin: Boolean = false) =
+        ManagedUser(id, "u$id", null, null, isAdmin = admin, isDisabled = false, createdAtMs = 0)
+
+    @Test fun userManagementRequiresAdmin() = runTest {
+        val accounts = FakeAccountAdminGateway()
+        val auth = FakeAuthGateway().apply { currentUser.value = User("2", "bob") }
+        assertEquals(AppError.AdminRequired, assertFailsWith<AppError> { LoadUsersUseCase(auth, accounts)() })
+        assertEquals(AppError.AdminRequired, assertFailsWith<AppError> { DeleteUserUseCase(auth, accounts)(managed("3")) })
+        assertTrue(accounts.calls.isEmpty())
+    }
+
+    @Test fun adminCannotChangeSelfOrOtherAdmins() = runTest {
+        val accounts = FakeAccountAdminGateway()
+        val auth = admin()
+        val disable = SetUserDisabledUseCase(auth, accounts)
+        val delete = DeleteUserUseCase(auth, accounts)
+        assertEquals(AppError.CannotManageAccount, assertFailsWith<AppError> { disable(managed("1"), true) })
+        assertEquals(AppError.CannotManageAccount, assertFailsWith<AppError> { delete(managed("5", admin = true)) })
+        assertTrue(accounts.calls.isEmpty())
+
+        disable(managed("3"), true)
+        disable(managed("3"), false)
+        delete(managed("3"))
+        assertEquals(listOf("disable 3 true", "disable 3 false", "delete 3"), accounts.calls)
+    }
+
+    @Test fun loadUsersPages() = runTest {
+        val accounts = FakeAccountAdminGateway().apply { repeat(3) { users += managed("${it + 2}") } }
+        val page = LoadUsersUseCase(admin(), accounts)(offset = 0, limit = 2)
+        assertEquals(listOf("2", "3"), page.users.map { it.id })
+        assertTrue(page.hasMore)
     }
 
     @Test fun deleteAccountNeedsPassword() = runTest {

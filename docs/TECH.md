@@ -39,6 +39,7 @@ make android      # Debug APK
 
 - 账号来源：**只由管理员创建**，App 不提供注册（不调用 `/auth/config`、`/auth/email-code`、`/register`）。部署时建议同时在 GO-IM 关闭自助注册（`gateway.auth.disable_registration` 或 `POST /admin/settings registration_open=false`）
 - 添加用户（仅管理员，`User.isAdmin`）：`CreateUserUseCase(email, nickname)` → `AccountAdminGateway.createUser` → `POST /admin/users/create`（email、nickname 可选）。校验在 `AccountRules`（邮箱格式转小写、昵称留空交给服务端）；服务端生成随机初始密码并置 `must_change_password`，配了 SMTP 就发到对方邮箱（`mailed: true`），未配或发信失败则返回 `initial_password`，`CreatedAccount.initialPassword` 非空时 UI 显示并可复制。错误映射：400 邮箱 / 昵称、403 非管理员、409 邮箱已存在
+- 用户管理（仅管理员）：`LoadUsersUseCase` → `GET /admin/users?offset&limit`（每页 50，`ManagedUser` 含 role / `is_disabled` / avatar_url）；`SetUserDisabledUseCase` → `POST /admin/users/disable`（服务端停用后 CmdKick `account disabled`）；`DeleteUserUseCase` → `POST /admin/users/delete`（CmdKick `account deleted`）。`AccountRules.canManage` 拒绝操作自己与其他管理员（`AppError.CannotManageAccount`），服务端 400 `cannot … yourself` 同样映射；`not found` → `AppError.UserNotFound`
 - 删除账号：`DeleteAccountUseCase(password)` → `POST /user/delete`（GO-IM 校验密码后删除用户并以 `account deleted` 踢下线；管理员账号 403）→ 登出、清本机配置 / 会话 / 缓存。满足 App Store 5.1.1(v)
 - 协议同意：`LoginUseCase` 带 `agreedToTerms`，先过 `LegalRules.requireAgreement`（未同意抛 `Validation`，不发请求）；链接由 `LegalRules.termsUrl` / `privacyUrl` 生成（`https://paircast.chaisz.com/{zh-Hans|en-US}/terms|privacy/`）。勾选状态放在 `AppSession` / `AppState`，默认不勾选、不持久化
 - 登录：`POST /login`（账号 = UID 或邮箱 + 密码）→ `token` + `must_change_password`；为真时强制 `POST /change-password` 后才进片库
@@ -134,7 +135,7 @@ make android      # Debug APK
 - 用户接口：`POST /user/block`、`/user/unblock`（幂等）、`GET /user/blocks`、`POST /user/report`（同一举报人对同一条消息的待处理举报去重）
 - 管理接口：`GET /admin/reports?status=pending|handled|all`（附双方昵称、`target_disabled`、`pending` 总数）、`POST /admin/reports/resolve`（`action=ignore|ban`；`ban` = `UpdateUserDisabled` + CmdKick `account disabled` + 关闭该用户其余待处理举报；不能封禁管理员 / 自己）
 - 客户端：`ModerationGateway`（`GoImModerationGateway`）；`ChatSafetyStore` 是服务端屏蔽名单的本机副本（离线也能隐藏消息），未上传成功的屏蔽记为 pending。`WatchSession.start` 调 `SyncBlockListUseCase`：先补传 pending（首次同步时把旧版本机屏蔽全部上传），再以服务端名单为准；`BlockUserUseCase` 先本机隐藏再上传；`ReportMessageUseCase` 直接提交服务器（不再打开 GitHub Issues）
-- 管理员身份：`/login` 与 `/user/profile` 的 `role == "admin"` → `User.isAdmin`；「我的」里仅管理员可见「举报处理」（`LoadReportsUseCase` / `ResolveReportUseCase` 也会校验）
+- 管理员身份：`/login` 与 `/user/profile` 的 `role == "admin"` → `User.isAdmin`；「我的」里仅管理员可见「后台管理」（用户管理 / 添加用户 / 举报处理；各用例也会校验）
 
 ## 测试
 

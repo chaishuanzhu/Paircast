@@ -142,6 +142,51 @@ class GoImAuthTest {
     }
 
     @Test
+    fun adminListsDisablesAndDeletesUsers() = runTest {
+        val h = harness { req ->
+            val path = req.url.encodedPath
+            when {
+                path.endsWith("/login") -> respond("""{"uid":"1","token":"t","role":"admin"}""", HttpStatusCode.OK, json)
+                path.endsWith("/admin/users") -> respond(
+                    """{"users":[{"uid":"2","nickname":"","email":"bob@example.com","signature":"","role":"user",""" +
+                        """"is_disabled":true,"created_at":1700000000000,"updated_at":0,"avatar_url":""},""" +
+                        """{"uid":"1","nickname":"root","role":"admin","is_disabled":false,"created_at":1,"avatar_url":"https://x/avatar/3"}],""" +
+                        """"total":5,"offset":0,"limit":50}""",
+                    HttpStatusCode.OK,
+                    json,
+                )
+                path.endsWith("/admin/users/disable") && formBody(req).contains("target_uid=1") ->
+                    respond("cannot disable yourself", HttpStatusCode.BadRequest)
+                path.endsWith("/admin/users/delete") && formBody(req).contains("target_uid=9") ->
+                    respond("delete failed: user 9 not found", HttpStatusCode.InternalServerError)
+                else -> respond("""{"status":"ok"}""", HttpStatusCode.OK, json)
+            }
+        }
+        h.auth.login("root", "pw")
+        val accounts = GoImAccountAdminGateway(h.auth, h.api)
+
+        val page = accounts.users(0, 50)
+        assertEquals(5, page.total)
+        assertTrue(page.hasMore)
+        val bob = page.users.first()
+        assertEquals("2", bob.displayName)
+        assertEquals("bob@example.com", bob.email)
+        assertNull(bob.avatarUrl)
+        assertTrue(bob.isDisabled && !bob.isAdmin)
+        assertTrue(page.users.last().isAdmin)
+        assertTrue(h.requests.last { it.url.encodedPath.endsWith("/admin/users") }.url.encodedQuery.contains("offset=0"))
+
+        accounts.setDisabled("2", false)
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/admin/users/disable") }).contains("disabled=false"))
+        assertFailsWith<AppError.CannotManageAccount> { accounts.setDisabled("1", true) }
+        accounts.deleteUser("2")
+        assertTrue(h.requests.any { it.url.encodedPath.endsWith("/admin/users/delete") })
+        assertFailsWith<AppError.UserNotFound> { accounts.deleteUser("9") }
+        h.auth.logout()
+        h.scope.cancel()
+    }
+
+    @Test
     fun deleteAccountCallsServerThenClearsEverything() = runTest {
         var deleteStatus = HttpStatusCode.Unauthorized
         val h = harness { req ->

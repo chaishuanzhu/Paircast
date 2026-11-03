@@ -19,6 +19,7 @@ import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.ChatMessageKind
 import com.chaisz.paircast.core.model.CreatedAccount
 import com.chaisz.paircast.core.model.LoginResult
+import com.chaisz.paircast.core.model.ManagedUser
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
@@ -28,6 +29,7 @@ import com.chaisz.paircast.core.model.ReportPage
 import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
+import com.chaisz.paircast.core.model.UserPage
 import com.chaisz.paircast.core.model.VideoFormat
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.session.PlayerPort
@@ -83,6 +85,19 @@ internal class FakeAccountAdminGateway : AccountAdminGateway {
         if (created.any { it.first == email }) throw AppError.EmailAlreadyRegistered
         created += email to nickname
         return CreatedAccount("10000${created.size}", email, nickname ?: email.substringBefore('@'), if (mailer) null else "Init1234")
+    }
+
+    val users = mutableListOf<ManagedUser>()
+    val calls = mutableListOf<String>()
+
+    override suspend fun users(offset: Int, limit: Int) = UserPage(users.drop(offset).take(limit), users.size)
+
+    override suspend fun setDisabled(userId: String, disabled: Boolean) {
+        calls += "disable $userId $disabled"
+    }
+
+    override suspend fun deleteUser(userId: String) {
+        calls += "delete $userId"
     }
 }
 

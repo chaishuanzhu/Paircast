@@ -17,6 +17,9 @@ import com.chaisz.paircast.core.session.WatchSession
 import com.chaisz.paircast.core.store.ChatSafetyStore
 import com.chaisz.paircast.core.gateway.ModerationGateway
 import com.chaisz.paircast.core.usecase.LoadReportsUseCase
+import com.chaisz.paircast.core.usecase.LoadUsersUseCase
+import com.chaisz.paircast.core.usecase.SetUserDisabledUseCase
+import com.chaisz.paircast.core.usecase.DeleteUserUseCase
 import com.chaisz.paircast.core.usecase.ResolveReportUseCase
 import com.chaisz.paircast.data.goim.GoImModerationGateway
 import com.chaisz.paircast.core.store.KeyValueStore
@@ -105,6 +108,9 @@ class PaircastGraph(
     val loadReports get() = LoadReportsUseCase(authGateway, moderationGateway)
     val resolveReport get() = ResolveReportUseCase(authGateway, moderationGateway)
     val createUser get() = CreateUserUseCase(authGateway, accountAdminGateway)
+    val loadUsers get() = LoadUsersUseCase(authGateway, accountAdminGateway)
+    val setUserDisabled get() = SetUserDisabledUseCase(authGateway, accountAdminGateway)
+    val deleteUser get() = DeleteUserUseCase(authGateway, accountAdminGateway)
 
     val watchDependencies: WatchDependencies
         get() = WatchDependencies(

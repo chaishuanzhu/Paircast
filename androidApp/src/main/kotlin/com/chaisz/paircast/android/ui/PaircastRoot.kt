@@ -60,6 +60,8 @@ private fun LibraryHost(app: AppState) {
     when (top) {
         null -> LibraryScreen(app)
         LibraryRoute.Config -> ConfigScreen(app, fromLogin = false)
+        LibraryRoute.Admin -> AdminScreen(app)
+        LibraryRoute.Users -> UsersScreen(app)
         LibraryRoute.Reports -> ReportsScreen(app)
         is LibraryRoute.Watch -> WatchScreen(app, top.roomId, top.movieId, top.hostUserId)
     }

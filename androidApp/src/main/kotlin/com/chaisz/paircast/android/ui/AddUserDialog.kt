@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
 
 /** Admin-only: accounts exist only when an admin adds them (no self sign-up). */
 @Composable
-fun AddUserDialog(app: AppState, onDismiss: () -> Unit) {
+fun AddUserDialog(app: AppState, onCreated: () -> Unit = {}, onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
     var email by remember { mutableStateOf("") }
@@ -113,6 +113,7 @@ fun AddUserDialog(app: AppState, onDismiss: () -> Unit) {
                             error = null
                             try {
                                 created = app.createUser(email, nickname)
+                                onCreated()
                             } catch (e: Exception) {
                                 error = L10n.message(e, AppError.Network)
                             } finally {

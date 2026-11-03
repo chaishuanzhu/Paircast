@@ -1,6 +1,7 @@
 package com.chaisz.paircast.core.rules
 
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.ManagedUser
 import com.chaisz.paircast.core.model.PlaybackAction
 import com.chaisz.paircast.core.model.PlaybackState
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
@@ -242,4 +243,8 @@ object AccountRules {
     @Throws(Exception::class)
     fun normalizedNickname(raw: String): String? =
         raw.trim().takeIf { it.isNotEmpty() }?.let(ProfileRules::validatedNickname)
+
+    /** Admins may disable / delete regular users only — never themselves or another admin. */
+    fun canManage(user: ManagedUser, currentUserId: String?): Boolean =
+        !user.isAdmin && user.id != currentUserId
 }

@@ -15,6 +15,7 @@ import com.chaisz.paircast.core.model.StickerPackSummary
 import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
+import com.chaisz.paircast.core.model.UserPage
 import com.chaisz.paircast.core.model.WatchRoom
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -72,11 +73,23 @@ interface ModerationGateway {
     suspend fun resolveReport(reportId: Long, action: ReportAction)
 }
 
-/** Admin account management (GO-IM `/admin/users/create`). Accounts exist only when an admin adds them. */
+/** Admin account management (GO-IM `/admin/users*`). Accounts exist only when an admin adds them. */
 interface AccountAdminGateway {
     /** Creates a regular user with a random initial password. [nickname] null → derived from the email. */
     @Throws(Exception::class)
     suspend fun createUser(email: String, nickname: String?): CreatedAccount
+
+    /** Newest accounts first. */
+    @Throws(Exception::class)
+    suspend fun users(offset: Int, limit: Int): UserPage
+
+    /** A disabled account is signed out right away and can't sign in until enabled again. */
+    @Throws(Exception::class)
+    suspend fun setDisabled(userId: String, disabled: Boolean)
+
+    /** Permanently deletes the account and signs it out; the email can be added again later. */
+    @Throws(Exception::class)
+    suspend fun deleteUser(userId: String)
 }
 
 interface ConfigGateway {

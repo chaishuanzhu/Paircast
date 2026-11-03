@@ -66,6 +66,23 @@ data class CreatedAccount(
     val mailed: Boolean get() = initialPassword == null
 }
 
+/** An account as listed in the admin console (`/admin/users`). */
+data class ManagedUser(
+    val id: String,
+    val nickname: String,
+    val email: String?,
+    val avatarUrl: String?,
+    val isAdmin: Boolean,
+    val isDisabled: Boolean,
+    val createdAtMs: Long,
+) {
+    val displayName: String get() = nickname.ifBlank { id }
+}
+
+data class UserPage(val users: List<ManagedUser>, val total: Int) {
+    val hasMore: Boolean get() = users.size < total
+}
+
 enum class RoomStatus(val rawValue: String) {
     ACTIVE("active"),
     ENDED("ended"),

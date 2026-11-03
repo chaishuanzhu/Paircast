@@ -214,8 +214,8 @@ class GoImAuthGateway(
         throw AppError.Unknown("Server error {{code}}", mapOf("code" to e.status.toString()))
     }
 
-    private companion object {
-        const val PROFILE_TTL_MS = 5 * 60_000L
+    internal companion object {
+        private const val PROFILE_TTL_MS = 5 * 60_000L
         const val ADMIN_ROLE = "admin"
     }
 }

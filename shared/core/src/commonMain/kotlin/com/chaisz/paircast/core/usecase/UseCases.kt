@@ -15,6 +15,7 @@ import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.ChatMessage
 import com.chaisz.paircast.core.model.CreatedAccount
 import com.chaisz.paircast.core.model.LoginResult
+import com.chaisz.paircast.core.model.ManagedUser
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackAction
@@ -24,6 +25,7 @@ import com.chaisz.paircast.core.model.ReportFilter
 import com.chaisz.paircast.core.model.ReportPage
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
+import com.chaisz.paircast.core.model.UserPage
 import com.chaisz.paircast.core.model.UserReport
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.AccountRules
@@ -33,11 +35,11 @@ import com.chaisz.paircast.core.rules.LegalRules
 import com.chaisz.paircast.core.rules.LoginRules
 import com.chaisz.paircast.core.rules.ProfileRules
 import com.chaisz.paircast.core.store.ChatSafetyStore
+import kotlin.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlin.time.Clock
 
 // region Auth
 
@@ -70,6 +72,43 @@ class CreateUserUseCase(private val authGateway: AuthGateway, private val accoun
         val name = AccountRules.normalizedNickname(nickname)
         return mapNetwork { accounts.createUser(normalized, name) }
     }
+}
+
+/** Admin console user list, newest first. */
+class LoadUsersUseCase(private val authGateway: AuthGateway, private val accounts: AccountAdminGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(offset: Int = 0, limit: Int = PAGE_SIZE): UserPage {
+        if (authGateway.currentUser.value?.isAdmin != true) throw AppError.AdminRequired
+        return mapNetwork { accounts.users(offset, limit) }
+    }
+
+    companion object {
+        const val PAGE_SIZE = 50
+    }
+}
+
+/** Disable (sign out + block sign-in) or re-enable a regular user. */
+class SetUserDisabledUseCase(private val authGateway: AuthGateway, private val accounts: AccountAdminGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(user: ManagedUser, disabled: Boolean) {
+        requireManageable(authGateway, user)
+        mapNetwork { accounts.setDisabled(user.id, disabled) }
+    }
+}
+
+/** Permanently delete a regular user. */
+class DeleteUserUseCase(private val authGateway: AuthGateway, private val accounts: AccountAdminGateway) {
+    @Throws(Exception::class)
+    suspend operator fun invoke(user: ManagedUser) {
+        requireManageable(authGateway, user)
+        mapNetwork { accounts.deleteUser(user.id) }
+    }
+}
+
+private fun requireManageable(authGateway: AuthGateway, user: ManagedUser) {
+    val me = authGateway.currentUser.value
+    if (me?.isAdmin != true) throw AppError.AdminRequired
+    if (!AccountRules.canManage(user, me.id)) throw AppError.CannotManageAccount
 }
 
 class DeleteAccountUseCase(private val authGateway: AuthGateway) {

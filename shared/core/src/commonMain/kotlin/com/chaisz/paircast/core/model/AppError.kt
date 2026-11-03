@@ -35,6 +35,8 @@ sealed class AppError(key: String) : Exception(key) {
     data object AdminRequired : AppError("Only admins can do this")
     data object CannotBanAdmin : AppError("Admin accounts cannot be banned")
     data object ReportNotFound : AppError("This report no longer exists")
+    data object UserNotFound : AppError("This user no longer exists")
+    data object CannotManageAccount : AppError("Your own account and other admins can't be changed here")
 
     /** Localization template key (may contain `{{name}}`) plus replacement values. */
     data class Validation(val key: String, val args: Map<String, String> = emptyMap()) : AppError(key)

@@ -3,6 +3,8 @@ package com.chaisz.paircast.data.goim
 import com.chaisz.paircast.core.gateway.AccountAdminGateway
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.CreatedAccount
+import com.chaisz.paircast.core.model.ManagedUser
+import com.chaisz.paircast.core.model.UserPage
 import com.chaisz.paircast.core.rules.ProfileRules
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -15,13 +17,30 @@ internal data class AdminUserDto(
 )
 
 @Serializable
+internal data class ManagedUserDto(
+    val uid: String,
+    val nickname: String = "",
+    val email: String? = null,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    val role: String = "",
+    @SerialName("is_disabled") val isDisabled: Boolean = false,
+    @SerialName("created_at") val createdAt: Long = 0,
+)
+
+@Serializable
+internal data class UserListDto(
+    val users: List<ManagedUserDto>? = null,
+    val total: Int = 0,
+)
+
+@Serializable
 internal data class CreateUserResponseDto(
     val user: AdminUserDto,
     val mailed: Boolean = false,
     @SerialName("initial_password") val initialPassword: String? = null,
 )
 
-/** GO-IM `/admin/users/create`. */
+/** GO-IM `/admin/users`, `/admin/users/create`, `/admin/users/disable`, `/admin/users/delete`. */
 class GoImAccountAdminGateway(
     private val auth: GoImAuthGateway,
     private val api: GoImApi,
@@ -53,5 +72,43 @@ class GoImAccountAdminGateway(
             nickname = dto.user.nickname.ifEmpty { dto.user.uid },
             initialPassword = if (dto.mailed) null else dto.initialPassword?.takeIf { it.isNotEmpty() },
         )
+    }
+
+    override suspend fun users(offset: Int, limit: Int): UserPage = call {
+        val dto = api.decode(
+            api.get(auth.requireSession(), "admin/users", "offset" to "$offset", "limit" to "$limit"),
+            UserListDto.serializer(),
+        )
+        UserPage(dto.users.orEmpty().map(::toModel), dto.total)
+    }
+
+    override suspend fun setDisabled(userId: String, disabled: Boolean) {
+        call { api.post(auth.requireSession(), "admin/users/disable", "target_uid" to userId, "disabled" to "$disabled") }
+    }
+
+    override suspend fun deleteUser(userId: String) {
+        call { api.post(auth.requireSession(), "admin/users/delete", "target_uid" to userId) }
+    }
+
+    private fun toModel(dto: ManagedUserDto) = ManagedUser(
+        id = dto.uid,
+        nickname = dto.nickname,
+        email = dto.email?.takeIf { it.isNotEmpty() },
+        avatarUrl = dto.avatarUrl?.takeIf { it.isNotEmpty() },
+        isAdmin = dto.role == GoImAuthGateway.ADMIN_ROLE,
+        isDisabled = dto.isDisabled,
+        createdAtMs = dto.createdAt,
+    )
+
+    private suspend fun <T> call(block: suspend () -> T): T = try {
+        block()
+    } catch (e: GoImHttpException) {
+        throw when {
+            e.status == 401 -> AppError.SessionExpired
+            e.status == 403 -> AppError.AdminRequired
+            e.status == 400 && e.body.contains("yourself") -> AppError.CannotManageAccount
+            e.body.contains("not found") -> AppError.UserNotFound
+            else -> AppError.Unknown("Server error {{code}}", mapOf("code" to e.status.toString()))
+        }
     }
 }

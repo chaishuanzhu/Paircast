@@ -28,6 +28,8 @@ sealed interface AppRoute {
 
 sealed interface LibraryRoute {
     data object Config : LibraryRoute
+    data object Admin : LibraryRoute
+    data object Users : LibraryRoute
     data object Reports : LibraryRoute
     data class Watch(val roomId: String?, val movieId: String?, val hostUserId: String?) : LibraryRoute
 }
@@ -197,8 +199,14 @@ class AppState(val graph: PaircastGraph) {
         }
     }
 
-    fun openReports() {
-        if (libraryStack.lastOrNull() != LibraryRoute.Reports) libraryStack.add(LibraryRoute.Reports)
+    fun openAdmin() = push(LibraryRoute.Admin)
+
+    fun openUsers() = push(LibraryRoute.Users)
+
+    fun openReports() = push(LibraryRoute.Reports)
+
+    private fun push(route: LibraryRoute) {
+        if (libraryStack.lastOrNull() != route) libraryStack.add(route)
     }
 
     fun popLibrary() {
