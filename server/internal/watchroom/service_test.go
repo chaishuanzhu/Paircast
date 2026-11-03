@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 type fakeGroups struct {
@@ -14,7 +16,10 @@ type fakeGroups struct {
 	n       int
 }
 
-func (g *fakeGroups) Create(_ context.Context, _ string, owner string) (string, error) {
+func (g *fakeGroups) Create(_ context.Context, name string, owner string) (string, error) {
+	if n := utf8.RuneCountInString(strings.TrimSpace(name)); n == 0 || n > 32 {
+		return "", fmt.Errorf("group name %q: must be 1-32 characters", name)
+	}
 	g.n++
 	id := fmt.Sprintf("g_%d", g.n)
 	g.members[id] = []string{owner}
@@ -197,5 +202,17 @@ func TestWebhookSyncAndJanitorDismiss(t *testing.T) {
 	}
 	if _, err := svc.Get(ctx, "carol", other.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("stale room not deleted: %v", err)
+	}
+}
+
+func TestCreateWithRandomIDFitsGroupNameLimit(t *testing.T) {
+	groups := &fakeGroups{members: map[string][]string{}}
+	svc := NewService(NewMemoryStore(), groups, nil, NewRandomID)
+	room, err := svc.Create(context.Background(), "u1", "oss:a.mp4")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if room.GroupID == "" {
+		t.Fatal("room has no group")
 	}
 }

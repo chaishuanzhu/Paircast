@@ -57,7 +57,7 @@ func (s *Service) Create(ctx context.Context, uid, movieID string) (*Room, error
 		return nil, errors.New("movie_id required")
 	}
 	id := s.newID()
-	groupID, err := s.groups.Create(ctx, "paircast-"+id, uid)
+	groupID, err := s.groups.Create(ctx, groupName(id), uid)
 	if err != nil {
 		return nil, err
 	}
@@ -304,6 +304,14 @@ func (s *Service) notify(ctx context.Context, actorUID string, room *Room) {
 func normalizeID(id string) string { return strings.ToLower(strings.TrimSpace(id)) }
 
 // NewRandomID 生成 UUID v4 形式的房间 ID（出现在邀请链接里，不可猜测）。
+// groupName 是房间对应 IM 群的名字；GO-IM 服务端 API 限制群名 1–32 个字符。
+func groupName(roomID string) string {
+	if len(roomID) > 8 {
+		roomID = roomID[:8]
+	}
+	return "Paircast " + roomID
+}
+
 func NewRandomID() string {
 	var b [16]byte
 	_, _ = rand.Read(b[:])
