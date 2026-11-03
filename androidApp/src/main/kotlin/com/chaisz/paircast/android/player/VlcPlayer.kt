@@ -71,6 +71,7 @@ class VlcPlayer(context: Context) : PlayerPort {
         if (released || attachedLayout === layout) return
         if (attachedLayout != null) player.detachViews()
         player.attachViews(layout, null, true, false)
+        player.videoScale = MediaPlayer.ScaleType.SURFACE_FIT_SCREEN
         attachedLayout = layout
     }
 
@@ -97,6 +98,7 @@ class VlcPlayer(context: Context) : PlayerPort {
         detachedForBackground = null
         if (attachedLayout == null) {
             player.attachViews(layout, null, true, false)
+            player.videoScale = MediaPlayer.ScaleType.SURFACE_FIT_SCREEN
             attachedLayout = layout
         }
         player.setVideoTrackEnabled(true)
