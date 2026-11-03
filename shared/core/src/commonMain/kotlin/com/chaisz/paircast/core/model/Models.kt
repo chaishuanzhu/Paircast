@@ -27,7 +27,7 @@ enum class ReportFilter { PENDING, HANDLED }
 
 enum class ReportAction { IGNORE, BAN }
 
-/** A chat report as seen by an admin (`/admin/reports`). */
+/** A chat report as seen by an admin (Paircast `/console/reports`). */
 data class UserReport(
     val id: Long,
     val reporterId: String,
@@ -66,7 +66,7 @@ data class CreatedAccount(
     val mailed: Boolean get() = initialPassword == null
 }
 
-/** An account as listed in the admin console (`/admin/users`). */
+/** An account as listed in the admin console (Paircast `/console/users`). */
 data class ManagedUser(
     val id: String,
     val nickname: String,

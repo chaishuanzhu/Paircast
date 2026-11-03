@@ -52,9 +52,9 @@ class ServerMediaTest {
         val requests = mutableListOf<HttpRequestData>()
         val client = createHttpClient(
             MockEngine { req ->
-                if (req.url.encodedPath == "/login") {
+                if (req.url.encodedPath == "/account/login") {
                     respond(
-                        """{"uid":"u1","token":"jwt","username":"alice","must_change_password":true}""",
+                        """{"uid":"u1","token":"pc","nickname":"alice","must_change_password":true,"im":{"token":"jwt"}}""",
                         HttpStatusCode.OK,
                         headersOf(HttpHeaders.ContentType, "application/json"),
                     )
@@ -90,7 +90,7 @@ class ServerMediaTest {
         assertEquals("B.mp4", movies[1].title)
         assertEquals("https://p/b.jpg", movies[1].posterUrl)
         assertEquals("oss", h.requests.first().url.parameters["source"])
-        assertEquals("jwt", h.requests.first().url.parameters["token"])
+        assertEquals("pc", h.requests.first().url.parameters["token"])
         h.scope.cancel()
     }
 

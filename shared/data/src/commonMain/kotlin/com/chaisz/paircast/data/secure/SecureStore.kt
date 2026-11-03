@@ -53,9 +53,21 @@ class SecureConfigStore(private val store: SecureStore) : ConfigGateway {
     }
 }
 
-/** Persisted GO-IM login (`uid` + JWT) bound to the server it was issued by. */
+/**
+ * Persisted login bound to the configured Paircast server [serverUrl]. [appToken] authenticates
+ * Paircast (`/account`, `/console`, `/media`, `/room`); [token] is the GO-IM token for [imBase]
+ * (WebSocket and chat REST). [uid] is the GO-IM uid, the user ID everywhere in the app.
+ */
 @Serializable
-data class GoImSession(val serverUrl: String, val uid: String, val token: String)
+data class GoImSession(
+    val serverUrl: String,
+    val uid: String,
+    val token: String,
+    val appToken: String = "",
+    val imUrl: String = "",
+) {
+    val imBase: String get() = imUrl.ifEmpty { serverUrl }
+}
 
 class SessionStore(private val store: SecureStore) {
     fun load(): GoImSession? =

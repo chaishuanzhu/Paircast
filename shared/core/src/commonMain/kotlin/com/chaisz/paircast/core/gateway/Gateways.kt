@@ -28,7 +28,7 @@ sealed class SessionEvent {
 
 enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, RECONNECTING }
 
-/** GO-IM account session: password login, token persistence, profile, realtime link. */
+/** Paircast account session (Paircast token + GO-IM token): password login, persistence, profile, realtime link. */
 interface AuthGateway {
     val currentUser: StateFlow<User?>
     val connection: StateFlow<ConnectionState>
@@ -55,7 +55,7 @@ interface AuthGateway {
     suspend fun deleteAccount(password: String)
 }
 
-/** Server-side block list, chat reports, and admin report review (GO-IM `/user/block*`, `/user/report`, `/admin/reports*`). */
+/** Server-side block list, chat reports, and admin report review (GO-IM `/user/block*`, `/user/report`; Paircast `/console/reports*`). */
 interface ModerationGateway {
     @Throws(Exception::class)
     suspend fun blockedUserIds(): List<String>
@@ -73,7 +73,7 @@ interface ModerationGateway {
     suspend fun resolveReport(reportId: Long, action: ReportAction)
 }
 
-/** Admin account management (GO-IM `/admin/users*`). Accounts exist only when an admin adds them. */
+/** Admin account management (Paircast `/console/users*`). Accounts exist only when an admin adds them. */
 interface AccountAdminGateway {
     /** Creates a regular user with a random initial password. [nickname] null → derived from the email. */
     @Throws(Exception::class)

@@ -275,7 +275,7 @@
 | 昵称输入框 | 1–16 字；展示字数 |
 | 账号（只读） | GO-IM UID / 用户名，不可改 |
 | 修改密码 | 当前密码 + 新密码 + 确认 |
-| 删除账号 | 输入当前密码确认后调用 GO-IM `POST /user/delete` 永久注销账号（连接立即下线，管理员之后可用该邮箱重新建号），再清本地配置、会话与缓存；管理员账号不能在 App 内注销 |
+| 删除账号 | 输入当前密码确认后调用 Paircast `POST /account/delete` 永久注销账号（同时删除 GO-IM 用户）（连接立即下线，管理员之后可用该邮箱重新建号），再清本地配置、会话与缓存；管理员账号不能在 App 内注销 |
 | 保存按钮 | 有变更时可点 |
 | 服务配置 | 进入配置页（与登录侧同一套） |
 | 退出登录 | 次要/危险操作 |
@@ -323,7 +323,7 @@ GO-IM `role=admin` 的账号在「我的」里多一项「后台管理」，进�
 | 邮箱 | 必填；本地校验格式，提交前转小写；作为对方的登录账号 |
 | 昵称 | 可选，1–16 字；留空时服务端取邮箱 `@` 前部分 |
 | 说明 | 「系统会生成随机初始密码：服务器配置了邮件时发到这个邮箱，否则显示在这里由你转交。用户首次登录时必须修改密码。」 |
-| 添加按钮 | 邮箱非空可点；调用 `POST /admin/users/create`（email、nickname） |
+| 添加按钮 | 邮箱非空可点；调用 Paircast `POST /console/users/create`（email、nickname） |
 | 结果（已发邮件） | 「已添加用户」+ 昵称 · 邮箱 +「初始密码已发送到 {邮箱}，对方首次登录时必须修改密码。」 |
 | 结果（未发邮件） | 显示初始密码（等宽字体，可选中）与「复制」；提示「请自行把密码转交给对方。离开此页后不会再显示」 |
 | 继续添加 | 清空表单再建下一个 |
@@ -343,9 +343,9 @@ GO-IM `role=admin` 的账号在「我的」里多一项「后台管理」，进�
 |------|------|
 | 列表行 | 头像、昵称（空则 UID）、「邮箱 · UID」；标签「我」「管理员」「已停用」 |
 | 操作 | 普通用户行有「⋯」菜单（iOS 也可左滑）：停用 / 启用、删除；自己和其他管理员不显示操作（共享层 `AccountRules.canManage` 同样拒绝） |
-| 停用 | 二次确认「停用 {昵称}？对方会立即下线，在你重新启用前无法登录。」→ `POST /admin/users/disable`；行内标签变「已停用」 |
+| 停用 | 二次确认「停用 {昵称}？对方会立即下线，在你重新启用前无法登录。」→ Paircast `POST /console/users/disable`；行内标签变「已停用」 |
 | 启用 | 直接执行，无需确认 |
-| 删除 | 二次确认「删除 {昵称}？将永久删除该账号并让其下线。之后可以用同一邮箱重新添加。」→ `POST /admin/users/delete`；从列表移除 |
+| 删除 | 二次确认「删除 {昵称}？将永久删除该账号并让其下线。之后可以用同一邮箱重新添加。」→ Paircast `POST /console/users/delete`；从列表移除 |
 | 顶部 | 「共 N 人」 |
 
 | 异常 | 提示 |
@@ -807,8 +807,8 @@ flowchart TD
 
 | 产品功能 | GO-IM 能力 |
 |----------|---------|
-| 登录 / 强制改密 | `POST /login`（`must_change_password`）、`POST /change-password` |
-| 昵称/头像 | `POST /user/profile`、`POST /upload`（`avatar_file_id`） |
+| 登录 / 强制改密 | Paircast `POST /account/login`（`must_change_password`，返回 IM 地址与令牌）、`POST /account/password` |
+| 昵称/头像 | Paircast `POST /account/profile`、GO-IM `POST /upload`（`avatar_file_id`） |
 | 观影房间 | `/room/create` / `join` / `leave` / `update`（服务端建群并维护成员、房主、修订号） |
 | 观看成员 | 房间 `members` + `/user/profiles` |
 | 聊天 | `CmdChat` 群文本 / 贴纸（`msg_type=6`） |
@@ -859,11 +859,12 @@ flowchart TD
 
 ## 8. 关键接口清单（产品级）
 
-客户端只调用 GO-IM：
+客户端调用 Paircast 服务与 GO-IM（同域名，反向代理分流）：
 
 | 接口/能力 | 说明 |
 |-----------|------|
-| GO-IM REST | `/login`、`/change-password`、`/user/profile(s)`、`/upload`、`/group/*` |
+| Paircast 账号 | `/account/login`、`/account/session`、`/account/password`、`/account/profile`、`/account/delete`、`/console/*` |
+| GO-IM REST | `/user/profiles`、`/upload`、`/user/block*`、`/user/report` |
 | 片库 | `/media/sources`、`/media/items`、`/media/item`、`/media/play` |
 | 字幕 | `/media/subtitles`、`/media/subtitle`、`/media/subtitles/search`、`/media/subtitles/fetch`、`/media/subtitles/share` |
 | 贴纸 | `/media/stickers`、`/media/stickers/pack` |

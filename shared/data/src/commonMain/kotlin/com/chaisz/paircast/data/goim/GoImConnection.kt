@@ -107,6 +107,12 @@ class GoImConnection(
     /** Runs before a kick / expiry is emitted so the stored session is gone before any UI reacts. */
     internal var onSessionEnded: (suspend (GoImSession) -> Unit)? = null
 
+    /**
+     * Called when GO-IM rejects the IM token: returns the session with a fresh IM token, the same
+     * session when the server is unreachable (retry later), or null when the login itself is gone.
+     */
+    internal var refreshSession: (suspend (GoImSession) -> GoImSession?)? = null
+
     /** All mutable link state is confined to this serial dispatcher. */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val serial = Dispatchers.Default.limitedParallelism(1)
@@ -213,7 +219,8 @@ class GoImConnection(
         }
     }
 
-    private suspend fun runLoop(session: GoImSession) {
+    private suspend fun runLoop(initial: GoImSession) {
+        var session = initial
         var attempt = 0
         while (scope.isActive && this.session == session) {
             _state.value = if (attempt == 0) ConnectionState.CONNECTING else ConnectionState.RECONNECTING
@@ -246,11 +253,20 @@ class GoImConnection(
                 return
             }
             if (api.validateToken(session) == false) {
-                this.session = null
-                _state.value = ConnectionState.DISCONNECTED
-                onSessionEnded?.invoke(session)
-                _events.emit(SessionEvent.TokenExpired)
-                return
+                val refreshed = refreshSession?.invoke(session)
+                if (this.session != session) return
+                if (refreshed == null) {
+                    this.session = null
+                    _state.value = ConnectionState.DISCONNECTED
+                    onSessionEnded?.invoke(session)
+                    _events.emit(SessionEvent.TokenExpired)
+                    return
+                }
+                if (refreshed.token != session.token) {
+                    session = refreshed
+                    this.session = refreshed
+                    continue
+                }
             }
             _state.value = ConnectionState.RECONNECTING
             delay(ReconnectPolicy.delayMillis(attempt++))
@@ -306,7 +322,7 @@ class GoImConnection(
     }
 
     private fun wsUrl(session: GoImSession): String {
-        val base = Url(session.serverUrl)
+        val base = Url(session.imBase)
         return URLBuilder().apply {
             protocol = if (base.protocol == URLProtocol.HTTPS) URLProtocol.WSS else URLProtocol.WS
             host = base.host

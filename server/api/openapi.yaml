@@ -3,10 +3,14 @@ info:
   title: Paircast Server HTTP API
   version: "1.0.0"
   description: |
-    Paircast 服务端的媒体库（`/media/*`）与观影房间（`/room/*`）接口。
+    Paircast 服务端的账号（`/account/*`）、管理后台（`/console/*`）、媒体库（`/media/*`）与观影房间（`/room/*`）接口。
 
-    **认证**：GO-IM 用户令牌。带 `uid` 与 `token` 参数（查询或表单），或 `Authorization: Bearer <token>`；
-    服务端用 GO-IM 服务端 API `tokens/verify` 校验，`uid` 与令牌不一致返回 403。
+    **账号**：账号归 Paircast 所有（邮箱 + 密码，管理员建号），每个账号在 GO-IM 有一个镜像用户。
+    对客户端暴露的用户 ID（`uid`）一律是 GO-IM uid。登录 / 会话接口同时返回 Paircast 会话令牌和 GO-IM 连接信息
+    （`im.url` 为空表示与本服务同源，`im.token` 用于 GO-IM 的 WebSocket、上传、拉黑、举报等接口）。
+
+    **认证**：Paircast 会话令牌（登录返回的 `token`）。带 `token` 参数（查询或表单），或 `Authorization: Bearer <token>`；
+    带 `uid` 参数时必须与账号一致，否则 403。改密、禁用、删除后旧令牌返回 401。
 
     **约定**：POST 请求体为 `application/x-www-form-urlencoded`（`/media/subtitles/share` 为 `multipart/form-data`）；
     时间戳为 Unix 毫秒；错误响应为纯文本。房间变化通过 GO-IM 群信令 `paircast.room_updated` 推送（`data` 为 `{"group_id","room"}`）。
@@ -16,11 +20,292 @@ security:
   - uid: []
     token: []
 tags:
+  - name: 账号
+    description: 登录、会话、改密、资料、注销
+  - name: 管理后台
+    description: 账号管理与举报审核（仅管理员）
   - name: 媒体库
     description: 视频源（S3 兼容存储等）、播放直链、字幕、贴纸
   - name: 观影房间
     description: 一起看房间（同时建 GO-IM 群），变化通过群信令 `paircast.room_updated` 推送
 paths:
+  /account/login:
+    post:
+      tags: [账号]
+      summary: 登录
+      security: []
+      description: 首次登录（管理员建号的初始密码）`must_change_password` 为 true，客户端应先调用 `/account/password`。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [account, password]
+              properties:
+                account: { type: string, description: 邮箱或 GO-IM uid }
+                password: { type: string }
+      responses:
+        "200":
+          description: 会话
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: "`invalid account or password`", content: { text/plain: { schema: { type: string } } } }
+        "403": { description: "`account disabled`", content: { text/plain: { schema: { type: string } } } }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /account/session:
+    get:
+      tags: [账号]
+      summary: 校验会话并刷新 IM 令牌
+      description: 启动恢复登录、GO-IM 令牌过期时调用；返回最新资料与新的 `im.token`，`token` 原样返回。
+      responses:
+        "200":
+          description: 会话
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /account/password:
+    post:
+      tags: [账号]
+      summary: 修改密码
+      description: 清除 `must_change_password`；其他设备上的会话全部失效，响应带新的会话令牌。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [old_password, new_password]
+              properties:
+                old_password: { type: string }
+                new_password: { type: string, minLength: 6, maxLength: 72 }
+      responses:
+        "200":
+          description: 已修改
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  token: { type: string, description: 新的会话令牌 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: "`invalid current password`，或令牌无效", content: { text/plain: { schema: { type: string } } } }
+
+  /account/profile:
+    get:
+      tags: [账号]
+      summary: 自己的资料
+      responses:
+        "200":
+          description: 资料
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [账号]
+      summary: 修改昵称 / 头像
+      description: 头像先用 GO-IM 令牌上传到 GO-IM `/upload`，再把文件 ID 传到这里；资料同步到 GO-IM 镜像用户。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                nickname: { type: string, maxLength: 32 }
+                avatar_file_id: { type: integer, format: int64, description: 0 清除头像；须是自己上传的图片 }
+      responses:
+        "200":
+          description: 更新后的资料
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /account/delete:
+    post:
+      tags: [账号]
+      summary: 注销自己的账号
+      description: 连同 GO-IM 镜像用户一起删除；管理员不能自助注销。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "401": { description: "`invalid password`，或令牌无效", content: { text/plain: { schema: { type: string } } } }
+        "403": { description: "`admin accounts cannot be deleted here`", content: { text/plain: { schema: { type: string } } } }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /console/users:
+    get:
+      tags: [管理后台]
+      summary: 账号列表
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        "200":
+          description: 一页账号（新的在前）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdminUser" }
+                  total: { type: integer }
+                  offset: { type: integer }
+                  limit: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/AdminRequired" }
+
+  /console/users/create:
+    post:
+      tags: [管理后台]
+      summary: 建号
+      description: 以随机初始密码建号（首次登录须改密）。配置了发信时把密码发到邮箱，否则 / 发送失败时响应带 `initial_password`，由管理员转交。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+                nickname: { type: string, maxLength: 32, description: 默认取邮箱 @ 前部分 }
+      responses:
+        "200":
+          description: 已建号
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  user: { $ref: "#/components/schemas/AdminUser" }
+                  mailed: { type: boolean }
+                  initial_password: { type: string, description: 仅在未能发信时返回 }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/AdminRequired" }
+        "409": { description: "`email already registered`", content: { text/plain: { schema: { type: string } } } }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /console/users/disable:
+    post:
+      tags: [管理后台]
+      summary: 禁用 / 启用账号
+      description: 禁用让该账号的会话失效，并禁用 GO-IM 镜像用户（立即下线）。不能禁用自己。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [target_uid, disabled]
+              properties:
+                target_uid: { type: string, description: GO-IM uid }
+                disabled: { type: boolean }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/AdminRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /console/users/delete:
+    post:
+      tags: [管理后台]
+      summary: 删除账号
+      description: 连同 GO-IM 镜像用户一起删除。不能删除自己。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [target_uid]
+              properties:
+                target_uid: { type: string, description: GO-IM uid }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/AdminRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /console/reports:
+    get:
+      tags: [管理后台]
+      summary: 举报列表
+      description: 用户在 GO-IM 里提交的举报（GO-IM 服务端 API `reports/list`）。
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [pending, handled, all], default: pending } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        "200":
+          description: 一页举报（新的在前）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items: { $ref: "#/components/schemas/Report" }
+                  total: { type: integer }
+                  pending: { type: integer, description: 全部待处理条数 }
+                  offset: { type: integer }
+                  limit: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/AdminRequired" }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
+  /console/reports/resolve:
+    post:
+      tags: [管理后台]
+      summary: 处理举报
+      description: "`ignore` 只标记这条；`ban` 禁用被举报人的 GO-IM 与 Paircast 账号，并结清针对他的其他待处理举报。管理员不能被封禁。"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [id, action]
+              properties:
+                id: { type: integer, format: int64 }
+                action: { type: string, enum: [ignore, ban] }
+      responses:
+        "200": { $ref: "#/components/responses/OK" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: "`admin required` 或 `cannot ban an admin`", content: { text/plain: { schema: { type: string } } } }
+        "404": { description: "`report not found`", content: { text/plain: { schema: { type: string } } } }
+        "502": { $ref: "#/components/responses/IMUnavailable" }
+
   /media/sources:
     get:
       tags: [媒体库]
@@ -381,18 +666,32 @@ components:
       type: apiKey
       in: query
       name: uid
-      description: 登录返回的 `uid`
+      description: 登录返回的 `uid`（GO-IM uid），可省略
     token:
       type: apiKey
       in: query
       name: token
-      description: 登录返回的 JWT `token`
+      description: "登录返回的 Paircast 会话令牌 `token`（也可用 `Authorization: Bearer`）"
   responses:
+    OK:
+      description: 成功
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: { type: string, example: ok }
+    AdminRequired:
+      description: "`admin required`"
+      content: { text/plain: { schema: { type: string } } }
+    IMUnavailable:
+      description: "`im unavailable`：GO-IM 服务端 API 请求失败"
+      content: { text/plain: { schema: { type: string } } }
     BadRequest:
       description: 参数缺失或无效
       content: { text/plain: { schema: { type: string } } }
     Unauthorized:
-      description: 缺少 uid / token，或 token 无效、过期
+      description: 缺少令牌，或令牌无效、过期、已吊销（`token revoked`），或账号已禁用 / 删除
       content: { text/plain: { schema: { type: string } } }
     Forbidden:
       description: "`uid does not match token`"
@@ -410,6 +709,54 @@ components:
       description: "`room ended`"
       content: { text/plain: { schema: { type: string } } }
   schemas:
+    Profile:
+      type: object
+      properties:
+        uid: { type: string, description: GO-IM uid }
+        nickname: { type: string }
+        email: { type: string }
+        avatar_url: { type: string, description: "相对于 GO-IM 地址，例如 `/avatar/42`" }
+        role: { type: string, enum: [user, admin] }
+        must_change_password: { type: boolean }
+    Session:
+      allOf:
+        - $ref: "#/components/schemas/Profile"
+        - type: object
+          properties:
+            token: { type: string, description: Paircast 会话令牌 }
+            im:
+              type: object
+              properties:
+                url: { type: string, description: GO-IM 地址，空 = 与本服务同源 }
+                uid: { type: string }
+                token: { type: string, description: GO-IM 令牌 }
+                expires_at: { type: integer, format: int64, description: Unix 秒 }
+    AdminUser:
+      type: object
+      properties:
+        uid: { type: string, description: GO-IM uid }
+        nickname: { type: string }
+        email: { type: string }
+        avatar_url: { type: string }
+        role: { type: string, enum: [user, admin] }
+        is_disabled: { type: boolean }
+        created_at: { type: integer, format: int64 }
+    Report:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        reporter_uid: { type: string }
+        reporter_nickname: { type: string }
+        target_uid: { type: string }
+        target_nickname: { type: string }
+        target_disabled: { type: boolean, description: 被举报人的 GO-IM 账号是否已禁用 }
+        message_id: { type: string }
+        context: { type: string, description: 举报发生的会话（如房间群 ID） }
+        content: { type: string }
+        status: { type: string, enum: [pending, ignored, banned] }
+        handled_by: { type: string }
+        created_at: { type: integer, format: int64 }
+        handled_at: { type: integer, format: int64 }
     MediaSource:
       type: object
       properties:

@@ -1,4 +1,4 @@
-# 与主 ingress 同域名，只接管 /media 与 /room（路径更长的规则优先，其余仍由 gateway 处理）。
+# 与主 ingress 同域名，只接管 /account、/console、/media、/room（路径更长的规则优先，其余仍由 gateway 处理）。
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -14,6 +14,14 @@ spec:
     - host: im.example.com
       http:
         paths:
+          - path: /account
+            pathType: Prefix
+            backend:
+              service: { name: paircast, port: { name: http } }
+          - path: /console
+            pathType: Prefix
+            backend:
+              service: { name: paircast, port: { name: http } }
           - path: /media
             pathType: Prefix
             backend:

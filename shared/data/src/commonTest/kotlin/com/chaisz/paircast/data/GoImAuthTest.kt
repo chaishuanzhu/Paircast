@@ -81,7 +81,7 @@ class GoImAuthTest {
     fun expiredSessionIsClearedFromStorage() = runTest {
         val h = harness { req ->
             when {
-                req.url.encodedPath.endsWith("/login") -> respond("""{"uid":"u1","token":"jwt"}""", HttpStatusCode.OK, json)
+                req.url.encodedPath.endsWith("/account/login") -> respond("""{"uid":"u1","token":"pc","im":{"token":"jwt"}}""", HttpStatusCode.OK, json)
                 else -> respond("invalid token", HttpStatusCode.Unauthorized)
             }
         }
@@ -106,7 +106,7 @@ class GoImAuthTest {
     fun mustChangePasswordPersistsSessionWithoutConnecting() = runTest {
         val h = harness {
             respond(
-                """{"uid":"u1","token":"jwt","username":"alice","avatar_url":"/avatar/3","must_change_password":true}""",
+                """{"uid":"u1","token":"pc","nickname":"alice","avatar_url":"/avatar/3","must_change_password":true,"im":{"url":"","token":"jwt"}}""",
                 HttpStatusCode.OK,
                 json,
             )
@@ -115,9 +115,9 @@ class GoImAuthTest {
         assertTrue(result.mustChangePassword)
         assertEquals("https://im.example.com/avatar/3", result.user.avatarUrl)
         assertEquals("alice", result.user.nickname)
-        assertEquals(GoImSession("https://im.example.com", "u1", "jwt"), h.sessions.load())
+        assertEquals(GoImSession("https://im.example.com", "u1", "jwt", appToken = "pc"), h.sessions.load())
         val login = h.requests.single()
-        assertEquals("https://im.example.com/login", login.url.toString())
+        assertEquals("https://im.example.com/account/login", login.url.toString())
         assertTrue(formBody(login).contains("account=alice"))
         h.scope.cancel()
     }
@@ -129,8 +129,8 @@ class GoImAuthTest {
         val h = harness { req ->
             val path = req.url.encodedPath
             when {
-                path.endsWith("/login") -> respond("""{"uid":"1","token":"t","role":"admin"}""", HttpStatusCode.OK, json)
-                path.endsWith("/admin/users/create") -> when (createStatus) {
+                path.endsWith("/account/login") -> respond("""{"uid":"1","token":"t","role":"admin","im":{"token":"imt"}}""", HttpStatusCode.OK, json)
+                path.endsWith("/console/users/create") -> when (createStatus) {
                     HttpStatusCode.OK -> respond(
                         """{"status":"ok","user":{"uid":"100002","nickname":"dana","email":"dana@example.com","role":"user"},""" +
                             if (mailed) """"mailed":true}""" else """"mailed":false,"initial_password":"Abc123xyz"}""",
@@ -148,12 +148,12 @@ class GoImAuthTest {
         val created = accounts.createUser("dana@example.com", null)
         assertEquals("100002", created.uid)
         assertEquals("Abc123xyz", created.initialPassword)
-        val body = formBody(h.requests.last { it.url.encodedPath.endsWith("/admin/users/create") })
+        val body = formBody(h.requests.last { it.url.encodedPath.endsWith("/console/users/create") })
         assertTrue(body.contains("email=dana%40example.com") && !body.contains("nickname"))
 
         mailed = true
         assertTrue(accounts.createUser("dana@example.com", "Dana").mailed)
-        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/admin/users/create") }).contains("nickname=Dana"))
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/console/users/create") }).contains("nickname=Dana"))
 
         createStatus = HttpStatusCode.Conflict
         assertFailsWith<AppError.EmailAlreadyRegistered> { accounts.createUser("dana@example.com", null) }
@@ -168,8 +168,8 @@ class GoImAuthTest {
         val h = harness { req ->
             val path = req.url.encodedPath
             when {
-                path.endsWith("/login") -> respond("""{"uid":"1","token":"t","role":"admin"}""", HttpStatusCode.OK, json)
-                path.endsWith("/admin/users") -> respond(
+                path.endsWith("/account/login") -> respond("""{"uid":"1","token":"t","role":"admin","im":{"token":"imt"}}""", HttpStatusCode.OK, json)
+                path.endsWith("/console/users") -> respond(
                     """{"users":[{"uid":"2","nickname":"","email":"bob@example.com","signature":"","role":"user",""" +
                         """"is_disabled":true,"created_at":1700000000000,"updated_at":0,"avatar_url":""},""" +
                         """{"uid":"1","nickname":"root","role":"admin","is_disabled":false,"created_at":1,"avatar_url":"https://x/avatar/3"}],""" +
@@ -177,9 +177,9 @@ class GoImAuthTest {
                     HttpStatusCode.OK,
                     json,
                 )
-                path.endsWith("/admin/users/disable") && formBody(req).contains("target_uid=1") ->
+                path.endsWith("/console/users/disable") && formBody(req).contains("target_uid=1") ->
                     respond("cannot disable yourself", HttpStatusCode.BadRequest)
-                path.endsWith("/admin/users/delete") && formBody(req).contains("target_uid=9") ->
+                path.endsWith("/console/users/delete") && formBody(req).contains("target_uid=9") ->
                     respond("delete failed: user 9 not found", HttpStatusCode.InternalServerError)
                 else -> respond("""{"status":"ok"}""", HttpStatusCode.OK, json)
             }
@@ -196,13 +196,13 @@ class GoImAuthTest {
         assertNull(bob.avatarUrl)
         assertTrue(bob.isDisabled && !bob.isAdmin)
         assertTrue(page.users.last().isAdmin)
-        assertTrue(h.requests.last { it.url.encodedPath.endsWith("/admin/users") }.url.encodedQuery.contains("offset=0"))
+        assertTrue(h.requests.last { it.url.encodedPath.endsWith("/console/users") }.url.encodedQuery.contains("offset=0"))
 
         accounts.setDisabled("2", false)
-        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/admin/users/disable") }).contains("disabled=false"))
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/console/users/disable") }).contains("disabled=false"))
         assertFailsWith<AppError.CannotManageAccount> { accounts.setDisabled("1", true) }
         accounts.deleteUser("2")
-        assertTrue(h.requests.any { it.url.encodedPath.endsWith("/admin/users/delete") })
+        assertTrue(h.requests.any { it.url.encodedPath.endsWith("/console/users/delete") })
         assertFailsWith<AppError.UserNotFound> { accounts.deleteUser("9") }
         h.auth.logout()
         h.scope.cancel()
@@ -213,8 +213,8 @@ class GoImAuthTest {
         var deleteStatus = HttpStatusCode.Unauthorized
         val h = harness { req ->
             when {
-                req.url.encodedPath.endsWith("/login") -> respond("""{"uid":"me","token":"t"}""", HttpStatusCode.OK, json)
-                req.url.encodedPath.endsWith("/user/delete") -> respond(if (deleteStatus.value == 200) """{"status":"ok"}""" else "invalid password", deleteStatus, json)
+                req.url.encodedPath.endsWith("/account/login") -> respond("""{"uid":"me","token":"t","im":{"token":"imt"}}""", HttpStatusCode.OK, json)
+                req.url.encodedPath.endsWith("/account/delete") -> respond(if (deleteStatus.value == 200) """{"status":"ok"}""" else "invalid password", deleteStatus, json)
                 else -> respond("", HttpStatusCode.OK)
             }
         }
@@ -225,7 +225,7 @@ class GoImAuthTest {
         assertFailsWith<AppError.AdminAccountDeletion> { h.auth.deleteAccount("pw") }
         deleteStatus = HttpStatusCode.OK
         h.auth.deleteAccount("pw")
-        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/user/delete") }).contains("password=pw"))
+        assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/account/delete") }).contains("password=pw"))
         assertNull(h.sessions.load())
         assertNull(h.auth.currentUser.value)
         h.scope.cancel()
@@ -234,9 +234,9 @@ class GoImAuthTest {
     @Test
     fun restoreDropsRejectedToken() = runTest {
         val h = harness { req ->
-            if (req.url.encodedPath.endsWith("/unread")) respond("", HttpStatusCode.Unauthorized) else respond("", HttpStatusCode.NotFound)
+            if (req.url.encodedPath.endsWith("/account/session")) respond("token revoked", HttpStatusCode.Unauthorized) else respond("", HttpStatusCode.NotFound)
         }
-        h.sessions.save(GoImSession("https://im.example.com", "u1", "old"))
+        h.sessions.save(GoImSession("https://im.example.com", "u1", "old", appToken = "pc"))
         assertNull(h.auth.restoreSession())
         assertNull(h.sessions.load())
         h.scope.cancel()
@@ -245,7 +245,7 @@ class GoImAuthTest {
     @Test
     fun restoreDropsTokenFromAnotherServer() = runTest {
         val h = harness { respond("{}", HttpStatusCode.OK, json) }
-        h.sessions.save(GoImSession("https://other.example.com", "u1", "t"))
+        h.sessions.save(GoImSession("https://other.example.com", "u1", "t", appToken = "pc"))
         assertNull(h.auth.restoreSession())
         assertTrue(h.requests.isEmpty())
         h.scope.cancel()
@@ -256,8 +256,8 @@ class GoImAuthTest {
         var calls = 0
         val h = harness { req ->
             when {
-                req.url.encodedPath.endsWith("/login") ->
-                    respond("""{"uid":"me","token":"t","nickname":"Me"}""", HttpStatusCode.OK, json)
+                req.url.encodedPath.endsWith("/account/login") ->
+                    respond("""{"uid":"me","token":"t","nickname":"Me","im":{"token":"imt"}}""", HttpStatusCode.OK, json)
                 req.url.encodedPath.endsWith("/user/profiles") -> {
                     calls++
                     respond("""{"users":[{"uid":"b","nickname":"Bee"},{"uid":"a","nickname":""}]}""", HttpStatusCode.OK, json)
@@ -281,16 +281,16 @@ class GoImAuthTest {
         val h = harness { req ->
             val path = req.url.encodedPath
             when {
-                path.endsWith("/login") -> respond("""{"uid":"root","token":"t","role":"admin"}""", HttpStatusCode.OK, json)
+                path.endsWith("/account/login") -> respond("""{"uid":"root","token":"t","role":"admin","im":{"token":"imt"}}""", HttpStatusCode.OK, json)
                 path.endsWith("/user/blocks") -> respond("""{"blocked":["b1"]}""", HttpStatusCode.OK, json)
-                path.endsWith("/admin/reports") -> respond(
+                path.endsWith("/console/reports") -> respond(
                     """{"reports":[{"id":3,"reporter_uid":"a","reporter_nickname":"A","target_uid":"b","target_nickname":"",""" +
                         """"target_disabled":true,"context":"room1","content":"rude","status":"banned","created_at":5,"handled_at":0}],""" +
                         """"total":1,"pending":0}""",
                     HttpStatusCode.OK,
                     json,
                 )
-                path.endsWith("/admin/reports/resolve") ->
+                path.endsWith("/console/reports/resolve") ->
                     respond(if (resolveStatus == HttpStatusCode.OK) """{"status":"ok"}""" else "cannot ban an admin", resolveStatus, json)
                 path.endsWith("/user/report") -> respond("moderation not available", HttpStatusCode.ServiceUnavailable)
                 else -> respond("""{"status":"ok"}""", HttpStatusCode.OK, json)
@@ -305,7 +305,7 @@ class GoImAuthTest {
         assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/user/block") }).contains("target_uid=b2"))
 
         val page = moderation.reports(ReportFilter.HANDLED, 0, 30)
-        assertTrue(h.requests.last { it.url.encodedPath.endsWith("/admin/reports") }.url.encodedQuery.contains("status=handled"))
+        assertTrue(h.requests.last { it.url.encodedPath.endsWith("/console/reports") }.url.encodedQuery.contains("status=handled"))
         val report = page.reports.single()
         assertEquals("b", report.targetName)
         assertEquals(ReportStatus.BANNED, report.status)
@@ -319,6 +319,96 @@ class GoImAuthTest {
         assertTrue(formBody(h.requests.last { it.url.encodedPath.endsWith("/resolve") }).contains("action=ignore"))
 
         assertIs<AppError.ModerationUnavailable>(assertFailsWith<AppError> { moderation.report("b", "x", "1", null) })
+        h.scope.cancel()
+    }
+
+    @Test
+    fun restoreRefreshesImTokenAndUsesSeparateImHost() = runTest {
+        val h = harness { req ->
+            when (req.url.encodedPath) {
+                "/account/session" -> respond(
+                    """{"uid":"u1","token":"pc","nickname":"Al","avatar_url":"/avatar/7","im":{"url":"https://chat.example.com","token":"fresh"}}""",
+                    HttpStatusCode.OK,
+                    json,
+                )
+                "/user/blocks" -> respond("""{"blocked":[]}""", HttpStatusCode.OK, json)
+                else -> respond("", HttpStatusCode.NotFound)
+            }
+        }
+        h.sessions.save(GoImSession("https://im.example.com", "u1", "stale", appToken = "pc"))
+        val user = h.auth.restoreSession()
+        assertEquals("Al", user?.nickname)
+        assertEquals("https://chat.example.com/avatar/7", user?.avatarUrl)
+        val stored = h.sessions.load()
+        assertEquals("fresh", stored?.token)
+        assertEquals("https://chat.example.com", stored?.imBase)
+        val sessionCall = h.requests.first()
+        assertEquals("https://im.example.com/account/session", sessionCall.url.toString().substringBefore('?'))
+        assertEquals("pc", sessionCall.url.parameters["token"])
+
+        GoImModerationGateway(h.auth, h.api).blockedUserIds()
+        val blocks = h.requests.last { it.url.encodedPath == "/user/blocks" }
+        assertEquals("chat.example.com", blocks.url.host)
+        assertEquals("fresh", blocks.url.parameters["token"])
+        h.auth.logout()
+        h.scope.cancel()
+    }
+
+    @Test
+    fun restoreKeepsStoredLoginWhenOffline() = runTest {
+        val h = harness { throw IllegalStateException("offline") }
+        val stored = GoImSession("https://im.example.com", "u1", "imt", appToken = "pc")
+        h.sessions.save(stored)
+        assertEquals("u1", h.auth.restoreSession()?.id)
+        assertEquals(stored, h.auth.session)
+        h.auth.logout()
+        h.scope.cancel()
+    }
+
+    @Test
+    fun changePasswordStoresNewSessionToken() = runTest {
+        val h = harness { req ->
+            when (req.url.encodedPath) {
+                "/account/login" -> respond("""{"uid":"u1","token":"old","must_change_password":true,"im":{"token":"imt"}}""", HttpStatusCode.OK, json)
+                "/account/password" -> if (formBody(req).contains("old_password=bad")) {
+                    respond("invalid current password", HttpStatusCode.Unauthorized)
+                } else {
+                    respond("""{"status":"ok","token":"new"}""", HttpStatusCode.OK, json)
+                }
+                else -> respond("", HttpStatusCode.NotFound)
+            }
+        }
+        h.auth.login("alice@example.com", "init")
+        assertIs<AppError.Validation>(assertFailsWith<AppError> { h.auth.changePassword("bad", "secret1") })
+        h.auth.changePassword("init", "secret1")
+        assertEquals("new", h.sessions.load()?.appToken)
+        assertEquals("new", h.auth.session?.appToken)
+        assertTrue(h.requests.last { it.url.encodedPath == "/account/password" }.url.host == "im.example.com")
+        h.auth.logout()
+        h.scope.cancel()
+    }
+
+    @Test
+    fun expiredImTokenIsRefreshedThroughPaircast() = runTest {
+        var sessionCalls = 0
+        val h = harness { req ->
+            when (req.url.encodedPath) {
+                "/account/login" -> respond("""{"uid":"u1","token":"pc","im":{"token":"expired"}}""", HttpStatusCode.OK, json)
+                "/account/session" -> {
+                    sessionCalls++
+                    respond("""{"uid":"u1","token":"pc","im":{"token":"renewed"}}""", HttpStatusCode.OK, json)
+                }
+                "/unread" -> respond("", if (req.url.parameters["token"] == "expired") HttpStatusCode.Unauthorized else HttpStatusCode.OK)
+                else -> respond("", HttpStatusCode.NotFound)
+            }
+        }
+        h.auth.login("alice@example.com", "pw")
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (h.sessions.load()?.token != "renewed") delay(20) }
+        }
+        assertEquals("renewed", h.auth.session?.token)
+        assertTrue(sessionCalls >= 1)
+        h.auth.logout()
         h.scope.cancel()
     }
 }

@@ -15,7 +15,7 @@ kind: Deployment
 metadata:
   name: paircast
 spec:
-  # 房间状态在 MySQL，可以多副本；在线字幕下载的限流按副本计。
+  # 账号与房间状态在 MySQL，可以多副本；在线字幕下载的限流按副本计。
   replicas: 1
   strategy:
     type: RollingUpdate
@@ -45,13 +45,18 @@ spec:
       containers:
         - name: paircast
           image: 870027381/paircast-server
+          # 接入方密钥 GOIM_APP_PAIRCAST_SECRET / _WEBHOOK_SECRET 与 GO-IM 网关共用 Secret goim-apps。
+          envFrom:
+            - secretRef: { name: goim-apps }
           env:
             - { name: CONFIG_PATH, value: /etc/paircast/paircast.json }
             - { name: TZ, value: Asia/Shanghai }
-            - name: PAIRCAST_IM_SECRET
-              valueFrom: { secretKeyRef: { name: goim-paircast, key: IM_SECRET } }
-            - name: PAIRCAST_IM_WEBHOOK_SECRET
-              valueFrom: { secretKeyRef: { name: goim-paircast, key: IM_WEBHOOK_SECRET } }
+            - name: PAIRCAST_SESSION_SECRET
+              valueFrom: { secretKeyRef: { name: goim-paircast, key: SESSION_SECRET } }
+            - name: PAIRCAST_ADMIN_EMAIL
+              valueFrom: { secretKeyRef: { name: goim-paircast, key: ADMIN_EMAIL, optional: true } }
+            - name: PAIRCAST_MAIL_PASSWORD
+              valueFrom: { secretKeyRef: { name: goim-paircast, key: MAIL_PASSWORD, optional: true } }
             - name: PAIRCAST_MYSQL_DSN
               valueFrom: { secretKeyRef: { name: goim-paircast, key: MYSQL_DSN } }
             - name: PAIRCAST_BLOB_ACCESS_KEY

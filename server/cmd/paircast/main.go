@@ -1,10 +1,10 @@
-// Paircast 服务 —— 一起看业务后端：媒体库（/media/*）与观影房间（/room/*）。
-// 它作为 IM 的一个接入方运行：用 IM 令牌认证用户，通过服务端 API 建群、拉人、发房间信令，
-// 通过 webhook 同步 IM 侧的退群与解散。
+// Paircast 服务 —— 一起看业务后端：账号（/account/*）、管理后台（/console/*）、媒体库（/media/*）与观影房间（/room/*）。
+// 它作为 IM 的一个接入方运行：账号归 Paircast 所有，每个账号在 IM 侧有一个镜像用户，登录时一并签发 IM 令牌；
+// 通过服务端 API 建群、拉人、发房间信令、审核举报，通过 webhook 同步 IM 侧的退群与解散。
 //
 // 用法：
 //
-//	CONFIG_PATH=configs/paircast.json PAIRCAST_IM_SECRET=... go run ./cmd/paircast/
+//	CONFIG_PATH=configs/paircast.json PAIRCAST_IM_SECRET=... PAIRCAST_SESSION_SECRET=... go run ./cmd/paircast/
 package main
 
 import (
@@ -24,6 +24,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/chaishuanzhu/GO-IM/pkg/imserver"
+	"github.com/chaishuanzhu/Paircast/server/internal/account"
 	"github.com/chaishuanzhu/Paircast/server/internal/api"
 	"github.com/chaishuanzhu/Paircast/server/internal/media"
 	"github.com/chaishuanzhu/Paircast/server/internal/media/s3source"
@@ -54,7 +55,7 @@ func main() {
 		}
 		defer db.Close()
 	} else {
-		log.Printf("[paircast] WARNING: mysql.dsn is empty, rooms are kept in memory")
+		log.Printf("[paircast] WARNING: mysql.dsn is empty, accounts and rooms are kept in memory")
 	}
 
 	var blobs media.BlobStore
@@ -84,8 +85,38 @@ func main() {
 	rooms := watchroom.NewService(store, api.IMGroups{C: im}, api.IMNotifier{C: im}, watchroom.NewRandomID)
 	rooms.StartJanitor(ctx, time.Duration(cfg.Media.RoomRetention), time.Hour)
 
+	var users account.Store = account.NewMemoryStore()
+	if db != nil {
+		if users, err = account.NewMySQLStore(db); err != nil {
+			log.Fatalf("[paircast] account store: %v", err)
+		}
+	}
+	var mailer account.Mailer
+	if cfg.Mail.Enabled {
+		m, err := account.NewSMTPMailer(cfg.Mail)
+		if err != nil {
+			log.Fatalf("[paircast] mail: %v", err)
+		}
+		mailer = m
+	}
+	accounts, err := account.NewService(users, im, mailer, account.Options{
+		SessionSecret: cfg.Account.SessionSecret,
+		SessionTTL:    time.Duration(cfg.Account.SessionTTL),
+		IMTokenTTL:    time.Duration(cfg.IM.TokenTTL),
+	})
+	if err != nil {
+		log.Fatalf("[paircast] accounts: %v", err)
+	}
+	if cfg.Account.AdminEmail != "" {
+		if err := accounts.BootstrapAdmin(ctx, cfg.Account.AdminEmail); err != nil {
+			log.Printf("[paircast] WARNING: admin bootstrap: %v", err)
+		}
+	}
+	accountHTTP := account.NewHandler(accounts, cfg.IM.PublicURL)
+
 	mux := http.NewServeMux()
-	api.NewServer(svc, rooms, api.NewIMAuth(im)).Register(mux)
+	accountHTTP.Register(mux)
+	api.NewServer(svc, rooms, accountHTTP).Register(mux)
 	if cfg.IM.WebhookSecret != "" {
 		mux.Handle("/im/webhook", api.WebhookHandler(rooms, cfg.IM.WebhookSecret))
 	} else {

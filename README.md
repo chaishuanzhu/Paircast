@@ -39,7 +39,7 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 
 ## 双端冒烟
 
-管理员在 GO-IM 建两个账号（`/admin/users/create`），并在 Paircast 服务 `media.sources` 配好片源（见[服务端部署指南](docs/zh-Hans/deploy/index.html)第 5 步）；两台设备填同一服务器地址：
+管理员在 Paircast 建两个账号（`/console/users/create` 或 App「后台管理」），并在 Paircast 服务 `media.sources` 配好片源（见[服务端部署指南](docs/zh-Hans/deploy/index.html)第 5 步）；两台设备填同一服务器地址：
 
 1. A 登录 → 开片建房 → 分享邀请链接  
 2. B 登录 → 打开邀请 → 加入成功  
@@ -50,7 +50,7 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 ## 安全说明
 
 - 账号密码由 GO-IM 校验；会话 token 存 Keychain / EncryptedSharedPreferences
-- 客户端配置只有服务器（GO-IM）地址，由用户手动填写；对象存储 / TMDB / OpenSubtitles 凭证只在 Paircast 服务端（环境变量注入）。服务端部署见 [docs/zh-Hans/deploy](docs/zh-Hans/deploy/index.html)（线上 `https://paircast.chaisz.com/zh-Hans/deploy/`）
+- 客户端配置只有服务器（Paircast）地址，登录后服务端告诉客户端 GO-IM 地址，由用户手动填写；对象存储 / TMDB / OpenSubtitles 凭证只在 Paircast 服务端（环境变量注入）。服务端部署见 [docs/zh-Hans/deploy](docs/zh-Hans/deploy/index.html)（线上 `https://paircast.chaisz.com/zh-Hans/deploy/`）
 
 ## 文档
 

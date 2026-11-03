@@ -1,12 +1,28 @@
 {
-    "_comment": "Paircast 服务配置(cmd/paircast)。密钥用环境变量提供:PAIRCAST_IM_SECRET、PAIRCAST_IM_WEBHOOK_SECRET、PAIRCAST_MYSQL_DSN、PAIRCAST_BLOB_ACCESS_KEY / PAIRCAST_BLOB_SECRET_KEY、PAIRCAST_MEDIA_<ID>_ACCESS_KEY / PAIRCAST_MEDIA_<ID>_SECRET_KEY、PAIRCAST_TMDB_ACCESS_TOKEN、PAIRCAST_OPENSUBTITLES_API_KEY。",
+    "_comment": "Paircast 服务配置(cmd/paircast)。密钥用环境变量提供:PAIRCAST_SESSION_SECRET、PAIRCAST_IM_SECRET / PAIRCAST_IM_WEBHOOK_SECRET(未设置时读 GO-IM 的 GOIM_APP_PAIRCAST_SECRET / GOIM_APP_PAIRCAST_WEBHOOK_SECRET)、PAIRCAST_MYSQL_DSN、PAIRCAST_MAIL_PASSWORD、PAIRCAST_BLOB_ACCESS_KEY / PAIRCAST_BLOB_SECRET_KEY、PAIRCAST_MEDIA_<ID>_ACCESS_KEY / PAIRCAST_MEDIA_<ID>_SECRET_KEY、PAIRCAST_TMDB_ACCESS_TOKEN、PAIRCAST_OPENSUBTITLES_API_KEY。",
     "http_addr": ":8090",
     "im": {
         "_comment": "IM 网关地址与接入方 ID。IM 侧 server_api.apps 中登记同一个 app_id,webhook_url 指向 http://paircast:8090/im/webhook,webhook_events 含 group.member_left 与 group.dismissed。",
         "base_url": "http://gateway:8080",
+        "public_url": "",
         "app_id": "paircast",
         "secret": "",
-        "webhook_secret": ""
+        "webhook_secret": "",
+        "token_ttl": "168h"
+    },
+    "account": {
+        "_comment": "账号归 Paircast 所有(邮箱 + 密码,管理员建号)。session_secret ≥ 16 字符,用 PAIRCAST_SESSION_SECRET 提供;admin_email 非空时启动确保该管理员存在(新建时初始密码发邮件,未配置发信则写日志)。im.public_url 为客户端连接 IM 的地址,空 = 与本服务同域名。",
+        "session_secret": "",
+        "session_ttl": "720h",
+        "admin_email": ""
+    },
+    "mail": {
+        "_comment": "管理员建号时把初始密码发到邮箱;未启用时初始密码显示给管理员。465 端口用隐式 TLS,其他端口 STARTTLS;密码用 PAIRCAST_MAIL_PASSWORD 提供。",
+        "enabled": false,
+        "host": "smtp.example.com",
+        "port": 465,
+        "username": "noreply@example.com",
+        "from": "Paircast <noreply@example.com>"
     },
     "mysql": {
         "dsn": ""

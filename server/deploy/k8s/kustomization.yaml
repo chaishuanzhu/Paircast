@@ -1,12 +1,21 @@
 # Paircast 服务端 —— 部署到 GO-IM 所在的命名空间（默认 go-im），在 GO-IM 之后应用：
 #   kubectl apply -k server/deploy/k8s
-#   kubectl -n go-im rollout restart deployment/gateway   # 让网关读到 goim-paircast 里的接入方密钥
-# Ingress 与 GO-IM 同域名，把 /media、/room 转到 paircast，其余路径仍由 GO-IM 网关处理。
-# GO-IM 侧：config.json 的 gateway.server_api.apps 登记 app_id "paircast"（webhook_url http://paircast:8090/im/webhook），
-# gateway Deployment 的 env 从 Secret goim-paircast 读 GOIM_APP_PAIRCAST_SECRET / GOIM_APP_PAIRCAST_WEBHOOK_SECRET（GO-IM 的 deploy/k8s 已配置）。
+# Ingress 与 GO-IM 同域名，把 /account、/console、/media、/room 转到 paircast，其余路径仍由 GO-IM 网关处理。
+#
+# GO-IM 侧登记接入方（一次性）：
+#   1. GO-IM config.json 的 gateway.server_api.apps 加一项：
+#        {"app_id": "paircast", "webhook_url": "http://paircast:8090/im/webhook",
+#         "webhook_events": ["group.member_left", "group.dismissed"]}
+#   2. 接入方密钥放进 Secret goim-apps（网关 envFrom 读取，本服务也读）：
+#        kubectl -n go-im create secret generic goim-apps \
+#          --from-literal=GOIM_APP_PAIRCAST_SECRET=$(openssl rand -hex 32) \
+#          --from-literal=GOIM_APP_PAIRCAST_WEBHOOK_SECRET=$(openssl rand -hex 32)
+#      （已有 goim-apps 时用 kubectl patch 追加这两个键）
+#   3. kubectl -n go-im rollout restart deployment/gateway
+#
 # 上线前修改：
-#   - 下方 IM_SECRET / IM_WEBHOOK_SECRET（网关与 paircast 共用同一个 Secret）
-#   - paircast.json 的 media.sources，以及下方 MEDIA_* 密钥
+#   - 下方 SESSION_SECRET（≥ 16 字符）与 ADMIN_EMAIL（首个管理员，初始密码发邮件或见 paircast 日志）
+#   - paircast.json 的 media.sources，以及下方 MEDIA_* 密钥；需要发信时配置 paircast.json 的 mail 与 MAIL_PASSWORD
 #   - ingress.yaml 的域名（与 GO-IM 的 ingress 相同）
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -21,13 +30,11 @@ secretGenerator:
   - name: goim-paircast-config
     files:
       - paircast.json
-  # 网关也引用它，名字不能带内容哈希；修改后需手动重启 gateway 与 paircast。
   - name: goim-paircast
-    options:
-      disableNameSuffixHash: true
     literals:
-      - IM_SECRET=change-me-paircast-secret
-      - IM_WEBHOOK_SECRET=change-me-paircast-webhook-secret
+      - SESSION_SECRET=change-me-paircast-session-secret
+      - ADMIN_EMAIL=
+      - MAIL_PASSWORD=
       - MYSQL_DSN=im:im-dev@tcp(mysql:3306)/im?parseTime=true&charset=utf8mb4
       - MEDIA_OSS_ACCESS_KEY=
       - MEDIA_OSS_SECRET_KEY=

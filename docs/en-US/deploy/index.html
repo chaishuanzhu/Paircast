@@ -25,7 +25,7 @@
 <body>
   <p class="lang"><a href="./">English</a><a href="../../zh-Hans/deploy/">简体中文</a></p>
   <h1>Paircast Server Deployment Guide</h1>
-  <p>The Paircast backend has two parts: the open-source IM <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> handles accounts, chat and playback-sync signals; the Paircast server (<a href="https://github.com/chaishuanzhu/Paircast/tree/main/server"><code>server/</code> in the Paircast repo</a>) handles the media library and watch rooms. This guide deploys both on one Linux host with Docker. Once they are running, enter the server address in the app's Service Configuration.</p>
+  <p>The Paircast backend has two parts: the Paircast server (<a href="https://github.com/chaishuanzhu/Paircast/tree/main/server"><code>server/</code> in the Paircast repo</a>) handles accounts, the admin console, the media library and watch rooms; the open-source IM <a href="https://github.com/chaishuanzhu/GO-IM">GO-IM</a> handles chat and playback-sync signals. This guide deploys both on one Linux host with Docker. Once they are running, enter the server address in the app's Service Configuration.</p>
 
   <div class="note">
     Other setups (full Docker, Kubernetes) and every config field are documented in GO-IM's <a href="https://github.com/chaishuanzhu/GO-IM/blob/main/deploy/README.md">deploy/README.md</a> and Paircast's <a href="https://github.com/chaishuanzhu/Paircast/blob/main/server/README.md">server/README.md</a>.
@@ -49,75 +49,50 @@ curl -fsSLO $base/docker-compose.minimal.yml
 curl -fsSLO $base/config.minimal.json
 
 # Required: JWT signing secret
-sed -i.bak "s|CHANGE_ME_run_openssl_rand_base64_48|$(openssl rand -base64 48 | tr -d '\n/+=')|" config.minimal.json
+sed -i.bak "s|CHANGE_ME_run_openssl_rand_base64_48|$(openssl rand -base64 48 | tr -d '\n/+=')|" config.minimal.json</code></pre>
+  <p>Accounts are managed by the Paircast server, so GO-IM's own sign-up endpoint isn't needed; close it by adding <code>"disable_registration": true</code> under <code>gateway.auth</code> in <code>config.minimal.json</code>.</p>
+
+  <h2>2. Register Paircast with GO-IM</h2>
+  <p>The Paircast server calls GO-IM's server API as an integrated app. Add this under <code>gateway</code> in <code>config.minimal.json</code>:</p>
+<pre><code>"server_api": {
+    "apps": [
+        {
+            "app_id": "paircast",
+            "webhook_url": "http://paircast:8090/im/webhook",
+            "webhook_events": ["group.member_left", "group.dismissed"]
+        }
+    ]
+},</code></pre>
+  <p>The app secrets go in <code>apps.env</code> in the same directory (both GO-IM and the Paircast server read it). Then start GO-IM:</p>
+<pre><code>echo "GOIM_APP_PAIRCAST_SECRET=$(openssl rand -hex 32)" &gt;&gt; apps.env
+echo "GOIM_APP_PAIRCAST_WEBHOOK_SECRET=$(openssl rand -hex 32)" &gt;&gt; apps.env
 
 docker compose -f docker-compose.minimal.yml up -d
 curl http://127.0.0.1:8080/health     # ready when it returns "status":"ok"</code></pre>
-  <p>This starts the gateway, MySQL, Redis and RustFS (which stores small files such as shared subtitles and avatars). Whenever you change <code>config.minimal.json</code> or <code>.env</code>, recreate the gateway so it reloads (“restart the gateway” below):</p>
+  <p>This starts the gateway, MySQL, Redis and RustFS (which stores small files such as shared subtitles and avatars). Whenever you change <code>config.minimal.json</code>, <code>.env</code> or <code>apps.env</code>, recreate the gateway so it reloads (“restart the gateway” below):</p>
 <pre><code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code></pre>
 
-  <h2>2. Reverse proxy and HTTPS</h2>
-  <p>The app takes a single server address: <code>/media</code> and <code>/room</code> go to the Paircast server (8090), everything else to GO-IM (8080). Caddy obtains certificates automatically and passes WebSocket through:</p>
-<pre><code># /etc/caddy/Caddyfile
-im.example.com {
-    reverse_proxy /media/* 127.0.0.1:8090   # Paircast server (started in step 5)
-    reverse_proxy /room/*  127.0.0.1:8090
-    reverse_proxy 127.0.0.1:8080            # everything else: GO-IM
-}</code></pre>
-  <p>The server address in the app is then <code>im.example.com</code>. With nginx, forward the <code>Upgrade</code> / <code>Connection</code> headers. For LAN-only use you don't need a certificate: replace the site name <code>im.example.com</code> with <code>:80</code> and enter <code>http://192.168.x.x</code>.</p>
-
-  <h2>3. The admin account and mail</h2>
-  <p>Set the admin email in <code>config.minimal.json</code>. Mail (SMTP) is optional: with it, the initial passwords for you and new users are emailed to each address; without it, the admin's initial password goes to the gateway log and new users' passwords are shown in the app for the admin to pass on.</p>
-<pre><code>"gateway": {
-    "mail": {
-        "enabled": true,
-        "host": "smtp.example.com",
-        "port": 465,
-        "username": "no_reply@example.com",
-        "from": "Paircast &lt;no_reply@example.com&gt;"
-    },
-    ...
-},
-"admin_email": "you@example.com"</code></pre>
-  <p>Without mail, drop the <code>mail</code> block or set <code>"enabled": false</code>. With mail, keep the SMTP password out of the config file; put it in <code>.env</code> next to it:</p>
-<pre><code>MAIL_PASSWORD=your-smtp-password</code></pre>
-  <p>After restarting the gateway, it creates an admin account for <code>admin_email</code> and mails it a random password (without mail, or if sending fails, the password is in <code>docker compose -f docker-compose.minimal.yml logs gateway</code>). Sign in to the app with that email and password; you will be asked to change the password the first time.</p>
-
-  <h2>4. User accounts</h2>
-  <p>The Paircast app has no sign-up; the admin creates every account.</p>
-
-  <h3>4.1 Close self sign-up (recommended)</h3>
-  <p>The GO-IM server leaves its <code>/register</code> endpoint open by default. The app doesn't use it, so close it in either of two ways:</p>
-  <ul>
-    <li>Config file: set <code>"disable_registration": true</code> under <code>gateway.auth</code> in <code>config.minimal.json</code>, then <code>docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway</code>.</li>
-    <li>At runtime: with an admin token, <code>curl -s -X POST $SERVER/admin/settings -d uid=ADMIN_UID -d token=TOKEN -d registration_open=false</code>. Once changed this way, the database value wins over the config file.</li>
-  </ul>
-
-  <h3>4.2 Add users in the app</h3>
-  <p>Sign in to the app as the admin → Me → Admin Console → User Management → Add User (top right) → enter your friend's email (nickname optional) → Add. With mail set up, the initial password is emailed to them; otherwise (or if sending fails) it is shown on screen — tap Copy and pass it on privately (it isn't shown again). They must change it on first sign-in.</p>
-  <p>Users can delete their own account in the app under Me → Delete Account after entering their password (admin accounts excepted). For a forgotten password, the admin can delete the old account in Admin Console → User Management and add the same email again; the same screen can also disable / enable accounts.</p>
-
-  <h3>4.3 From the command line (optional)</h3>
-<pre><code>SERVER=https://im.example.com
-curl -s -X POST $SERVER/login -d account=you@example.com -d password='admin-password'
-# note "uid" and "token" in the response
-
-curl -s -X POST $SERVER/admin/users/create \
-  -d uid=ADMIN_UID -d token=TOKEN_FROM_ABOVE -d email=friend@example.com -d nickname=Sam</code></pre>
-  <p>Without mail, or if the mail could not be sent, the response includes <code>initial_password</code>; pass it on privately.</p>
-
-  <h2 id="media">5. Media library and watch rooms (Paircast server)</h2>
-  <h3>5.1 Start the Paircast server</h3>
-  <p>The Paircast server calls GO-IM's server API as an integrated app; both sides share a pair of secrets. Generate them into <code>.env</code>:</p>
-<pre><code>echo "PAIRCAST_IM_SECRET=$(openssl rand -hex 32)" &gt;&gt; .env
-echo "PAIRCAST_IM_WEBHOOK_SECRET=$(openssl rand -hex 32)" &gt;&gt; .env
-docker compose -f docker-compose.minimal.yml up -d --force-recreate gateway   # GO-IM picks up the secrets</code></pre>
-  <p><code>config.minimal.json</code> already registers the <code>paircast</code> app (<code>gateway.server_api</code>); it becomes active once the secrets are set. Then download the Paircast server's compose file and config into the same directory:</p>
+  <h2>3. Start the Paircast server (accounts and admin)</h2>
+  <p>Download the Paircast server's compose file and config into the same directory:</p>
 <pre><code>base=https://raw.githubusercontent.com/chaishuanzhu/Paircast/main/server/deploy/docker
 curl -fsSLO $base/docker-compose.paircast.yml
 curl -fsSLO $base/paircast.json</code></pre>
+  <p>Set the session secret and the admin email in <code>.env</code>:</p>
+<pre><code>echo "PAIRCAST_SESSION_SECRET=$(openssl rand -hex 32)" &gt;&gt; .env
+echo "PAIRCAST_ADMIN_EMAIL=you@example.com" &gt;&gt; .env</code></pre>
+  <p>Mail (SMTP) is optional: with it, the initial passwords for you and new users are emailed to each address; without it, the admin's initial password goes to the Paircast server log and new users' passwords are shown in the app for the admin to pass on. To send mail, add this to <code>paircast.json</code>:</p>
+<pre><code>"mail": {
+    "enabled": true,
+    "host": "smtp.example.com",
+    "port": 465,
+    "username": "no_reply@example.com",
+    "from": "Paircast &lt;no_reply@example.com&gt;"
+}</code></pre>
+  <p>Keep the SMTP password out of the config file; put it in <code>.env</code>: <code>PAIRCAST_MAIL_PASSWORD=your-smtp-password</code>.</p>
+  <p>Configure the library in the next step, then start everything. On startup the Paircast server creates an admin account for <code>PAIRCAST_ADMIN_EMAIL</code> and mails it a random password (without mail, or if sending fails, the password is in <code>docker compose -f docker-compose.paircast.yml logs paircast</code>). Sign in to the app with that email and password; you will be asked to change the password the first time.</p>
 
-  <h3>5.2 Connect your video storage</h3>
+  <h2 id="media">4. Media library and watch rooms</h2>
+  <h3>4.1 Connect your video storage</h3>
   <p>Point <code>media.sources</code> in <code>paircast.json</code> at your storage (keys don't go here):</p>
 <pre><code>"media": {
     "sources": [
@@ -141,16 +116,16 @@ curl -fsSLO $base/paircast.json</code></pre>
 MEDIA_OSS_SECRET_KEY=read-only-secret-key</code></pre>
 <pre><code>docker compose -f docker-compose.paircast.yml up -d
 docker compose -f docker-compose.paircast.yml logs paircast   # ready when it shows listening on :8090</code></pre>
-  <p>After changing <code>paircast.json</code> or <code>.env</code>, run <code>docker compose -f docker-compose.paircast.yml up -d --force-recreate</code> (“restart the Paircast server” below). The app's Library lists the <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files under <code>prefix</code>.</p>
+  <p>After changing <code>paircast.json</code>, <code>.env</code> or <code>apps.env</code>, run <code>docker compose -f docker-compose.paircast.yml up -d --force-recreate</code> (“restart the Paircast server” below). The app's Library lists the <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files under <code>prefix</code>.</p>
   <ul>
     <li><code>endpoint</code> is the regional S3 API host without <code>https://</code>; <strong>do not use a CDN domain</strong>. Qiniu and MinIO usually need <code>"path_style": true</code>.</li>
     <li>The source <code>id</code> becomes part of every movie ID, so don't change it later. If your <code>id</code> is not <code>oss</code>, add matching <code>PAIRCAST_MEDIA_&lt;UPPERCASE_ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code> entries to <code>environment</code> in <code>docker-compose.paircast.yml</code>.</li>
     <li>You can add several sources; the Library screen then shows a source picker.</li>
     <li>For playback the server issues links valid for 6 hours and the video stream bypasses the server, so a <strong>read-only</strong> key is enough.</li>
-    <li>Rooms and the metadata cache live in GO-IM's MySQL and shared subtitles in RustFS; nothing else needs deploying.</li>
+    <li>Accounts, rooms and the metadata cache live in GO-IM's MySQL and shared subtitles in RustFS; nothing else needs deploying.</li>
   </ul>
 
-  <h3>5.3 Subtitles and posters</h3>
+  <h3>4.2 Subtitles and posters</h3>
   <ul>
     <li><strong>Sidecar subtitles</strong>: put them next to the video with the same name, e.g. <code>Inception.2010.mkv</code> with <code>Inception.2010.srt</code>, <code>Inception.2010.zh.ass</code> or <code>Inception.2010_en.vtt</code> (srt / vtt / ass / ssa).</li>
     <li><strong>Posters and overviews</strong>: <code>{name}.nfo</code> and <code>{name}-poster.jpg</code> next to the video are used first; otherwise the server can query TMDB.</li>
@@ -158,21 +133,46 @@ docker compose -f docker-compose.paircast.yml logs paircast   # ready when it sh
     <li><strong>Online subtitle search</strong> (optional): add <code>OPENSUBTITLES_API_KEY=…</code> to <code>.env</code> and restart the Paircast server.</li>
   </ul>
 
-  <h3>5.4 Stickers (optional)</h3>
+  <h3>4.3 Stickers (optional)</h3>
   <p>Stickers live in the bucket of one of your sources, as <code>catalog.json</code> plus <code>{pack_id}/pack.json</code>. The Paircast repo has scripts to build and upload them:</p>
 <pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
 PAIRCAST_S3_ACCESS_KEY=… PAIRCAST_S3_SECRET_KEY=… \
   python3 Scripts/upload-stickers.py --endpoint oss-cn-hangzhou.aliyuncs.com --bucket my-videos</code></pre>
   <p>Uploading needs a writable key; use it only on your own machine, not on the server. Then set <code>"stickers_source": "oss"</code> and <code>"stickers_prefix": "stickers/"</code> under <code>media</code> in <code>paircast.json</code> and restart the Paircast server.</p>
 
-  <h2>6. Use it in the app</h2>
+  <h2>5. Reverse proxy and HTTPS</h2>
+  <p>The app takes a single server address: <code>/account</code>, <code>/console</code>, <code>/media</code> and <code>/room</code> go to the Paircast server (8090), everything else to GO-IM (8080). Caddy obtains certificates automatically and passes WebSocket through:</p>
+<pre><code># /etc/caddy/Caddyfile
+im.example.com {
+    @paircast path /account/* /console/* /media/* /room/*
+    reverse_proxy @paircast 127.0.0.1:8090   # Paircast server
+    reverse_proxy 127.0.0.1:8080             # everything else: GO-IM
+}</code></pre>
+  <p>The server address in the app is then <code>im.example.com</code>. With nginx, forward the <code>Upgrade</code> / <code>Connection</code> headers. For LAN-only use you don't need a certificate: replace the site name <code>im.example.com</code> with <code>:80</code> and enter <code>http://192.168.x.x</code>.</p>
+
+  <h2>6. User accounts</h2>
+  <p>The Paircast app has no sign-up; the admin creates every account.</p>
+  <h3>6.1 Add users in the app</h3>
+  <p>Sign in to the app as the admin → Me → Admin Console → User Management → Add User (top right) → enter your friend's email (nickname optional) → Add. With mail set up, the initial password is emailed to them; otherwise (or if sending fails) it is shown on screen — tap Copy and pass it on privately (it isn't shown again). They must change it on first sign-in.</p>
+  <p>Users can delete their own account in the app under Me → Delete Account after entering their password (admin accounts excepted). For a forgotten password, the admin can delete the old account in Admin Console → User Management and add the same email again; the same screen can also disable / enable accounts. Reports are handled under Admin Console → Reports; banning also disables the account.</p>
+
+  <h3>6.2 From the command line (optional)</h3>
+<pre><code>SERVER=https://im.example.com
+curl -s -X POST $SERVER/account/login -d account=you@example.com -d password='admin-password'
+# note "token" in the response
+
+curl -s -X POST $SERVER/console/users/create -H "Authorization: Bearer TOKEN_FROM_ABOVE" \
+  -d email=friend@example.com -d nickname=Sam</code></pre>
+  <p>Without mail, or if the mail could not be sent, the response includes <code>initial_password</code>; pass it on privately.</p>
+
+  <h2>7. Use it in the app</h2>
   <ol>
     <li>Open Paircast → Service Configuration (top right of the login screen) → enter <code>im.example.com</code> → Save.</li>
     <li>Sign in with the admin or a friend's account, pick a title, open a room and send the invite link.</li>
   </ol>
   <p>See the <a href="../guide/">User Guide</a> for details.</p>
 
-  <h2>7. Maintenance</h2>
+  <h2>8. Maintenance</h2>
 <pre><code>docker compose -f docker-compose.minimal.yml logs -f gateway        # GO-IM logs
 docker compose -f docker-compose.paircast.yml logs -f paircast      # Paircast server logs
 docker compose -f docker-compose.minimal.yml pull &amp;&amp; docker compose -f docker-compose.minimal.yml up -d     # upgrade GO-IM
@@ -184,13 +184,13 @@ GOIM_TAG=x.y.z docker compose -f docker-compose.minimal.yml up -d  # pin / roll 
   </ul>
 
   <div class="warn">
-    Every secret (JWT, SMTP, app secrets, storage, TMDB, OpenSubtitles) stays in the server's <code>config.minimal.json</code> / <code>.env</code>. Never send them to users or commit them to git. Users only need the server address and their own account.
+    Every secret (JWT, session secret, SMTP, app secrets, storage, TMDB, OpenSubtitles) stays in the server's <code>config.minimal.json</code> / <code>.env</code> / <code>apps.env</code>. Never send them to users or commit them to git. Users only need the server address and their own account.
   </div>
 
-  <h2>8. More</h2>
+  <h2>9. More</h2>
   <ul>
     <li><a href="../guide/">User Guide</a> · <a href="../support/">Support</a> · <a href="../privacy/">Privacy</a></li>
-    <li>Accounts and chat: <a href="https://github.com/chaishuanzhu/GO-IM/issues/new">GO-IM Issues</a>; media library, rooms and the app: <a href="https://github.com/chaishuanzhu/Paircast/issues/new">Paircast Issues</a></li>
+    <li>Chat: <a href="https://github.com/chaishuanzhu/GO-IM/issues/new">GO-IM Issues</a>; accounts, media library, rooms and the app: <a href="https://github.com/chaishuanzhu/Paircast/issues/new">Paircast Issues</a></li>
   </ul>
 </body>
 </html>

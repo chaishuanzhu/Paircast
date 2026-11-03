@@ -377,65 +377,6 @@ func TestRoomLifecycleAndSharedSubtitle(t *testing.T) {
 	}
 }
 
-type fakeVerifier struct {
-	calls int
-	infos map[string]*imserver.TokenInfo
-	err   error
-}
-
-func (v *fakeVerifier) VerifyToken(_ context.Context, token string) (*imserver.TokenInfo, error) {
-	v.calls++
-	if v.err != nil {
-		return nil, v.err
-	}
-	if info, ok := v.infos[token]; ok {
-		return info, nil
-	}
-	return &imserver.TokenInfo{Valid: false, Reason: "token revoked"}, nil
-}
-
-func TestIMAuth(t *testing.T) {
-	v := &fakeVerifier{infos: map[string]*imserver.TokenInfo{"good": {Valid: true, UID: "100001"}}}
-	a := NewIMAuth(v)
-	now := time.Unix(1_700_000_000, 0)
-	a.now = func() time.Time { return now }
-
-	run := func(target string, header string) (*httptest.ResponseRecorder, string) {
-		req := httptest.NewRequest(http.MethodGet, target, nil)
-		if header != "" {
-			req.Header.Set("Authorization", "Bearer "+header)
-		}
-		rec := httptest.NewRecorder()
-		uid, _ := a.Authenticate(rec, req)
-		return rec, uid
-	}
-
-	if rec, _ := run("/", ""); rec.Code != http.StatusUnauthorized {
-		t.Fatalf("missing token: %d", rec.Code)
-	}
-	if _, uid := run("/?token=good", ""); uid != "100001" {
-		t.Fatalf("query token uid = %q", uid)
-	}
-	if _, uid := run("/", "good"); uid != "100001" || v.calls != 1 {
-		t.Fatalf("bearer token uid = %q calls = %d (want cached)", uid, v.calls)
-	}
-	if rec, _ := run("/?token=good&uid=100002", ""); rec.Code != http.StatusForbidden {
-		t.Fatalf("uid mismatch: %d", rec.Code)
-	}
-	if rec, _ := run("/?token=bad", ""); rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), "revoked") {
-		t.Fatalf("invalid token: %d %s", rec.Code, rec.Body.String())
-	}
-	now = now.Add(tokenCacheTTL + time.Second)
-	run("/?token=good", "")
-	if v.calls != 3 {
-		t.Fatalf("cache should expire, calls = %d", v.calls)
-	}
-	v.err = errors.New("down")
-	if rec, _ := run("/?token=other", ""); rec.Code != http.StatusServiceUnavailable {
-		t.Fatalf("verifier down: %d", rec.Code)
-	}
-}
-
 func signedWebhook(t *testing.T, secret, typ string, data any) *http.Request {
 	t.Helper()
 	raw, _ := json.Marshal(data)

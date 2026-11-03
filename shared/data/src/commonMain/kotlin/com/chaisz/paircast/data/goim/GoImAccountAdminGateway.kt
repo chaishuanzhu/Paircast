@@ -40,7 +40,7 @@ internal data class CreateUserResponseDto(
     @SerialName("initial_password") val initialPassword: String? = null,
 )
 
-/** GO-IM `/admin/users`, `/admin/users/create`, `/admin/users/disable`, `/admin/users/delete`. */
+/** Paircast `/console/users`, `/console/users/create`, `/console/users/disable`, `/console/users/delete`. */
 class GoImAccountAdminGateway(
     private val auth: GoImAuthGateway,
     private val api: GoImApi,
@@ -48,7 +48,7 @@ class GoImAccountAdminGateway(
     override suspend fun createUser(email: String, nickname: String?): CreatedAccount {
         val dto = try {
             api.decode(
-                api.post(auth.requireSession(), "admin/users/create", "email" to email, "nickname" to nickname),
+                api.appPost(auth.requireSession(), "console/users/create", "email" to email, "nickname" to nickname),
                 CreateUserResponseDto.serializer(),
             )
         } catch (e: GoImHttpException) {
@@ -75,26 +75,27 @@ class GoImAccountAdminGateway(
     }
 
     override suspend fun users(offset: Int, limit: Int): UserPage = call {
+        val s = auth.requireSession()
         val dto = api.decode(
-            api.get(auth.requireSession(), "admin/users", "offset" to "$offset", "limit" to "$limit"),
+            api.appGet(s, "console/users", "offset" to "$offset", "limit" to "$limit"),
             UserListDto.serializer(),
         )
-        UserPage(dto.users.orEmpty().map(::toModel), dto.total)
+        UserPage(dto.users.orEmpty().map { toModel(it, s.imBase) }, dto.total)
     }
 
     override suspend fun setDisabled(userId: String, disabled: Boolean) {
-        call { api.post(auth.requireSession(), "admin/users/disable", "target_uid" to userId, "disabled" to "$disabled") }
+        call { api.appPost(auth.requireSession(), "console/users/disable", "target_uid" to userId, "disabled" to "$disabled") }
     }
 
     override suspend fun deleteUser(userId: String) {
-        call { api.post(auth.requireSession(), "admin/users/delete", "target_uid" to userId) }
+        call { api.appPost(auth.requireSession(), "console/users/delete", "target_uid" to userId) }
     }
 
-    private fun toModel(dto: ManagedUserDto) = ManagedUser(
+    private fun toModel(dto: ManagedUserDto, imBase: String) = ManagedUser(
         id = dto.uid,
         nickname = dto.nickname,
         email = dto.email?.takeIf { it.isNotEmpty() },
-        avatarUrl = dto.avatarUrl?.takeIf { it.isNotEmpty() },
+        avatarUrl = GoImApi.absoluteUrl(imBase, dto.avatarUrl),
         isAdmin = dto.role == GoImAuthGateway.ADMIN_ROLE,
         isDisabled = dto.isDisabled,
         createdAtMs = dto.createdAt,

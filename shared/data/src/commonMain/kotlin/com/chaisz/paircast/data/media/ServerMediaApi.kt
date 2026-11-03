@@ -118,15 +118,15 @@ internal data class RoomDto(
 internal data class RoomUpdatedDto(@SerialName("group_id") val groupId: String? = null, val room: RoomDto? = null)
 
 /**
- * GO-IM media library (`/media/…`) and watch rooms (`/room/…`). Uses the signed-in session;
- * the server holds every storage / TMDB / OpenSubtitles credential.
+ * Paircast media library (`/media/…`) and watch rooms (`/room/…`), authenticated with the Paircast
+ * session token; the server holds every storage / TMDB / OpenSubtitles credential.
  */
 class ServerMediaApi(
     private val client: HttpClient,
     private val api: GoImApi,
     private val auth: GoImAuthGateway,
 ) {
-    internal suspend fun sources(): MediaSourcesDto = call { s -> api.decode(api.get(s, "media/sources"), MediaSourcesDto.serializer()) }
+    internal suspend fun sources(): MediaSourcesDto = call { s -> api.decode(api.appGet(s, "media/sources"), MediaSourcesDto.serializer()) }
 
     /** All pages of a source (the server pages at 500). */
     internal suspend fun items(sourceId: String?, refresh: Boolean = false): List<MediaItemDto> = call { s ->
@@ -138,28 +138,28 @@ class ServerMediaApi(
                 if (!cursor.isNullOrEmpty()) add("cursor" to cursor!!)
                 if (refresh) add("refresh" to "1")
             }
-            val page = api.decode(api.get(s, "media/items", *params.toTypedArray()), MediaPageDto.serializer())
+            val page = api.decode(api.appGet(s, "media/items", *params.toTypedArray()), MediaPageDto.serializer())
             out += page.items
             cursor = page.nextCursor?.ifEmpty { null } ?: return@call out
         }
         out
     }
 
-    internal suspend fun item(id: String): MediaItemDto = call(AppError.PlaybackFailed) { s -> api.decode(api.get(s, "media/item", "id" to id), MediaItemDto.serializer()) }
+    internal suspend fun item(id: String): MediaItemDto = call(AppError.PlaybackFailed) { s -> api.decode(api.appGet(s, "media/item", "id" to id), MediaItemDto.serializer()) }
 
-    internal suspend fun play(id: String): PlayInfoDto = call(AppError.PlaybackFailed) { s -> api.decode(api.get(s, "media/play", "id" to id), PlayInfoDto.serializer()) }
+    internal suspend fun play(id: String): PlayInfoDto = call(AppError.PlaybackFailed) { s -> api.decode(api.appGet(s, "media/play", "id" to id), PlayInfoDto.serializer()) }
 
     internal suspend fun subtitles(itemId: String, roomId: String? = null): List<SubtitleRefDto> = call { s ->
         val params = buildList {
             add("id" to itemId)
             if (!roomId.isNullOrEmpty()) add("room_id" to roomId)
         }
-        api.decode(api.get(s, "media/subtitles", *params.toTypedArray()), SubtitleListDto.serializer()).subtitles
+        api.decode(api.appGet(s, "media/subtitles", *params.toTypedArray()), SubtitleListDto.serializer()).subtitles
     }
 
     /** Raw subtitle bytes + extension (`srt` / `ass` / `vtt`). */
     internal suspend fun subtitle(ref: String): Pair<ByteArray, String> = call { s ->
-        val response = api.get(s, "media/subtitle", "ref" to ref)
+        val response = api.appGet(s, "media/subtitle", "ref" to ref)
         response.bodyAsBytes() to (response.headers["X-Subtitle-Format"]?.ifEmpty { null } ?: "srt")
     }
 
@@ -168,12 +168,12 @@ class ServerMediaApi(
             add("q" to query)
             if (!year.isNullOrEmpty()) add("year" to year)
         }
-        api.decode(api.get(s, "media/subtitles/search", *params.toTypedArray()), SubtitleListDto.serializer()).subtitles
+        api.decode(api.appGet(s, "media/subtitles/search", *params.toTypedArray()), SubtitleListDto.serializer()).subtitles
     }
 
     /** Downloads an online result (`os:<id>`) into server storage; returns a readable ref. */
     internal suspend fun fetchSubtitle(onlineRef: String): String =
-        call { s -> api.decode(api.post(s, "media/subtitles/fetch", "ref" to onlineRef), RefDto.serializer()).ref }
+        call { s -> api.decode(api.appPost(s, "media/subtitles/fetch", "ref" to onlineRef), RefDto.serializer()).ref }
 
     internal suspend fun shareSubtitle(roomId: String, label: String?, fileName: String, bytes: ByteArray): String = call { s ->
         val response = api.send {
@@ -181,7 +181,7 @@ class ServerMediaApi(
                 url = GoImApi.url(s.serverUrl, "media/subtitles/share"),
                 formData = formData {
                     append("uid", s.uid)
-                    append("token", s.token)
+                    append("token", s.appToken)
                     append("room_id", roomId)
                     if (!label.isNullOrBlank()) append("label", label)
                     append(
@@ -198,18 +198,18 @@ class ServerMediaApi(
         api.decode(response, RefDto.serializer()).ref
     }
 
-    internal suspend fun stickerCatalog(): String = call { s -> api.get(s, "media/stickers").bodyAsText() }
+    internal suspend fun stickerCatalog(): String = call { s -> api.appGet(s, "media/stickers").bodyAsText() }
 
-    internal suspend fun stickerPack(packId: String): String = call { s -> api.get(s, "media/stickers/pack", "id" to packId).bodyAsText() }
+    internal suspend fun stickerPack(packId: String): String = call { s -> api.appGet(s, "media/stickers/pack", "id" to packId).bodyAsText() }
 
     internal suspend fun createRoom(movieId: String): RoomDto =
-        call(AppError.RoomNotFound) { s -> api.decode(api.post(s, "room/create", "movie_id" to movieId), RoomDto.serializer()) }
+        call(AppError.RoomNotFound) { s -> api.decode(api.appPost(s, "room/create", "movie_id" to movieId), RoomDto.serializer()) }
 
     internal suspend fun joinRoom(roomId: String): RoomDto =
-        call(AppError.RoomNotFound) { s -> api.decode(api.post(s, "room/join", "room_id" to roomId), RoomDto.serializer()) }
+        call(AppError.RoomNotFound) { s -> api.decode(api.appPost(s, "room/join", "room_id" to roomId), RoomDto.serializer()) }
 
     internal suspend fun leaveRoom(roomId: String, transferSeq: Long): RoomDto = call(AppError.RoomNotFound) { s ->
-        api.decode(api.post(s, "room/leave", "room_id" to roomId, "transfer_seq" to transferSeq.toString()), RoomDto.serializer())
+        api.decode(api.appPost(s, "room/leave", "room_id" to roomId, "transfer_seq" to transferSeq.toString()), RoomDto.serializer())
     }
 
     internal suspend fun updateRoom(
@@ -221,7 +221,7 @@ class ServerMediaApi(
         ended: Boolean,
     ): RoomDto = call(AppError.RoomNotFound) { s ->
         api.decode(
-            api.post(
+            api.appPost(
                 s,
                 "room/update",
                 "room_id" to roomId,
@@ -235,7 +235,7 @@ class ServerMediaApi(
         )
     }
 
-    internal suspend fun room(roomId: String): RoomDto = call(AppError.RoomNotFound) { s -> api.decode(api.get(s, "room", "room_id" to roomId), RoomDto.serializer()) }
+    internal suspend fun room(roomId: String): RoomDto = call(AppError.RoomNotFound) { s -> api.decode(api.appGet(s, "room", "room_id" to roomId), RoomDto.serializer()) }
 
     private suspend fun <T> call(notFound: AppError = AppError.SubtitleUnavailable, block: suspend (GoImSession) -> T): T {
         val session = auth.session ?: throw AppError.SessionExpired

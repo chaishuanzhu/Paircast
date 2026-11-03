@@ -5,97 +5,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/chaishuanzhu/GO-IM/pkg/imserver"
 	"github.com/chaishuanzhu/Paircast/server/internal/watchroom"
 )
-
-// tokenCacheTTL 是 IM 令牌校验结果的缓存时长：吊销 / 禁用最多晚这么久在 Paircast 生效。
-const tokenCacheTTL = 60 * time.Second
-
-// TokenVerifier 校验 IM 令牌（imserver.Client 实现）。
-type TokenVerifier interface {
-	VerifyToken(ctx context.Context, token string) (*imserver.TokenInfo, error)
-}
-
-type tokenEntry struct {
-	info    *imserver.TokenInfo
-	expires time.Time
-}
-
-// IMAuth 用 IM 令牌认证请求：令牌取自 token 参数（查询或表单）或 Authorization: Bearer；
-// 带 uid 参数时必须与令牌一致（与网关接口相同的约定）。
-type IMAuth struct {
-	verifier TokenVerifier
-	now      func() time.Time
-
-	mu    sync.Mutex
-	cache map[string]tokenEntry
-}
-
-// NewIMAuth 创建认证器。
-func NewIMAuth(v TokenVerifier) *IMAuth {
-	return &IMAuth{verifier: v, now: time.Now, cache: map[string]tokenEntry{}}
-}
-
-func (a *IMAuth) verify(ctx context.Context, token string) (*imserver.TokenInfo, error) {
-	now := a.now()
-	a.mu.Lock()
-	if e, ok := a.cache[token]; ok && now.Before(e.expires) {
-		a.mu.Unlock()
-		return e.info, nil
-	}
-	a.mu.Unlock()
-	info, err := a.verifier.VerifyToken(ctx, token)
-	if err != nil {
-		return nil, err
-	}
-	a.mu.Lock()
-	if len(a.cache) > 50000 {
-		for k, e := range a.cache {
-			if now.After(e.expires) {
-				delete(a.cache, k)
-			}
-		}
-	}
-	a.cache[token] = tokenEntry{info: info, expires: now.Add(tokenCacheTTL)}
-	a.mu.Unlock()
-	return info, nil
-}
-
-// Authenticate 实现 Authenticator。
-func (a *IMAuth) Authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	token := r.FormValue("token")
-	if token == "" {
-		token = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	}
-	if token == "" {
-		http.Error(w, "missing token", http.StatusUnauthorized)
-		return "", false
-	}
-	info, err := a.verify(r.Context(), token)
-	if err != nil {
-		log.Printf("[paircast] verify token: %v", err)
-		http.Error(w, "auth service unavailable", http.StatusServiceUnavailable)
-		return "", false
-	}
-	if !info.Valid {
-		reason := info.Reason
-		if reason == "" {
-			reason = "invalid token"
-		}
-		http.Error(w, reason, http.StatusUnauthorized)
-		return "", false
-	}
-	if uid := r.FormValue("uid"); uid != "" && uid != info.UID {
-		http.Error(w, "uid does not match token", http.StatusForbidden)
-		return "", false
-	}
-	return info.UID, true
-}
 
 // IMGroups 用服务端 API 实现 watchroom.Groups。
 type IMGroups struct{ C *imserver.Client }

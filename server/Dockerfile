@@ -1,6 +1,6 @@
 # Paircast（一起看）业务服务多阶段构建。
 # Build（在 server/ 目录）:   docker build -t paircast-server .
-# Run:     docker run -p 8090:8090 -v $(pwd)/configs/paircast.json:/etc/paircast/paircast.json -e PAIRCAST_IM_SECRET=... paircast-server
+# Run:     docker run -p 8090:8090 -v $(pwd)/configs/paircast.json:/etc/paircast/paircast.json -e PAIRCAST_SESSION_SECRET=... -e PAIRCAST_IM_SECRET=... paircast-server
 
 FROM golang:1.26.5-alpine AS builder
 

@@ -19,7 +19,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 
-/** Password login against GO-IM; persists `uid` + JWT in the secure store and owns the WS link. */
+/**
+ * Password login against the Paircast server, which also issues the GO-IM token; persists the
+ * session in the secure store and owns the GO-IM WebSocket link.
+ */
 class GoImAuthGateway(
     private val configGateway: ConfigGateway,
     private val sessions: SessionStore,
@@ -42,12 +45,13 @@ class GoImAuthGateway(
         // Kicked / expired: drop the stored token too, or the next launch would restore it and
         // kick the other device back.
         connectionLink.onSessionEnded = { ended ->
-            if (sessions.load()?.token == ended.token) sessions.clear()
-            if (session?.token == ended.token) {
+            if (sessions.load()?.appToken == ended.appToken) sessions.clear()
+            if (session?.appToken == ended.appToken) {
                 session = null
                 _currentUser.value = null
             }
         }
+        connectionLink.refreshSession = { stale -> refresh(stale) }
     }
 
     override suspend fun login(account: String, password: String): LoginResult {
@@ -74,48 +78,84 @@ class GoImAuthGateway(
     private fun serverError(e: GoImHttpException) =
         AppError.Unknown("Server error {{code}}", mapOf("code" to e.status.toString()))
 
-    private suspend fun startSession(serverUrl: String, dto: LoginResponseDto): LoginResult {
-        val newSession = GoImSession(serverUrl = serverUrl, uid = dto.uid, token = dto.token)
+    private suspend fun startSession(serverUrl: String, dto: SessionDto): LoginResult {
+        val newSession = sessionOf(serverUrl, dto)
         sessions.save(newSession)
         session = newSession
-        val user = User(
-            id = dto.uid,
-            nickname = (dto.nickname ?: dto.username).orEmpty().ifEmpty { dto.uid },
-            avatarUrl = GoImApi.absoluteUrl(serverUrl, dto.avatarUrl),
-            username = dto.username,
-            email = dto.email,
-            isAdmin = dto.role == ADMIN_ROLE,
-        )
+        val user = sessionUser(newSession, dto)
         _currentUser.value = user
         // First login with an admin-issued password: link comes up after the forced change.
         if (!dto.mustChangePassword) connectionLink.connect(newSession)
         return LoginResult(user, dto.mustChangePassword)
     }
 
+    private fun sessionOf(serverUrl: String, dto: SessionDto): GoImSession {
+        if (dto.im.token.isEmpty()) throw AppError.Unknown("Server error {{code}}", mapOf("code" to "im"))
+        return GoImSession(
+            serverUrl = serverUrl,
+            uid = dto.uid,
+            token = dto.im.token,
+            appToken = dto.token,
+            imUrl = dto.im.url.trimEnd('/').takeIf { it.isNotEmpty() && it != serverUrl }.orEmpty(),
+        )
+    }
+
+    private fun sessionUser(s: GoImSession, dto: SessionDto) = User(
+        id = dto.uid,
+        nickname = dto.nickname.orEmpty().ifEmpty { dto.uid },
+        avatarUrl = GoImApi.absoluteUrl(s.imBase, dto.avatarUrl),
+        email = dto.email,
+        isAdmin = dto.role == ADMIN_ROLE,
+    )
+
     override suspend fun restoreSession(): User? {
         val stored = sessions.load() ?: return null
         val configured = configGateway.load()?.im?.serverUrl?.let(ConfigValidation::normalizedServerUrl)
-        if (configured != null && configured != stored.serverUrl) {
-            // Server address changed in settings — the old token belongs to another gateway.
+        if (stored.appToken.isEmpty() || (configured != null && configured != stored.serverUrl)) {
+            // Pre-Paircast-account login, or the server address changed in settings.
             sessions.clear()
             return null
         }
-        if (api.validateToken(stored) == false) {
-            sessions.clear()
-            return null
+        val (current, user) = try {
+            val dto = api.session(stored)
+            val fresh = sessionOf(stored.serverUrl, dto)
+            sessions.save(fresh)
+            fresh to sessionUser(fresh, dto)
+        } catch (e: GoImHttpException) {
+            if (e.status == 401) {
+                sessions.clear()
+                return null
+            }
+            stored to User(stored.uid, stored.uid)
+        } catch (_: AppError) {
+            // Offline: keep the stored login; the link retries and refreshes the IM token later.
+            stored to User(stored.uid, stored.uid)
         }
-        session = stored
-        val user = runCatching { api.myProfile(stored) }.getOrNull()
-            ?.let { ownUser(stored, it) }
-            ?: User(stored.uid, stored.uid)
+        session = current
         _currentUser.value = user
-        connectionLink.connect(stored)
+        connectionLink.connect(current)
         return user
+    }
+
+    /** New IM token for the link; same session when unreachable, null when the login is gone. */
+    private suspend fun refresh(stale: GoImSession): GoImSession? {
+        val fresh = try {
+            sessionOf(stale.serverUrl, api.session(stale))
+        } catch (e: GoImHttpException) {
+            return if (e.status == 401) null else stale
+        } catch (_: AppError) {
+            return stale
+        }
+        if (session?.appToken == stale.appToken) {
+            session = fresh
+            sessions.save(fresh)
+        }
+        return fresh
     }
 
     override suspend fun changePassword(oldPassword: String, newPassword: String) {
         val s = requireSession()
-        try {
+        val appToken = try {
             api.changePassword(s, oldPassword, newPassword)
         } catch (e: GoImHttpException) {
             throw when (e.status) {
@@ -123,7 +163,10 @@ class GoImAuthGateway(
                 else -> AppError.PasswordChangeFailed
             }
         }
-        connectionLink.connect(s)
+        val updated = s.copy(appToken = appToken)
+        sessions.save(updated)
+        session = updated
+        connectionLink.connect(updated)
     }
 
     override suspend fun logout() {
@@ -173,7 +216,7 @@ class GoImAuthGateway(
             val fetched = authed { api.profiles(s, missing) }
             profileLock.withLock {
                 fetched.forEach { dto ->
-                    profileCache[dto.uid] = User(dto.uid, dto.nickname.ifEmpty { dto.uid }, GoImApi.absoluteUrl(s.serverUrl, dto.avatarUrl)) to now
+                    profileCache[dto.uid] = User(dto.uid, dto.nickname.ifEmpty { dto.uid }, GoImApi.absoluteUrl(s.imBase, dto.avatarUrl)) to now
                 }
             }
         }
@@ -214,7 +257,7 @@ class GoImAuthGateway(
     private fun ownUser(s: GoImSession, dto: ProfileDto, fallbackNickname: String = dto.uid) = User(
         id = dto.uid,
         nickname = dto.nickname.ifEmpty { fallbackNickname },
-        avatarUrl = GoImApi.absoluteUrl(s.serverUrl, dto.avatarUrl),
+        avatarUrl = GoImApi.absoluteUrl(s.imBase, dto.avatarUrl),
         email = dto.email,
         isAdmin = dto.role?.let { it == ADMIN_ROLE } ?: (_currentUser.value?.isAdmin == true),
     )

@@ -2,16 +2,28 @@
 # 先按 GO-IM deploy/docker/docker-compose.minimal.yml 启动 IM（compose 项目名 go-im），本服务加入它的网络，
 # 用服务名访问 gateway / mysql / rustfs；GO-IM 用 http://paircast:8090/im/webhook 回调本服务。
 #
+# GO-IM 侧登记接入方（一次性）：
+#   1. config.json 的 gateway.server_api.apps 加一项：
+#        {"app_id": "paircast", "webhook_url": "http://paircast:8090/im/webhook",
+#         "webhook_events": ["group.member_left", "group.dismissed"]}
+#   2. 同目录 apps.env 写入接入方密钥（网关与本服务都读这个文件）：
+#        GOIM_APP_PAIRCAST_SECRET=<openssl rand -hex 32>
+#        GOIM_APP_PAIRCAST_WEBHOOK_SECRET=<openssl rand -hex 32>
+#   3. docker compose -f docker-compose.minimal.yml up -d   # 重建网关以读取新配置
+#
 #   cd go-im    # 与 GO-IM 的 compose 文件放在同一目录，共用 .env
 #   base=https://raw.githubusercontent.com/chaishuanzhu/Paircast/main/server/deploy/docker
 #   curl -fsSLO $base/docker-compose.paircast.yml
 #   curl -fsSLO $base/paircast.json
 #   docker compose -f docker-compose.paircast.yml up -d
 #
-# 反向代理把 /media、/room 转到 127.0.0.1:${PAIRCAST_PORT:-8090}，其余转 GO-IM 网关。
+# 反向代理把 /account、/console、/media、/room 转到 127.0.0.1:${PAIRCAST_PORT:-8090}，其余转 GO-IM 网关；
+# App 里的服务器地址填这个域名。
 #
 # .env（与 GO-IM 共用）:
-#   PAIRCAST_IM_SECRET / PAIRCAST_IM_WEBHOOK_SECRET  必填，GO-IM gateway 读取同一对值
+#   PAIRCAST_SESSION_SECRET   必填，≥ 16 字符（openssl rand -hex 32）
+#   PAIRCAST_ADMIN_EMAIL      首个管理员邮箱；初始密码发到该邮箱（需配置发信），否则见 docker logs paircast
+#   PAIRCAST_MAIL_PASSWORD    可选，paircast.json 的 mail 启用时的 SMTP 密码
 #   MEDIA_OSS_ACCESS_KEY / MEDIA_OSS_SECRET_KEY      片源 oss 的只读密钥；其它源 id 按 PAIRCAST_MEDIA_<大写ID>_* 自行添加
 #   TMDB_ACCESS_TOKEN / OPENSUBTITLES_API_KEY        可选
 #   PAIRCAST_TAG    镜像版本，默认 latest
@@ -24,9 +36,12 @@ services:
     restart: unless-stopped
     image: 870027381/paircast-server:${PAIRCAST_TAG:-latest}
     mem_limit: 256m
+    env_file:
+      - apps.env
     environment:
-      PAIRCAST_IM_SECRET: ${PAIRCAST_IM_SECRET:?set PAIRCAST_IM_SECRET in .env}
-      PAIRCAST_IM_WEBHOOK_SECRET: ${PAIRCAST_IM_WEBHOOK_SECRET:-}
+      PAIRCAST_SESSION_SECRET: ${PAIRCAST_SESSION_SECRET:?set PAIRCAST_SESSION_SECRET in .env}
+      PAIRCAST_ADMIN_EMAIL: ${PAIRCAST_ADMIN_EMAIL:-}
+      PAIRCAST_MAIL_PASSWORD: ${PAIRCAST_MAIL_PASSWORD:-}
       PAIRCAST_MYSQL_DSN: im:${MYSQL_PASSWORD:-im-dev}@tcp(mysql:3306)/im?parseTime=true&loc=UTC
       PAIRCAST_BLOB_ACCESS_KEY: rustfsadmin
       PAIRCAST_BLOB_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}

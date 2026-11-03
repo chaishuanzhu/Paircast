@@ -5,9 +5,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/chaishuanzhu/Paircast/server/internal/account"
 )
 
-// Register 挂载的每个路由都必须出现在 api/openapi.yaml 里。
+// Register（含账号接口）挂载的每个路由都必须出现在 api/openapi.yaml 里。
 func TestSpecCoversRoutes(t *testing.T) {
 	spec, err := os.ReadFile("../../api/openapi.yaml")
 	if err != nil {
@@ -15,6 +17,7 @@ func TestSpecCoversRoutes(t *testing.T) {
 	}
 	mux := &recordingMux{}
 	NewServer(nil, nil, nil).Register(mux)
+	account.NewHandler(nil, "").Register(mux)
 	if len(mux.routes) < 10 {
 		t.Fatalf("found only %d routes", len(mux.routes))
 	}

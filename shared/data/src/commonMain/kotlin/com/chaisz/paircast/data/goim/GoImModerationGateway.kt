@@ -35,7 +35,7 @@ internal data class ReportListDto(
     val pending: Int = 0,
 )
 
-/** GO-IM `/user/block*`, `/user/report`, `/admin/reports*`. */
+/** GO-IM `/user/block*` and `/user/report`; report review via Paircast `/console/reports*`. */
 class GoImModerationGateway(
     private val auth: GoImAuthGateway,
     private val api: GoImApi,
@@ -71,7 +71,7 @@ class GoImModerationGateway(
             ReportFilter.HANDLED -> "handled"
         }
         val dto = api.decode(
-            api.get(auth.requireSession(), "admin/reports", "status" to status, "offset" to "$offset", "limit" to "$limit"),
+            api.appGet(auth.requireSession(), "console/reports", "status" to status, "offset" to "$offset", "limit" to "$limit"),
             ReportListDto.serializer(),
         )
         ReportPage(dto.reports.orEmpty().map(::toModel), dto.total, dto.pending)
@@ -82,7 +82,7 @@ class GoImModerationGateway(
             ReportAction.IGNORE -> "ignore"
             ReportAction.BAN -> "ban"
         }
-        call { api.post(auth.requireSession(), "admin/reports/resolve", "id" to "$reportId", "action" to value) }
+        call { api.appPost(auth.requireSession(), "console/reports/resolve", "id" to "$reportId", "action" to value) }
     }
 
     private fun toModel(dto: ReportDto) = UserReport(

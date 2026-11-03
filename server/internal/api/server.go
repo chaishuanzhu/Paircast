@@ -1,5 +1,5 @@
-// Package api 是 Paircast（一起看）业务服务的 HTTP 层：媒体库（/media/*）与观影房间（/room/*）。
-// 它只通过 IM 的公开能力工作 —— 令牌校验、群、瞬时信令、webhook —— 不依赖网关内部实现。
+// Package api 是 Paircast（一起看）业务服务的媒体库（/media/*）与观影房间（/room/*）HTTP 层（账号见 internal/account）。
+// 它只通过 IM 的公开能力工作 —— 群、瞬时信令、webhook —— 不依赖网关内部实现。
 // IM 适配见 imadapter.go。
 package api
 
@@ -19,7 +19,7 @@ import (
 // RoomUpdatedSignal 是房间变化的信令类型，data 为 {"group_id":...,"room":{...}}。
 const RoomUpdatedSignal = "paircast.room_updated"
 
-// Authenticator 认证请求并返回 IM uid；失败时自己写响应并返回 ok=false。
+// Authenticator 认证请求（Paircast 会话）并返回 IM uid；失败时自己写响应并返回 ok=false。
 type Authenticator interface {
 	Authenticate(w http.ResponseWriter, r *http.Request) (uid string, ok bool)
 }

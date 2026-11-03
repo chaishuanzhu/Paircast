@@ -26,7 +26,7 @@ android: ## Debug APK
 android-test:
 	$(GRADLE) :androidApp:testDebugUnitTest
 
-server: ## Run the Go server (server/configs/paircast.json + PAIRCAST_IM_SECRET)
+server: ## Run the Go server (server/configs/paircast.json + PAIRCAST_SESSION_SECRET / PAIRCAST_IM_SECRET)
 	cd server && go run ./cmd/paircast/
 
 server-test: ## Go server vet + unit tests

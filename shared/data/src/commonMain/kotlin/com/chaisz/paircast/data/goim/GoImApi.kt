@@ -24,7 +24,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
-/** Non-2xx gateway response. [body] is the plain-text `http.Error` message. */
+/** Non-2xx GO-IM / Paircast response. [body] is the plain-text `http.Error` message. */
 class GoImHttpException(
     val status: Int,
     val body: String,
@@ -32,17 +32,30 @@ class GoImHttpException(
     val retryAfterSeconds: Int? = null,
 ) : Exception("HTTP $status: $body")
 
+/** GO-IM connection details issued with a Paircast session; empty [url] = same origin as Paircast. */
 @Serializable
-internal data class LoginResponseDto(
+internal data class ImInfoDto(
+    val url: String = "",
+    val uid: String = "",
+    val token: String = "",
+    @SerialName("expires_at") val expiresAt: Long = 0,
+)
+
+/** Paircast `/account/login` and `/account/session`. [uid] is the GO-IM uid, [token] the Paircast session. */
+@Serializable
+internal data class SessionDto(
     val uid: String,
     val token: String,
     val nickname: String? = null,
-    val username: String? = null,
     val email: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("must_change_password") val mustChangePassword: Boolean = false,
     val role: String? = null,
+    val im: ImInfoDto = ImInfoDto(),
 )
+
+@Serializable
+internal data class PasswordChangedDto(val token: String = "")
 
 @Serializable
 internal data class ProfileDto(
@@ -58,36 +71,36 @@ internal data class ProfileDto(
 internal data class ProfileListDto(val users: List<ProfileDto>? = null)
 
 @Serializable
-internal data class GroupCreateDto(
-    val id: String? = null,
-    @SerialName("group_id") val groupId: String? = null,
-)
-
-@Serializable
 internal data class UploadResponseDto(@SerialName("file_id") val fileId: JsonElement? = null)
 
 /**
- * GO-IM gateway REST API (`docs/07-api-reference.md`). Anonymous calls take [serverUrl];
- * authenticated calls carry `uid` + `token` from [GoImSession].
+ * HTTP calls for both backends. Accounts and the admin console live on the Paircast server
+ * ([GoImSession.serverUrl] + `appToken`, via [appGet] / [appPost]); chat REST and uploads go to
+ * GO-IM ([GoImSession.imBase] + the IM token, via [get] / [post]).
  */
 class GoImApi(private val client: HttpClient) {
-    internal suspend fun login(serverUrl: String, account: String, password: String): LoginResponseDto =
+    internal suspend fun login(serverUrl: String, account: String, password: String): SessionDto =
         decode(
-            send { client.submitForm(url(serverUrl, "login"), Parameters.build { append("account", account); append("password", password) }) { short() } },
-            LoginResponseDto.serializer(),
+            send { client.submitForm(url(serverUrl, "account/login"), Parameters.build { append("account", account); append("password", password) }) { short() } },
+            SessionDto.serializer(),
         )
 
+    /** Validates the Paircast session and returns fresh profile + IM token. */
+    internal suspend fun session(session: GoImSession): SessionDto =
+        decode(appGet(session, "account/session"), SessionDto.serializer())
+
     suspend fun deleteAccount(session: GoImSession, password: String) {
-        post(session, "user/delete", "password" to password)
+        appPost(session, "account/delete", "password" to password)
     }
 
-    suspend fun changePassword(session: GoImSession, oldPassword: String, newPassword: String) {
-        post(session, "change-password", "old_password" to oldPassword, "new_password" to newPassword)
-    }
+    /** Returns the new Paircast session token (every older one is revoked). */
+    suspend fun changePassword(session: GoImSession, oldPassword: String, newPassword: String): String =
+        decode(appPost(session, "account/password", "old_password" to oldPassword, "new_password" to newPassword), PasswordChangedDto.serializer())
+            .token.ifEmpty { throw GoImHttpException(200, "missing token") }
 
-    /** `GET /unread`: true valid, false rejected (401), null unknown (network). */
+    /** GO-IM `GET /unread`: true valid, false rejected (401), null unknown (network). */
     suspend fun validateToken(session: GoImSession): Boolean? = try {
-        val response = client.get(url(session.serverUrl, "unread")) {
+        val response = client.get(url(session.imBase, "unread")) {
             parameter("uid", session.uid)
             parameter("token", session.token)
             short()
@@ -104,20 +117,20 @@ class GoImApi(private val client: HttpClient) {
     }
 
     internal suspend fun myProfile(session: GoImSession): ProfileDto =
-        decode(get(session, "user/profile"), ProfileDto.serializer())
+        decode(appGet(session, "account/profile"), ProfileDto.serializer())
 
     internal suspend fun profiles(session: GoImSession, uids: List<String>): List<ProfileDto> =
         decode(get(session, "user/profiles", "uids" to uids.joinToString(",")), ProfileListDto.serializer()).users.orEmpty()
 
     /** null = unchanged; [avatarFileId] `"0"` clears the avatar. */
     internal suspend fun updateProfile(session: GoImSession, nickname: String?, avatarFileId: String?): ProfileDto =
-        decode(post(session, "user/profile", "nickname" to nickname, "avatar_file_id" to avatarFileId), ProfileDto.serializer())
+        decode(appPost(session, "account/profile", "nickname" to nickname, "avatar_file_id" to avatarFileId), ProfileDto.serializer())
 
-    /** Multipart `/upload`; returns `file_id`. */
+    /** GO-IM multipart `/upload`; returns `file_id`. */
     suspend fun upload(session: GoImSession, bytes: ByteArray, fileName: String, mime: String): String {
         val response = send {
             client.submitFormWithBinaryData(
-                url = url(session.serverUrl, "upload"),
+                url = url(session.imBase, "upload"),
                 formData = formData {
                     append("uid", session.uid)
                     append("token", session.token)
@@ -137,35 +150,37 @@ class GoImApi(private val client: HttpClient) {
             ?: throw GoImHttpException(response.status.value, "missing file_id")
     }
 
-    suspend fun createGroup(session: GoImSession, name: String): String {
-        val dto = decode(post(session, "group/create", "name" to name), GroupCreateDto.serializer())
-        return dto.groupId?.takeIf { it.isNotEmpty() } ?: dto.id?.takeIf { it.isNotEmpty() }
-            ?: throw GoImHttpException(200, "missing group id")
-    }
+    /** GO-IM GET with the IM token. */
+    internal suspend fun get(session: GoImSession, path: String, vararg params: Pair<String, String>): HttpResponse =
+        getAt(session.imBase, session.uid, session.token, path, params)
 
-    suspend fun joinGroup(session: GoImSession, groupId: String) {
-        post(session, "group/join", "group_id" to groupId)
-    }
+    /** GO-IM form POST with the IM token. */
+    internal suspend fun post(session: GoImSession, path: String, vararg params: Pair<String, String?>): HttpResponse =
+        postAt(session.imBase, session.uid, session.token, path, params)
 
-    suspend fun leaveGroup(session: GoImSession, groupId: String) {
-        post(session, "group/leave", "group_id" to groupId)
-    }
+    /** Paircast GET with the session token. */
+    internal suspend fun appGet(session: GoImSession, path: String, vararg params: Pair<String, String>): HttpResponse =
+        getAt(session.serverUrl, session.uid, session.appToken, path, params)
 
-    internal suspend fun get(session: GoImSession, path: String, vararg params: Pair<String, String>): HttpResponse = send {
-        client.get(url(session.serverUrl, path)) {
-            parameter("uid", session.uid)
-            parameter("token", session.token)
+    /** Paircast form POST with the session token. */
+    internal suspend fun appPost(session: GoImSession, path: String, vararg params: Pair<String, String?>): HttpResponse =
+        postAt(session.serverUrl, session.uid, session.appToken, path, params)
+
+    private suspend fun getAt(base: String, uid: String, token: String, path: String, params: Array<out Pair<String, String>>) = send {
+        client.get(url(base, path)) {
+            parameter("uid", uid)
+            parameter("token", token)
             params.forEach { (k, v) -> parameter(k, v) }
             short()
         }
     }
 
-    internal suspend fun post(session: GoImSession, path: String, vararg params: Pair<String, String?>): HttpResponse = send {
+    private suspend fun postAt(base: String, uid: String, token: String, path: String, params: Array<out Pair<String, String?>>) = send {
         client.submitForm(
-            url = url(session.serverUrl, path),
+            url = url(base, path),
             formParameters = Parameters.build {
-                append("uid", session.uid)
-                append("token", session.token)
+                append("uid", uid)
+                append("token", token)
                 params.forEach { (k, v) -> if (v != null) append(k, v) }
             },
         ) { short() }
@@ -204,7 +219,7 @@ class GoImApi(private val client: HttpClient) {
     companion object {
         fun url(serverUrl: String, path: String) = serverUrl.trimEnd('/') + "/" + path
 
-        /** Gateway-relative avatar paths (`/avatar/1`) → absolute URL; blank → null. */
+        /** GO-IM-relative avatar paths (`/avatar/1`) → absolute URL against [serverUrl]; blank → null. */
         fun absoluteUrl(serverUrl: String, path: String?): String? = when {
             path.isNullOrBlank() -> null
             path.startsWith("http://") || path.startsWith("https://") -> path

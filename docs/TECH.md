@@ -37,23 +37,25 @@ make android      # Debug APK
 
 ## 登录与安全
 
-- 账号来源：**只由管理员创建**，App 不提供注册（不调用 `/auth/config`、`/auth/email-code`、`/register`）。部署时建议同时在 GO-IM 关闭自助注册（`gateway.auth.disable_registration` 或 `POST /admin/settings registration_open=false`）
-- 添加用户（仅管理员，`User.isAdmin`）：`CreateUserUseCase(email, nickname)` → `AccountAdminGateway.createUser` → `POST /admin/users/create`（email、nickname 可选）。校验在 `AccountRules`（邮箱格式转小写、昵称留空交给服务端）；服务端生成随机初始密码并置 `must_change_password`，配了 SMTP 就发到对方邮箱（`mailed: true`），未配或发信失败则返回 `initial_password`，`CreatedAccount.initialPassword` 非空时 UI 显示并可复制。错误映射：400 邮箱 / 昵称、403 非管理员、409 邮箱已存在
-- 用户管理（仅管理员）：`LoadUsersUseCase` → `GET /admin/users?offset&limit`（每页 50，`ManagedUser` 含 role / `is_disabled` / avatar_url）；`SetUserDisabledUseCase` → `POST /admin/users/disable`（服务端停用后 CmdKick `account disabled`）；`DeleteUserUseCase` → `POST /admin/users/delete`（CmdKick `account deleted`）。`AccountRules.canManage` 拒绝操作自己与其他管理员（`AppError.CannotManageAccount`），服务端 400 `cannot … yourself` 同样映射；`not found` → `AppError.UserNotFound`
-- 删除账号：`DeleteAccountUseCase(password)` → `POST /user/delete`（GO-IM 校验密码后删除用户并以 `account deleted` 踢下线；管理员账号 403）→ 登出、清本机配置 / 会话 / 缓存。满足 App Store 5.1.1(v)
+- 账号归属：**账号由 Paircast 服务管理**（`server/internal/account`，MySQL `paircast_users`，bcrypt 密码）。每个账号在 GO-IM 有一个镜像用户（服务端 API `users/import`，`external_id` = Paircast 账号 ID），对客户端暴露的用户 ID 始终是 IM uid。App 不提供注册；GO-IM 侧建议关闭自助注册（`gateway.auth.disable_registration`）
+- 管理员：Paircast 配置 `account.admin_email`（或 `PAIRCAST_ADMIN_EMAIL`）启动时自动创建，随机初始密码配了 SMTP 就发信，否则打到服务日志；首次登录强制改密
+- 添加用户（仅管理员，`User.isAdmin`）：`CreateUserUseCase(email, nickname)` → `AccountAdminGateway.createUser` → Paircast `POST /console/users/create`（email、nickname 可选）。校验在 `AccountRules`（邮箱格式转小写、昵称留空交给服务端）；服务端生成随机初始密码并置 `must_change_password`，配了 SMTP 就发到对方邮箱（`mailed: true`），否则返回 `initial_password`，`CreatedAccount.initialPassword` 非空时 UI 显示并可复制。错误映射：400 邮箱 / 昵称、403 非管理员、409 邮箱已存在
+- 用户管理（仅管理员）：`LoadUsersUseCase` → `GET /console/users?offset&limit`（每页 50，`ManagedUser` 含 role / `is_disabled` / avatar_url）；`SetUserDisabledUseCase` → `POST /console/users/disable`（Paircast 先停用 IM 镜像用户——GO-IM CmdKick `account disabled`——再停用本地账号并吊销会话）；`DeleteUserUseCase` → `POST /console/users/delete`（同时删除 IM 用户）。`AccountRules.canManage` 拒绝操作自己与其他管理员（`AppError.CannotManageAccount`），服务端 400 `cannot … yourself` 同样映射；`not found` → `AppError.UserNotFound`
+- 删除账号：`DeleteAccountUseCase(password)` → Paircast `POST /account/delete`（校验密码后删除本地账号与 IM 用户；管理员账号 403）→ 登出、清本机配置 / 会话 / 缓存。满足 App Store 5.1.1(v)
 - 协议同意：`LoginUseCase` 带 `agreedToTerms`，先过 `LegalRules.requireAgreement`（未同意抛 `Validation`，不发请求）；链接由 `LegalRules.termsUrl` / `privacyUrl` 生成（`https://paircast.chaisz.com/{zh-Hans|en-US}/terms|privacy/`）。勾选状态放在 `AppSession` / `AppState`，默认不勾选、不持久化
-- 登录：`POST /login`（账号 = UID 或邮箱 + 密码）→ `token` + `must_change_password`；为真时强制 `POST /change-password` 后才进片库
-- 会话（serverUrl、uid、token）存安全存储：iOS Keychain（AfterFirstUnlockThisDeviceOnly），Android EncryptedSharedPreferences
+- 登录：Paircast `POST /account/login`（账号 = UID 或邮箱 + 密码）→ Paircast 会话令牌 `token`（`pc1.…`，默认 30 天）+ `must_change_password` + `im{url, uid, token, expires_at}`（GO-IM 地址与 IM 令牌；`url` 为空即与 Paircast 同域名）。`must_change_password` 为真时强制 `POST /account/password` 后才进片库；改密返回新 `token`（旧会话全部失效）
+- 两套令牌分工：Paircast 令牌用于 `/account/*`、`/console/*`、`/media/*`、`/room/*`；IM 令牌用于 GO-IM 的 WebSocket、`/upload`、`/user/profiles`、屏蔽与举报提交。IM 令牌由 `GET /account/session` 刷新：App 启动恢复会话时、以及 GO-IM 拒绝 IM 令牌时（`GoImConnection.refreshSession`）；刷新返回 401 才算会话失效，网络错误保留本机会话
+- 会话（serverUrl、uid、token、appToken、imUrl）存安全存储：iOS Keychain（AfterFirstUnlockThisDeviceOnly），Android EncryptedSharedPreferences
 - token 失效 / 被踢（WebSocket `KICK`）→ 先清掉本机保存的会话（`GoImConnection.onSessionEnded` → `SessionStore.clear`），再发 `SessionEvent` → 回登录页；重开 App 不会用旧 token 自动登录（否则会把另一台设备踢回去）
-- 配置只有 GO-IM 服务器地址：不含 IM 密钥，也不含对象存储 / TMDB / OpenSubtitles 凭证（v2.1 起全部在服务端）
+- 配置只有 Paircast 服务器地址（GO-IM 地址由登录返回）：不含 IM 密钥，也不含对象存储 / TMDB / OpenSubtitles 凭证（v2.1 起全部在服务端）
 
 ## 服务配置
 
-- 只有一个字段：服务器（GO-IM）地址，用户手动填写；`ConfigValidation.normalizedServerUrl` 补 `https://`、去掉路径与结尾 `/`，局域网可显式 `http://`
+- 只有一个字段：服务器（Paircast）地址，用户手动填写；`ConfigValidation.normalizedServerUrl` 补 `https://`、去掉路径与结尾 `/`，局域网可显式 `http://`
 - v2.1 起**不再提供配置分享 / 导入**：删除 `ConfigQRCodec`、`ConfigLinkCodec` / `ConfigShareLink`（AES-GCM）、导入导出用例与二维码 / 扫码 UI，Android 去掉 CameraX / ML Kit / ZXing 依赖与相机权限，iOS 去掉存相册权限；`paircast://config?args=…` 不再注册处理（`paircast://` scheme 仍用于 `watch`）
 - 已登录时保存了不同的服务器地址 → 退出登录、清元数据缓存、回登录页并提示「服务器已更换，请重新登录」
 - 本机安全存储（键 `paircast.cloud-config.v4` 保持不变）只存 `serverUrl` / `updatedAtMs` / `configVersion`；读到旧版遗留的 `accessKey` / `secretKey` / `subtitleApiKey` / `tmdbAccessToken` 时立即重写清除。iOS 1.x Keychain 旧配置直接删除
-- 配置页附两个外链：`https://paircast.chaisz.com/{zh-Hans|en-US}/guide/`（使用说明）与 `/deploy/`（服务端部署指南：Docker 最小化部署、HTTPS、SMTP 与管理员、`/admin/users/create`、片库 / 字幕 / 海报 / 表情包）
+- 配置页附两个外链：`https://paircast.chaisz.com/{zh-Hans|en-US}/guide/`（使用说明）与 `/deploy/`（服务端部署指南：Docker 最小化部署、HTTPS、SMTP 与管理员、`/console/users/create`、片库 / 字幕 / 海报 / 表情包）
 
 ## GO-IM 传输
 
@@ -93,7 +95,7 @@ make android      # Debug APK
 
 ## 头像与资料
 
-- 上传：`POST /upload`（GO-IM 文件存储）→ `file_id`，再 `POST /user/profile` 写 `avatar_file_id`；公开地址 `/avatar/{id}`
+- 上传：`POST /upload`（GO-IM 文件存储）→ `file_id`，再 Paircast `POST /account/profile` 写 `avatar_file_id`（Paircast 经 `users/import` 同步给 GO-IM，GO-IM 校验文件属于该用户且是图片后标为公开头像）；公开地址 `/avatar/{id}`
 - 观影页成员条：`/user/profiles` 批量拉取（带短缓存）；头像外圈环形进度反映播放进度
 - 播放器控件：5s 无操作自动隐藏；全屏自动横屏；房主拖动进度条发 `seek`
 - 字幕：内嵌（VLC 轨）/ 片库外挂（服务端匹配同目录 srt/vtt/ass）/ 在线搜索（服务端代理 OpenSubtitles）；本机偏移 ±30s（按 movieId 记忆）
@@ -107,7 +109,7 @@ make android      # Debug APK
 
 ## 服务端片库与房间（GO-IM，v2.1）
 
-接口由本仓库的 Paircast 服务（`server/`，定义见 `server/api/openapi.yaml`）提供，与 GO-IM 同域名（反向代理按 `/media`、`/room` 分流），客户端仍只填一个服务器地址。片源、TMDB、OpenSubtitles 凭证都在 Paircast 服务配置的 `media` 段（密钥走环境变量 `PAIRCAST_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`PAIRCAST_TMDB_ACCESS_TOKEN`、`PAIRCAST_OPENSUBTITLES_API_KEY`，见 `server/README.md`）。所有接口都要 GO-IM 的 `uid` + `token`（Paircast 服务经 GO-IM `tokens/verify` 校验）；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
+接口由本仓库的 Paircast 服务（`server/`，定义见 `server/api/openapi.yaml`）提供，与 GO-IM 同域名（反向代理按 `/account`、`/console`、`/media`、`/room` 分流），客户端仍只填一个服务器地址。片源、TMDB、OpenSubtitles 凭证都在 Paircast 服务配置的 `media` 段（密钥走环境变量 `PAIRCAST_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`PAIRCAST_TMDB_ACCESS_TOKEN`、`PAIRCAST_OPENSUBTITLES_API_KEY`，见 `server/README.md`）。所有接口都要 Paircast 会话令牌（`/account/login` 返回的 `token`）；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
 
 | 接口 | 说明 |
 |------|------|
@@ -133,9 +135,9 @@ make android      # Debug APK
 
 - GO-IM `internal/moderation`：`user_blocks`（owner_uid, target_uid）与 `user_reports`（reporter / target / message_id / context=房间 ID / content ≤500 字 / status `pending|ignored|banned`）两张表，启动自动建表；无 MySQL 时存内存
 - 用户接口：`POST /user/block`、`/user/unblock`（幂等）、`GET /user/blocks`、`POST /user/report`（同一举报人对同一条消息的待处理举报去重）
-- 管理接口：`GET /admin/reports?status=pending|handled|all`（附双方昵称、`target_disabled`、`pending` 总数）、`POST /admin/reports/resolve`（`action=ignore|ban`；`ban` = `UpdateUserDisabled` + CmdKick `account disabled` + 关闭该用户其余待处理举报；不能封禁管理员 / 自己）
+- 管理接口（Paircast 转 GO-IM 服务端 API `reports/list|get|resolve`）：`GET /console/reports?status=pending|handled|all`（附双方昵称、`target_disabled`、`pending` 总数）、`POST /console/reports/resolve`（`action=ignore|ban`；`ban` = GO-IM 停用 IM 用户 + CmdKick `account disabled` + 关闭该用户其余待处理举报，Paircast 同时停用本地账号；不能封禁 Paircast 管理员）
 - 客户端：`ModerationGateway`（`GoImModerationGateway`）；`ChatSafetyStore` 是服务端屏蔽名单的本机副本（离线也能隐藏消息），未上传成功的屏蔽记为 pending。`WatchSession.start` 调 `SyncBlockListUseCase`：先补传 pending（首次同步时把旧版本机屏蔽全部上传），再以服务端名单为准；`BlockUserUseCase` 先本机隐藏再上传；`ReportMessageUseCase` 直接提交服务器（不再打开 GitHub Issues）
-- 管理员身份：`/login` 与 `/user/profile` 的 `role == "admin"` → `User.isAdmin`；「我的」里仅管理员可见「后台管理」（用户管理〔含添加用户〕/ 举报处理；各用例也会校验）
+- 管理员身份：`/account/login` 与 `/account/session` 的 `role == "admin"` → `User.isAdmin`；「我的」里仅管理员可见「后台管理」（用户管理〔含添加用户〕/ 举报处理；各用例也会校验）
 
 ## 测试
 
