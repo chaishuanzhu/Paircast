@@ -45,6 +45,7 @@ GO-IM 网关配置 `gateway.server_api.apps` 中登记同一个 `app_id`，`webh
 ## 部署
 
 - 镜像：`docker build -t paircast-server .`（在 `server/` 目录），Docker Hub `870027381/paircast-server`。
+- 测试环境：Jenkins 任务 `paircast-server`（脚本 `ci/jenkins/paircast-server.groovy`）构建 `sha-<提交>` 镜像并部署到 k8s 命名空间 `go-im-test`。
 - Docker：`deploy/docker/`，与 GO-IM 最小化部署放在同一目录、共用 `.env`，加入其网络 `go-im_default`（步骤见 `docs/zh-Hans/deploy/` 第 5 步）。
 - Kubernetes：`deploy/k8s/`，与 GO-IM 部署在同一命名空间，Ingress 把 `/media`、`/room` 转给本服务（说明见 `kustomization.yaml` 头部）。
 - 其它反向代理：同域名下 `/media`、`/room` 转到 8090，其余转 GO-IM 网关。
