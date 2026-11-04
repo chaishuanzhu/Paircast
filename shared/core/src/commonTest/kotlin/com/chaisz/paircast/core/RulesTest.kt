@@ -193,6 +193,31 @@ class PlaybackSyncRulesTest {
         assertEquals(ApplyResult.Ignored(PlaybackSyncRules.IgnoreReason.ROOM_ENDED), result)
     }
 
+    @Test fun snapshotDoesNotSeekWhenAlreadyInSync() {
+        val room = roomFixture()
+        val playing = PlaybackState(movieId = "m1", isPaused = false, positionMs = 10_000, lastSeq = 1)
+        val inSync = assertIs<ApplyResult.Applied>(
+            PlaybackSyncRules.shouldAccept(signal(PlaybackAction.PLAY, 10_500, room.hostUserId, 2), room, playing, 10_200),
+        )
+        assertFalse(inSync.seek)
+        val drifted = assertIs<ApplyResult.Applied>(
+            PlaybackSyncRules.shouldAccept(signal(PlaybackAction.PLAY, 14_000, room.hostUserId, 2), room, playing, 10_200),
+        )
+        assertTrue(drifted.seek)
+        val flipped = assertIs<ApplyResult.Applied>(
+            PlaybackSyncRules.shouldAccept(signal(PlaybackAction.PAUSE, 10_200, room.hostUserId, 2), room, playing, 10_200),
+        )
+        assertTrue(flipped.seek)
+    }
+
+    @Test fun syncRequestNeverApplied() {
+        val room = roomFixture()
+        assertEquals(
+            ApplyResult.Ignored(PlaybackSyncRules.IgnoreReason.REQUEST),
+            PlaybackSyncRules.shouldAccept(signal(PlaybackAction.SYNC_REQUEST, 0, room.hostUserId, 9), room, PlaybackState(movieId = "m1")),
+        )
+    }
+
     @Test fun hostPlayApplied() {
         val room = roomFixture()
         val result = assertIs<ApplyResult.Applied>(

@@ -98,6 +98,8 @@ data class WatchUiState(
     val memberProfiles: Map<String, User> = emptyMap(),
     /** Default online-subtitle query for the current movie ("Title Year"). */
     val suggestedOnlineQuery: String = "",
+    /** Member tapped refresh and is waiting for the host's snapshot. */
+    val isRequestingSync: Boolean = false,
 ) {
     val isHost: Boolean get() = room != null && selfId != null && room.hostUserId == selfId
 
@@ -149,6 +151,8 @@ class WatchSession(
 
     private val listMovies = ListMoviesUseCase(deps.configGateway, deps.catalogGateway, deps.metadataGateway)
     private val emitHost = EmitHostPlaybackUseCase(deps.syncGateway)
+    private var syncRequestJob: Job? = null
+    private var lastSyncAnswerMs = Long.MIN_VALUE / 2
     private val changeMovie = ChangeMovieUseCase(deps.roomGateway, deps.syncGateway, deps.chatGateway)
     private val leaveRoom = LeaveRoomUseCase(deps.roomGateway, deps.chatGateway, deps.syncGateway)
     private val listTracks = ListSubtitleTracksUseCase(deps.configGateway, deps.subtitleGateway)
@@ -387,7 +391,7 @@ class WatchSession(
                         )
                     }
                     if (membersChanged) refreshMemberProfiles()
-                    if (updated.memberIds.any { it !in previousMembers }) emitSnapshotForNewMembers()
+                    if (updated.memberIds.any { it !in previousMembers }) emitSnapshot()
                 }
             },
         )
@@ -418,8 +422,11 @@ class WatchSession(
         }
     }
 
-    /** Newcomers only hear heartbeats while playing; tell them the host's state right away. */
-    private fun emitSnapshotForNewMembers() {
+    /**
+     * Host's current state as PLAY / PAUSE: newcomers only hear heartbeats while playing, and
+     * members can ask for it with [requestSync].
+     */
+    private fun emitSnapshot() {
         val room = current.room ?: return
         val user = me ?: return
         if (!current.isHost) return
@@ -449,10 +456,18 @@ class WatchSession(
 
     internal fun applyRemote(signal: PlaybackSyncSignal) {
         val room = current.room ?: return
+        if (signal.action == PlaybackAction.SYNC_REQUEST) {
+            answerSyncRequest()
+            return
+        }
         val result = PlaybackSyncRules.shouldAccept(signal, room, current.playback, player.currentPositionMs)
         if (result !is PlaybackSyncRules.ApplyResult.Applied) return
         val state = result.state
+        // The host's PLAY / PAUSE snapshot answers a pending refresh; always realign on it.
+        val answersRequest = current.isRequestingSync &&
+            (signal.action == PlaybackAction.PLAY || signal.action == PlaybackAction.PAUSE)
         _state.update { it.copy(playback = state) }
+        if (answersRequest) finishSyncRequest(synced = true)
         // A member promoted to host must keep emitting above the sequence it has already seen.
         seq = maxOf(seq, state.lastSeq)
 
@@ -463,6 +478,7 @@ class WatchSession(
                     it.copy(room = it.room?.copy(hostUserId = newHost, hostTransferSeq = signal.seq))
                 }
                 toast("Host is now {{name}}", mapOf("name" to current.memberDisplayName(newHost)))
+                if (current.isHost) finishSyncRequest(synced = false)
                 startHeartbeatIfNeeded()
             }
         }
@@ -490,7 +506,7 @@ class WatchSession(
         }
         // No playback while backgrounded; the host's next heartbeat realigns after return.
         if (backgroundedAtMs != null) return
-        if (result.seek) player.seek(state.positionMs)
+        if (result.seek || answersRequest) player.seek(state.positionMs)
         // Avoid pause↔play thrash on heartbeat when already in the right state.
         if (state.isPaused) {
             if (!player.isPaused) player.pause()
@@ -499,6 +515,58 @@ class WatchSession(
             val ignore = signal.action == PlaybackAction.HEARTBEAT && current.isHost && !player.hasStartedPlayback
             if (!ignore) player.play()
         }
+    }
+
+    // endregion
+
+    // region Member refresh
+
+    /** Member "refresh": ask the host for its current position and play / pause state. */
+    fun requestSync() {
+        val room = current.room ?: return
+        val user = me ?: return
+        if (current.isHost || current.isRequestingSync) return
+        _state.update { it.copy(isRequestingSync = true) }
+        syncRequestJob = scope.launch {
+            val request = PlaybackSyncSignal(
+                action = PlaybackAction.SYNC_REQUEST,
+                positionMs = player.currentPositionMs,
+                movieId = room.movieId,
+                senderId = user.id,
+                clientTs = nowMs(),
+                seq = 0,
+            )
+            try {
+                deps.syncGateway.send(room, request)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _state.update { it.copy(isRequestingSync = false) }
+                toast("Playback sync failed — check your connection")
+                return@launch
+            }
+            delay(PlaybackSyncRules.SYNC_REQUEST_TIMEOUT_MS)
+            if (current.isRequestingSync) {
+                _state.update { it.copy(isRequestingSync = false) }
+                toast("The host didn't respond. Try again in a moment")
+            }
+        }
+    }
+
+    private fun finishSyncRequest(synced: Boolean) {
+        if (!current.isRequestingSync) return
+        syncRequestJob?.cancel()
+        syncRequestJob = null
+        _state.update { it.copy(isRequestingSync = false) }
+        if (synced) toast("Synced with the host")
+    }
+
+    private fun answerSyncRequest() {
+        if (!current.isHost) return
+        val now = nowMs()
+        if (now - lastSyncAnswerMs < PlaybackSyncRules.SYNC_ANSWER_MIN_INTERVAL_MS) return
+        lastSyncAnswerMs = now
+        emitSnapshot()
     }
 
     // endregion

@@ -179,6 +179,12 @@ enum class PlaybackAction {
      * Empty / missing ref means host turned shared subtitles off.
      */
     @SerialName("subtitle_change") SUBTITLE_CHANGE,
+
+    /**
+     * Member asks the host for its current position / play state; the host answers with a PLAY or
+     * PAUSE snapshot. Never applied to playback. Older clients fail to decode it and drop it.
+     */
+    @SerialName("sync_request") SYNC_REQUEST,
 }
 
 @Serializable

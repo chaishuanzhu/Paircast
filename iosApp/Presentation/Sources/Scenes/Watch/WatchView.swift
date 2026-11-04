@@ -52,6 +52,7 @@ public final class WatchViewModel: ObservableObject {
     }
 
     public var isHost: Bool { uiState?.isHost ?? false }
+    public var isRequestingSync: Bool { uiState?.isRequestingSync ?? false }
 
     public var filteredLibraryMovies: [Movie] {
         let query = switchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -157,6 +158,10 @@ public final class WatchViewModel: ObservableObject {
 
     public func togglePlay() {
         watch.togglePlay()
+    }
+
+    public func requestSync() {
+        watch.requestSync()
     }
 
     public func seekTo(ms: Int64) {
@@ -683,17 +688,35 @@ public struct WatchView: View {
             }
 
             HStack(spacing: 10) {
-                Button {
-                    notePlayerInteraction()
-                    viewModel.togglePlay()
-                } label: {
-                    Image(systemName: viewModel.player.isPaused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.white)
+                if viewModel.isHost {
+                    Button {
+                        notePlayerInteraction()
+                        viewModel.togglePlay()
+                    } label: {
+                        Image(systemName: viewModel.player.isPaused ? "play.fill" : "pause.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                    }
+                    .opacity(0.95)
+                } else if viewModel.isRequestingSync {
+                    ProgressView()
+                        .tint(.white)
+                        .controlSize(.small)
                         .frame(width: 28, height: 28)
+                } else {
+                    Button {
+                        notePlayerInteraction()
+                        viewModel.requestSync()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                    }
+                    .opacity(0.95)
+                    .accessibilityLabel("Sync with host")
                 }
-                .disabled(!viewModel.isHost)
-                .opacity(viewModel.isHost ? 0.95 : 0.45)
 
                 Button {
                     notePlayerInteraction()

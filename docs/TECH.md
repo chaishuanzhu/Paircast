@@ -70,7 +70,7 @@ make android      # Debug APK
 
 ```json
 {
-  "action": "play|pause|seek|heartbeat|movie_change|host_transfer|subtitle_change",
+  "action": "play|pause|seek|heartbeat|movie_change|host_transfer|subtitle_change|sync_request",
   "positionMs": 0,
   "movieId": "oss:films/Inception.2010.mp4",
   "hostUserId": "10001",
@@ -88,6 +88,8 @@ make android      # Debug APK
 - 仅当前 `hostUserId` 的 play/pause/seek/heartbeat/movie_change/subtitle_change 生效
 - `seq` 单调；旧序丢弃
 - 房主播放中约每 5s 发 heartbeat；成员用**本机播放器实时进度**与房主 `positionMs` 比较，> 1200ms 才 Seek
+- play / pause 快照（新成员加入、`sync_request` 回应）发给全房：仅在播停状态翻转或偏差 > 1200ms 时 Seek，已同步的成员不卡顿
+- 成员刷新：`WatchSession.requestSync()` 广播 `sync_request`（`seq = 0`，任何人都不应用到播放器）→ 房主 `emitSnapshot()`（1s 节流）→ 请求方收到下一条 play / pause 时**强制** Seek 并结束 `isRequestingSync`；4s 无回应则提示。旧客户端解不开新 action 会整条丢弃，所以旧房主表现为「无响应」
 - 房主离开：先发 `host_transfer`（目标 = joinOrder 下一位），再 `POST /room/leave`（`transfer_seq`），服务端按加入顺序落库转让；最后一人离开结束房间
 - `subtitleObjectKey` 字段名沿用旧版，内容是服务端字幕 ref（见「字幕」）
 - **前后台**：`WatchSession.onBackground()` 本机暂停（房主播放中发 `pause`），后台期间不执行远端播控；`onForeground()` 离开 ≥15s 或播放器报错则用新 URL 重新 prepare 并 seek 回原进度、恢复当前字幕。`PlayerPort.enterBackground/enterForeground` 由平台处理渲染面（Android 后台 `detachViews` + 关视频轨，回前台重新挂载）

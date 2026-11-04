@@ -4454,6 +4454,57 @@
           }
         }
       }
+    },
+    "Sync with host": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync with host"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与房主同步"
+          }
+        }
+      }
+    },
+    "Synced with the host": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synced with the host"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已与房主同步"
+          }
+        }
+      }
+    },
+    "The host didn't respond. Try again in a moment": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The host didn't respond. Try again in a moment"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房主暂未响应，请稍后再试"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

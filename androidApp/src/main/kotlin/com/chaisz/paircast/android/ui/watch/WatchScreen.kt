@@ -47,6 +47,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloseFullscreen
@@ -210,6 +211,7 @@ fun WatchScreen(app: AppState, roomId: String?, movieId: String?, hostUserId: St
                 onBack = { fullscreen = false },
                 onToggleFullscreen = { fullscreen = false },
                 onTogglePlay = session::togglePlay,
+                onRefresh = session::requestSync,
                 onSeek = session::seekToProgress,
                 onSwitch = onSwitch,
                 onSubtitles = { showSubtitles = true; session.refreshSubtitles() },
@@ -224,6 +226,7 @@ fun WatchScreen(app: AppState, roomId: String?, movieId: String?, hostUserId: St
                 onBack = ::leave,
                 onToggleFullscreen = { fullscreen = true },
                 onTogglePlay = session::togglePlay,
+                onRefresh = session::requestSync,
                 onSeek = session::seekToProgress,
                 onSwitch = onSwitch,
                 onSubtitles = { showSubtitles = true; session.refreshSubtitles() },
@@ -293,6 +296,7 @@ private fun PlayerStage(
     onBack: () -> Unit,
     onToggleFullscreen: () -> Unit,
     onTogglePlay: () -> Unit,
+    onRefresh: () -> Unit,
     onSeek: (Double) -> Unit,
     onSwitch: () -> Unit,
     onSubtitles: () -> Unit,
@@ -395,13 +399,20 @@ private fun PlayerStage(
                         )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ChromeIcon(
-                            if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                            null,
-                            enabled = state.isHost,
-                        ) {
-                            touch()
-                            onTogglePlay()
+                        if (state.isHost) {
+                            ChromeIcon(if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, null) {
+                                touch()
+                                onTogglePlay()
+                            }
+                        } else if (state.isRequestingSync) {
+                            Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                            }
+                        } else {
+                            ChromeIcon(Icons.Filled.Refresh, t("Sync with host")) {
+                                touch()
+                                onRefresh()
+                            }
                         }
                         ChromeIcon(Icons.Outlined.Subtitles, t("Subtitles")) {
                             touch()

@@ -26,8 +26,12 @@ object PlaybackSyncRules {
     const val FOREGROUND_HEARTBEAT_MS: Long = 5_000
     const val BACKGROUND_HEARTBEAT_MS: Long = 15_000
     const val HOST_DISCONNECT_TIMEOUT_MS: Long = 45_000
+    /** Member "refresh": how long to wait for the host's snapshot before giving up. */
+    const val SYNC_REQUEST_TIMEOUT_MS: Long = 4_000
+    /** Host answers at most one sync request per this window (requests are room-wide broadcasts). */
+    const val SYNC_ANSWER_MIN_INTERVAL_MS: Long = 1_000
 
-    enum class IgnoreReason { STALE_SEQ, NON_HOST, ROOM_ENDED }
+    enum class IgnoreReason { STALE_SEQ, NON_HOST, ROOM_ENDED, REQUEST }
 
     sealed class ApplyResult {
         /** [seek]: whether the player should seek to `state.positionMs`. */
@@ -46,6 +50,7 @@ object PlaybackSyncRules {
         localPositionMs: Long? = null,
     ): ApplyResult {
         if (room.status != RoomStatus.ACTIVE) return ApplyResult.Ignored(IgnoreReason.ROOM_ENDED)
+        if (signal.action == PlaybackAction.SYNC_REQUEST) return ApplyResult.Ignored(IgnoreReason.REQUEST)
 
         if (signal.action == PlaybackAction.HOST_TRANSFER) {
             val newHost = signal.hostUserId
@@ -66,9 +71,18 @@ object PlaybackSyncRules {
         if ((signal.senderId ?: "") != room.hostUserId) return ApplyResult.Ignored(IgnoreReason.NON_HOST)
 
         val state = current.copy(lastSeq = signal.seq)
+        val drift = abs(signal.positionMs - (localPositionMs ?: current.positionMs))
         return when (signal.action) {
-            PlaybackAction.PLAY -> ApplyResult.Applied(state.copy(positionMs = signal.positionMs, isPaused = false), true)
-            PlaybackAction.PAUSE -> ApplyResult.Applied(state.copy(positionMs = signal.positionMs, isPaused = true), true)
+            // Snapshots (newcomer / sync request) reach everyone: only seek when the state flips or
+            // this member has actually drifted, so in-sync members don't stutter.
+            PlaybackAction.PLAY -> ApplyResult.Applied(
+                state.copy(positionMs = signal.positionMs, isPaused = false),
+                seek = current.isPaused || drift > SYNC_THRESHOLD_MS,
+            )
+            PlaybackAction.PAUSE -> ApplyResult.Applied(
+                state.copy(positionMs = signal.positionMs, isPaused = true),
+                seek = !current.isPaused || drift > SYNC_THRESHOLD_MS,
+            )
             PlaybackAction.SEEK -> ApplyResult.Applied(state.copy(positionMs = signal.positionMs), true)
             PlaybackAction.HEARTBEAT -> {
                 // Compare against the *live* player clock. Using frozen `current.positionMs` makes
@@ -88,6 +102,7 @@ object PlaybackSyncRules {
             // Subtitle share does not move the playhead or pause state.
             PlaybackAction.SUBTITLE_CHANGE -> ApplyResult.Applied(state, seek = false)
             PlaybackAction.HOST_TRANSFER -> ApplyResult.Applied(state, seek = false)
+            PlaybackAction.SYNC_REQUEST -> ApplyResult.Ignored(IgnoreReason.REQUEST)
         }
     }
 

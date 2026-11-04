@@ -15,6 +15,7 @@ import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.model.UserReport
 import com.chaisz.paircast.core.rules.HostTransferRules
+import com.chaisz.paircast.core.rules.PlaybackSyncRules
 import com.chaisz.paircast.core.session.WatchDependencies
 import com.chaisz.paircast.core.session.WatchEvent
 import com.chaisz.paircast.core.session.WatchSession
@@ -292,6 +293,68 @@ class WatchSessionTest {
         runCurrent()
         assertTrue(h.subtitles.uploads.isEmpty())
         assertEquals("src:oss:films/a.srt", h.sync.sent.last { it.action == PlaybackAction.SUBTITLE_CHANGE }.subtitleObjectKey)
+        h.session.close()
+    }
+
+    @Test fun memberRefreshRequestsAndRealignsOnHostSnapshot() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.sync.incoming.emit(PlaybackSyncSignal(action = PlaybackAction.PLAY, positionMs = 30_000, senderId = "host", seq = 2))
+        runCurrent()
+        h.player.seeks.clear()
+
+        h.session.requestSync()
+        runCurrent()
+        assertEquals(PlaybackAction.SYNC_REQUEST, h.sync.sent.last().action)
+        assertTrue(h.session.state.value.isRequestingSync)
+
+        // In sync already (no drift, no state flip) — still realigns because it answers our request.
+        h.player.currentPositionMs = 30_500
+        h.sync.incoming.emit(PlaybackSyncSignal(action = PlaybackAction.PLAY, positionMs = 30_600, senderId = "host", seq = 3))
+        runCurrent()
+        assertEquals(listOf(30_600L), h.player.seeks)
+        assertFalse(h.session.state.value.isRequestingSync)
+        assertFalse(h.player.isPaused)
+        h.session.close()
+    }
+
+    @Test fun memberRefreshTimesOutWhenHostSilent() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.session.requestSync()
+        runCurrent()
+        assertTrue(h.session.state.value.isRequestingSync)
+        advanceTimeBy(PlaybackSyncRules.SYNC_REQUEST_TIMEOUT_MS + 1)
+        runCurrent()
+        assertFalse(h.session.state.value.isRequestingSync)
+        h.session.close()
+    }
+
+    @Test fun hostAnswersSyncRequestWithThrottledSnapshot() = runTest {
+        var now = 10_000L
+        val h = Harness(this, User("host", "Host"), roomHost = "host", nowMs = { now })
+        h.session.start()
+        runCurrent()
+        h.session.togglePlay()
+        runCurrent()
+        val before = h.sync.sent.size
+        val request = PlaybackSyncSignal(action = PlaybackAction.SYNC_REQUEST, positionMs = 0, senderId = "member", seq = 0)
+
+        h.sync.incoming.emit(request)
+        runCurrent()
+        assertEquals(before + 1, h.sync.sent.size)
+        assertEquals(PlaybackAction.PLAY, h.sync.sent.last().action)
+
+        h.sync.incoming.emit(request)
+        runCurrent()
+        assertEquals(before + 1, h.sync.sent.size)
+
+        now += PlaybackSyncRules.SYNC_ANSWER_MIN_INTERVAL_MS
+        h.sync.incoming.emit(request)
+        runCurrent()
+        assertEquals(before + 2, h.sync.sent.size)
         h.session.close()
     }
 
