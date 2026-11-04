@@ -2,7 +2,7 @@
 //   Images  ci-01: paircast-server image of one commit, tagged sha-<7>, pushed to Docker Hub
 //           (skipped when the tag already exists, unless REBUILD)
 //   Deploy  ci-01: kubectl set image deployment/paircast in namespace go-im-test, rolls back on failure,
-//           then checks that https://go-im.test.chaisz.com/media is served by Paircast (401 without a token)
+//           then checks that https://paircast.test.chaisz.com/media/sources is served by Paircast (401 without a token)
 // The deployment, Secrets (goim-paircast, goim-paircast-config) and ingress already exist in go-im-test;
 // see server/deploy/k8s. GO-IM itself is deployed by the go-im-server job.
 //
@@ -13,7 +13,7 @@
 
 def repoUrl = 'https://github.com/chaishuanzhu/Paircast.git'
 def k8sNamespace = 'go-im-test'
-def siteUrl = 'https://go-im.test.chaisz.com'
+def siteUrl = 'https://paircast.test.chaisz.com'
 def commit = ''
 def tag = ''
 def imageNs = ''

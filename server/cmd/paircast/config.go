@@ -17,13 +17,14 @@ import (
 // （未设置时读 GO-IM 网关的 GOIM_APP_<APP_ID>_SECRET / _WEBHOOK_SECRET）、PAIRCAST_MYSQL_DSN、PAIRCAST_MAIL_PASSWORD、
 // PAIRCAST_BLOB_ACCESS_KEY / PAIRCAST_BLOB_SECRET_KEY，以及媒体库的 PAIRCAST_MEDIA_<ID>_* / PAIRCAST_TMDB_ACCESS_TOKEN / PAIRCAST_OPENSUBTITLES_API_KEY。
 type Config struct {
-	HTTPAddr string `json:"http_addr"` // 默认 ":8090"
+	HTTPAddr       string `json:"http_addr"`       // 默认 ":8090"
+	SwaggerEnabled bool   `json:"swagger_enabled"` // 在 /swagger/ 提供接口文档（Swagger UI），默认关闭
 
 	// IM 服务端 API（/server/v1/*）与 webhook。Paircast 在 IM 侧登记为一个接入方，
 	// webhook_url 指向本服务的 /im/webhook，订阅 group.member_left 与 group.dismissed。
 	IM struct {
 		BaseURL       string          `json:"base_url"`   // 服务端 API 地址，例如 "http://gateway:8080"
-		PublicURL     string          `json:"public_url"` // 客户端连接 IM 的地址，空 = 与 Paircast 服务同源（同域名反代）
+		PublicURL     string          `json:"public_url"` // 客户端连接 IM 的地址（如 "https://im.example.com"），随登录返回；空 = 与 Paircast 服务同源（单域名反代时）
 		AppID         string          `json:"app_id"`
 		Secret        string          `json:"secret"`
 		WebhookSecret string          `json:"webhook_secret"`

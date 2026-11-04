@@ -36,7 +36,7 @@
     <thead><tr><th>Item</th><th>Notes</th></tr></thead>
     <tbody>
       <tr><td>Server</td><td>Linux, 2 vCPU / 2 GB or more, with Docker 20.10+ and Docker Compose v2</td></tr>
-      <tr><td>Domain (recommended)</td><td>e.g. <code>im.example.com</code> pointing at the server, for HTTPS. Not needed for LAN-only use</td></tr>
+      <tr><td>Domains (recommended)</td><td>Two subdomains pointing at the server, for HTTPS: one for the Paircast server (e.g. <code>paircast.example.com</code>, the address users enter in the app) and one for GO-IM (e.g. <code>im.example.com</code>). Not needed for LAN-only use</td></tr>
       <tr><td>Mail account (optional)</td><td>Any mailbox with SMTP, used to send initial passwords to you and your friends; without it the passwords show up in the log / app</td></tr>
       <tr><td>Video storage</td><td><code>mp4</code> / <code>m4v</code> / <code>mkv</code> files in S3-compatible storage (Alibaba Cloud OSS, Tencent Cloud COS, Qiniu, MinIO, …) plus a <strong>read-only</strong> access key</td></tr>
     </tbody>
@@ -77,8 +77,9 @@ curl http://127.0.0.1:8080/health     # ready when it returns "status":"ok"</cod
 <pre><code>base=https://raw.githubusercontent.com/chaishuanzhu/Paircast/main/server/deploy/docker
 curl -fsSLO $base/docker-compose.paircast.yml
 curl -fsSLO $base/paircast.json</code></pre>
-  <p>Set the session secret, the admin email and the password of Paircast's database user in <code>.env</code>:</p>
+  <p>Set the session secret, GO-IM's public address (sent to the app at sign-in so it knows where to connect for chat), the admin email and the password of Paircast's database user in <code>.env</code>:</p>
 <pre><code>echo "PAIRCAST_SESSION_SECRET=$(openssl rand -hex 32)" &gt;&gt; .env
+echo "PAIRCAST_IM_PUBLIC_URL=https://im.example.com" &gt;&gt; .env
 echo "PAIRCAST_ADMIN_EMAIL=you@example.com" &gt;&gt; .env
 echo "PAIRCAST_MYSQL_PASSWORD=$(openssl rand -hex 16)" &gt;&gt; .env</code></pre>
   <p>Mail (SMTP) is optional: with it, the initial passwords for you and new users are emailed to each address; without it, the admin's initial password goes to the Paircast server log and new users' passwords are shown in the app for the admin to pass on. To send mail, add this to <code>paircast.json</code>:</p>
@@ -142,14 +143,15 @@ PAIRCAST_S3_ACCESS_KEY=… PAIRCAST_S3_SECRET_KEY=… \
   <p>Uploading needs a writable key; use it only on your own machine, not on the server. Then set <code>"stickers_source": "oss"</code> and <code>"stickers_prefix": "stickers/"</code> under <code>media</code> in <code>paircast.json</code> and restart the Paircast server.</p>
 
   <h2>5. Reverse proxy and HTTPS</h2>
-  <p>The app takes a single server address: <code>/account</code>, <code>/console</code>, <code>/media</code> and <code>/room</code> go to the Paircast server (8090), everything else to GO-IM (8080). Caddy obtains certificates automatically and passes WebSocket through:</p>
+  <p>The Paircast server and GO-IM each get their own domain: the Paircast domain goes to 8090, the GO-IM domain to 8080. Users enter only the Paircast address in the app; at sign-in the server tells the app where GO-IM is (<code>PAIRCAST_IM_PUBLIC_URL</code> from the previous step). Caddy obtains certificates automatically and passes WebSocket through:</p>
 <pre><code># /etc/caddy/Caddyfile
+paircast.example.com {
+    reverse_proxy 127.0.0.1:8090   # Paircast server
+}
 im.example.com {
-    @paircast path /account/* /console/* /media/* /room/*
-    reverse_proxy @paircast 127.0.0.1:8090   # Paircast server
-    reverse_proxy 127.0.0.1:8080             # everything else: GO-IM
+    reverse_proxy 127.0.0.1:8080   # GO-IM
 }</code></pre>
-  <p>The server address in the app is then <code>im.example.com</code>. With nginx, forward the <code>Upgrade</code> / <code>Connection</code> headers. For LAN-only use you don't need a certificate: replace the site name <code>im.example.com</code> with <code>:80</code> and enter <code>http://192.168.x.x</code>.</p>
+  <p>The server address in the app is then <code>paircast.example.com</code>. With nginx, forward the <code>Upgrade</code> / <code>Connection</code> headers on the GO-IM site. For LAN-only use you don't need a certificate: use the site names <code>:80</code> and <code>:8081</code>, enter <code>http://192.168.x.x</code> in the app and set <code>PAIRCAST_IM_PUBLIC_URL</code> to <code>http://192.168.x.x:8081</code>.</p>
 
   <h2>6. User accounts</h2>
   <p>The Paircast app has no sign-up; the admin creates every account.</p>
@@ -158,7 +160,7 @@ im.example.com {
   <p>Users can delete their own account in the app under Me → Delete Account after entering their password (admin accounts excepted). For a forgotten password, the admin can delete the old account in Admin Console → User Management and add the same email again; the same screen can also disable / enable accounts. Reports are handled under Admin Console → Reports; banning also disables the account.</p>
 
   <h3>6.2 From the command line (optional)</h3>
-<pre><code>SERVER=https://im.example.com
+<pre><code>SERVER=https://paircast.example.com
 curl -s -X POST $SERVER/account/login -d account=you@example.com -d password='admin-password'
 # note "token" in the response
 
@@ -168,7 +170,7 @@ curl -s -X POST $SERVER/console/users/create -H "Authorization: Bearer TOKEN_FRO
 
   <h2>7. Use it in the app</h2>
   <ol>
-    <li>Open Paircast → Service Configuration (top right of the login screen) → enter <code>im.example.com</code> → Save.</li>
+    <li>Open Paircast → Service Configuration (top right of the login screen) → enter <code>paircast.example.com</code> → Save.</li>
     <li>Sign in with the admin or a friend's account, pick a title, open a room and send the invite link.</li>
   </ol>
   <p>See the <a href="../guide/">User Guide</a> for details.</p>

@@ -2,19 +2,16 @@ package api
 
 import (
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/chaishuanzhu/Paircast/server/api/openapi"
 	"github.com/chaishuanzhu/Paircast/server/internal/account"
 )
 
-// Register（含账号接口）挂载的每个路由都必须出现在 api/openapi.yaml 里。
+// Register（含账号接口）挂载的每个路由都必须出现在 api/openapi/openapi.yaml 里。
 func TestSpecCoversRoutes(t *testing.T) {
-	spec, err := os.ReadFile("../../api/openapi.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	spec := openapi.Spec
 	mux := &recordingMux{}
 	NewServer(nil, nil, nil).Register(mux)
 	account.NewHandler(nil, "").Register(mux)
@@ -23,7 +20,7 @@ func TestSpecCoversRoutes(t *testing.T) {
 	}
 	for _, route := range mux.routes {
 		if !strings.Contains(string(spec), "\n  "+route+":") {
-			t.Errorf("route %s is not documented in api/openapi.yaml", route)
+			t.Errorf("route %s is not documented in api/openapi/openapi.yaml", route)
 		}
 	}
 }

@@ -3,6 +3,7 @@
     "http_addr": ":8090",
     "im": {
         "base_url": "http://gateway:8080",
+        "public_url": "https://im.example.com",
         "app_id": "paircast"
     },
     "media": {

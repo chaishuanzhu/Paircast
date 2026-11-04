@@ -51,7 +51,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 - APK：`.github/workflows/android.yaml`（PR / main 出 Debug；tag 出 Release，签名走 `PAIRCAST_KEYSTORE_*` secrets）
 - TestFlight / ASC：本机 `asc` + keychain；Agent 环境若无完整网络则在本机终端执行
 - LiveContainer：`Scripts/update-livecontainer-source.sh` + `docs/source.json`
-- 服务端：`server/`（Go 模块 `github.com/chaishuanzhu/Paircast/server`，`/media/…`、`/room/…`，接口定义 `server/api/openapi.yaml`），作为 GO-IM 接入方运行（服务端 API + webhook，SDK `github.com/chaishuanzhu/GO-IM/pkg/imserver`）；`make server-test`。依赖 GO-IM 的 `CmdSignal=25` 类型化信令：播控 `paircast.playback`（客户端互发）、房间快照 `paircast.room_updated`（服务端推送），`content` 为 `{"type","data"}`
+- 服务端：`server/`（Go 模块 `github.com/chaishuanzhu/Paircast/server`，`/media/…`、`/room/…`，接口定义 `server/api/openapi/openapi.yaml`，`swagger_enabled` 时在 `/swagger/` 提供文档），作为 GO-IM 接入方运行（服务端 API + webhook，SDK `github.com/chaishuanzhu/GO-IM/pkg/imserver`）；`make server-test`。依赖 GO-IM 的 `CmdSignal=25` 类型化信令：播控 `paircast.playback`（客户端互发）、房间快照 `paircast.room_updated`（服务端推送），`content` 为 `{"type","data"}`
 
 ## Agent Skills
 

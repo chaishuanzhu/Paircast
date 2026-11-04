@@ -7,7 +7,7 @@ info:
 
     **账号**：账号归 Paircast 所有（邮箱 + 密码，管理员建号），每个账号在 GO-IM 有一个镜像用户。
     对客户端暴露的用户 ID（`uid`）一律是 GO-IM uid。登录 / 会话接口同时返回 Paircast 会话令牌和 GO-IM 连接信息
-    （`im.url` 为空表示与本服务同源，`im.token` 用于 GO-IM 的 WebSocket、上传、拉黑、举报等接口）。
+    （`im.url` 是 GO-IM 的对外地址，Paircast 与 GO-IM 各用一个域名；为空表示与本服务同源。`im.token` 用于 GO-IM 的 WebSocket、上传、拉黑、举报等接口）。
 
     **认证**：Paircast 会话令牌（登录返回的 `token`）。带 `token` 参数（查询或表单），或 `Authorization: Bearer <token>`；
     带 `uid` 参数时必须与账号一致，否则 403。改密、禁用、删除后旧令牌返回 401。

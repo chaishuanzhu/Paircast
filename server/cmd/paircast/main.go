@@ -24,6 +24,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/chaishuanzhu/GO-IM/pkg/imserver"
+	"github.com/chaishuanzhu/Paircast/server/api/openapi"
 	"github.com/chaishuanzhu/Paircast/server/internal/account"
 	"github.com/chaishuanzhu/Paircast/server/internal/api"
 	"github.com/chaishuanzhu/Paircast/server/internal/media"
@@ -121,6 +122,9 @@ func main() {
 		mux.Handle("/im/webhook", api.WebhookHandler(rooms, cfg.IM.WebhookSecret))
 	} else {
 		log.Printf("[paircast] WARNING: im.webhook_secret is empty, IM-side leaves / dismissals are not synced")
+	}
+	if cfg.SwaggerEnabled {
+		mux.Handle("/swagger/", openapi.Handler("/swagger/"))
 	}
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if db != nil {

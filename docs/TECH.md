@@ -43,7 +43,7 @@ make android      # Debug APK
 - 用户管理（仅管理员）：`LoadUsersUseCase` → `GET /console/users?offset&limit`（每页 50，`ManagedUser` 含 role / `is_disabled` / avatar_url）；`SetUserDisabledUseCase` → `POST /console/users/disable`（Paircast 先停用 IM 镜像用户——GO-IM CmdKick `account disabled`——再停用本地账号并吊销会话）；`DeleteUserUseCase` → `POST /console/users/delete`（同时删除 IM 用户）。`AccountRules.canManage` 拒绝操作自己与其他管理员（`AppError.CannotManageAccount`），服务端 400 `cannot … yourself` 同样映射；`not found` → `AppError.UserNotFound`
 - 删除账号：`DeleteAccountUseCase(password)` → Paircast `POST /account/delete`（校验密码后删除本地账号与 IM 用户；管理员账号 403）→ 登出、清本机配置 / 会话 / 缓存。满足 App Store 5.1.1(v)
 - 协议同意：`LoginUseCase` 带 `agreedToTerms`，先过 `LegalRules.requireAgreement`（未同意抛 `Validation`，不发请求）；链接由 `LegalRules.termsUrl` / `privacyUrl` 生成（`https://paircast.chaisz.com/{zh-Hans|en-US}/terms|privacy/`）。勾选状态放在 `AppSession` / `AppState`，默认不勾选、不持久化
-- 登录：Paircast `POST /account/login`（账号 = UID 或邮箱 + 密码）→ Paircast 会话令牌 `token`（`pc1.…`，默认 30 天）+ `must_change_password` + `im{url, uid, token, expires_at}`（GO-IM 地址与 IM 令牌；`url` 为空即与 Paircast 同域名）。`must_change_password` 为真时强制 `POST /account/password` 后才进片库；改密返回新 `token`（旧会话全部失效）
+- 登录：Paircast `POST /account/login`（账号 = UID 或邮箱 + 密码）→ Paircast 会话令牌 `token`（`pc1.…`，默认 30 天）+ `must_change_password` + `im{url, uid, token, expires_at}`（GO-IM 的对外地址与 IM 令牌；Paircast 与 GO-IM 各用一个域名，`url` 由服务端 `im.public_url` 配置，为空时视为与 Paircast 同源）。`must_change_password` 为真时强制 `POST /account/password` 后才进片库；改密返回新 `token`（旧会话全部失效）
 - 两套令牌分工：Paircast 令牌用于 `/account/*`、`/console/*`、`/media/*`、`/room/*`；IM 令牌用于 GO-IM 的 WebSocket、`/upload`、`/user/profiles`、屏蔽与举报提交。IM 令牌由 `GET /account/session` 刷新：App 启动恢复会话时、以及 GO-IM 拒绝 IM 令牌时（`GoImConnection.refreshSession`）；刷新返回 401 才算会话失效，网络错误保留本机会话
 - 会话（serverUrl、uid、token、appToken、imUrl）存安全存储：iOS Keychain（AfterFirstUnlockThisDeviceOnly），Android EncryptedSharedPreferences
 - token 失效 / 被踢（WebSocket `KICK`）→ 先清掉本机保存的会话（`GoImConnection.onSessionEnded` → `SessionStore.clear`），再发 `SessionEvent` → 回登录页；重开 App 不会用旧 token 自动登录（否则会把另一台设备踢回去）
@@ -111,7 +111,7 @@ make android      # Debug APK
 
 ## 服务端片库与房间（GO-IM，v2.1）
 
-接口由本仓库的 Paircast 服务（`server/`，定义见 `server/api/openapi.yaml`）提供，与 GO-IM 同域名（反向代理按 `/account`、`/console`、`/media`、`/room` 分流），客户端仍只填一个服务器地址。片源、TMDB、OpenSubtitles 凭证都在 Paircast 服务配置的 `media` 段（密钥走环境变量 `PAIRCAST_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`PAIRCAST_TMDB_ACCESS_TOKEN`、`PAIRCAST_OPENSUBTITLES_API_KEY`，见 `server/README.md`）。所有接口都要 Paircast 会话令牌（`/account/login` 返回的 `token`）；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
+接口由本仓库的 Paircast 服务（`server/`，定义见 `server/api/openapi/openapi.yaml`，开启 `swagger_enabled` 后在 `/swagger/` 查看）提供。Paircast 与 GO-IM 各用一个域名：客户端只填 Paircast 的地址，GO-IM 地址随登录返回（`im.url`）。片源、TMDB、OpenSubtitles 凭证都在 Paircast 服务配置的 `media` 段（密钥走环境变量 `PAIRCAST_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`PAIRCAST_TMDB_ACCESS_TOKEN`、`PAIRCAST_OPENSUBTITLES_API_KEY`，见 `server/README.md`）。所有接口都要 Paircast 会话令牌（`/account/login` 返回的 `token`）；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
 
 | 接口 | 说明 |
 |------|------|

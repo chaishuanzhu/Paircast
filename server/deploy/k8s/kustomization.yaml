@@ -1,6 +1,6 @@
 # Paircast 服务端 —— 部署到 GO-IM 所在的命名空间（默认 go-im），在 GO-IM 之后应用：
 #   kubectl apply -k server/deploy/k8s
-# Ingress 与 GO-IM 同域名，把 /account、/console、/media、/room 转到 paircast，其余路径仍由 GO-IM 网关处理。
+# Paircast 用独立域名（ingress.yaml），GO-IM 的地址写在 paircast.json 的 im.public_url，登录时返回给客户端。
 #
 # GO-IM 侧登记接入方（一次性）：
 #   1. GO-IM config.json 的 gateway.server_api.apps 加一项：
@@ -17,7 +17,7 @@
 #   - 下方 SESSION_SECRET（≥ 16 字符）与 ADMIN_EMAIL（首个管理员，初始密码发邮件或见 paircast 日志）
 #   - 下方 MYSQL_PASSWORD：Paircast 独立库 paircast 的账号密码（db-init 用 GO-IM 的 goim-infra MYSQL_ROOT_PASSWORD 建库建账号）
 #   - paircast.json 的 media.sources，以及下方 MEDIA_* 密钥；需要发信时配置 paircast.json 的 mail 与 MAIL_PASSWORD
-#   - ingress.yaml 的域名（与 GO-IM 的 ingress 相同）
+#   - ingress.yaml 的 Paircast 域名，以及 paircast.json 的 im.public_url（GO-IM 的对外地址）
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 

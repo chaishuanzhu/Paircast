@@ -1,17 +1,18 @@
 {
     "_comment": "Paircast 服务配置(cmd/paircast)。密钥用环境变量提供:PAIRCAST_SESSION_SECRET、PAIRCAST_IM_SECRET / PAIRCAST_IM_WEBHOOK_SECRET(未设置时读 GO-IM 的 GOIM_APP_PAIRCAST_SECRET / GOIM_APP_PAIRCAST_WEBHOOK_SECRET)、PAIRCAST_MYSQL_DSN、PAIRCAST_MAIL_PASSWORD、PAIRCAST_BLOB_ACCESS_KEY / PAIRCAST_BLOB_SECRET_KEY、PAIRCAST_MEDIA_<ID>_ACCESS_KEY / PAIRCAST_MEDIA_<ID>_SECRET_KEY、PAIRCAST_TMDB_ACCESS_TOKEN、PAIRCAST_OPENSUBTITLES_API_KEY。",
     "http_addr": ":8090",
+    "swagger_enabled": false,
     "im": {
         "_comment": "IM 网关地址与接入方 ID。IM 侧 server_api.apps 中登记同一个 app_id,webhook_url 指向 http://paircast:8090/im/webhook,webhook_events 含 group.member_left 与 group.dismissed。",
         "base_url": "http://gateway:8080",
-        "public_url": "",
+        "public_url": "https://im.example.com",
         "app_id": "paircast",
         "secret": "",
         "webhook_secret": "",
         "token_ttl": "168h"
     },
     "account": {
-        "_comment": "账号归 Paircast 所有(邮箱 + 密码,管理员建号)。session_secret ≥ 16 字符,用 PAIRCAST_SESSION_SECRET 提供;admin_email 非空时启动确保该管理员存在(新建时初始密码发邮件,未配置发信则写日志)。im.public_url 为客户端连接 IM 的地址,空 = 与本服务同域名。",
+        "_comment": "账号归 Paircast 所有(邮箱 + 密码,管理员建号)。session_secret ≥ 16 字符,用 PAIRCAST_SESSION_SECRET 提供;admin_email 非空时启动确保该管理员存在(新建时初始密码发邮件,未配置发信则写日志)。im.public_url 为客户端连接 GO-IM 的地址(Paircast 与 GO-IM 各用一个域名,登录时返回给客户端),可用 PAIRCAST_IM_PUBLIC_URL 覆盖;只有单域名反代时才留空(= 与本服务同源)。swagger_enabled 在 /swagger/ 提供接口文档。",
         "session_secret": "",
         "session_ttl": "720h",
         "admin_email": ""

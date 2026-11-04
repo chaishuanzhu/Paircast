@@ -17,11 +17,12 @@
 #   curl -fsSLO $base/paircast.json
 #   docker compose -f docker-compose.paircast.yml up -d
 #
-# 反向代理把 /account、/console、/media、/room 转到 127.0.0.1:${PAIRCAST_PORT:-8090}，其余转 GO-IM 网关；
-# App 里的服务器地址填这个域名。
+# Paircast 与 GO-IM 各用一个域名：反向代理把 Paircast 域名整站转到 127.0.0.1:${PAIRCAST_PORT:-8090}，
+# GO-IM 域名转到网关。App 里的服务器地址填 Paircast 域名，GO-IM 地址（PAIRCAST_IM_PUBLIC_URL）随登录返回。
 #
 # .env（与 GO-IM 共用）:
 #   PAIRCAST_SESSION_SECRET   必填，≥ 16 字符（openssl rand -hex 32）
+#   PAIRCAST_IM_PUBLIC_URL    必填，客户端连接 GO-IM 的地址，如 https://im.example.com
 #   PAIRCAST_ADMIN_EMAIL      首个管理员邮箱；初始密码发到该邮箱（需配置发信），否则见 docker logs paircast
 #   PAIRCAST_MAIL_PASSWORD    可选，paircast.json 的 mail 启用时的 SMTP 密码
 #   MEDIA_OSS_ACCESS_KEY / MEDIA_OSS_SECRET_KEY      片源 oss 的只读密钥；其它源 id 按 PAIRCAST_MEDIA_<大写ID>_* 自行添加
@@ -65,6 +66,7 @@ services:
       - apps.env
     environment:
       PAIRCAST_SESSION_SECRET: ${PAIRCAST_SESSION_SECRET:?set PAIRCAST_SESSION_SECRET in .env}
+      PAIRCAST_IM_PUBLIC_URL: ${PAIRCAST_IM_PUBLIC_URL:?set PAIRCAST_IM_PUBLIC_URL in .env}
       PAIRCAST_ADMIN_EMAIL: ${PAIRCAST_ADMIN_EMAIL:-}
       PAIRCAST_MAIL_PASSWORD: ${PAIRCAST_MAIL_PASSWORD:-}
       PAIRCAST_MYSQL_DSN: paircast:${PAIRCAST_MYSQL_PASSWORD:-paircast-dev}@tcp(mysql:3306)/paircast?parseTime=true&loc=UTC

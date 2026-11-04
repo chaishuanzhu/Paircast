@@ -71,7 +71,7 @@ public struct ServiceConfigView: View {
     private var formContent: some View {
             Form {
                 Section {
-                    TextField("im.example.com", text: $viewModel.serverUrl)
+                    TextField("paircast.example.com", text: $viewModel.serverUrl)
                         .keyboardType(.URL)
                         .textContentType(.URL)
                         .textInputAutocapitalization(.never)

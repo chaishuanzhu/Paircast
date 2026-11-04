@@ -120,7 +120,7 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             SectionCard(title = t("Server"), footer = t("The address of the server you or a friend deployed. HTTPS is assumed unless you enter http:// (LAN only).")) {
-                PaircastField(t("Address"), form.serverUrl, { form.serverUrl = it }, keyboardType = KeyboardType.Uri, placeholder = "im.example.com")
+                PaircastField(t("Address"), form.serverUrl, { form.serverUrl = it }, keyboardType = KeyboardType.Uri, placeholder = "paircast.example.com")
             }
 
             SectionCard(footer = t("Fill in the server address, save, then sign in with the account the server admin created for you")) {
