@@ -27,22 +27,47 @@
 #   MEDIA_OSS_ACCESS_KEY / MEDIA_OSS_SECRET_KEY      片源 oss 的只读密钥；其它源 id 按 PAIRCAST_MEDIA_<大写ID>_* 自行添加
 #   TMDB_ACCESS_TOKEN / OPENSUBTITLES_API_KEY        可选
 #   PAIRCAST_TAG    镜像版本，默认 latest
-#   MYSQL_PASSWORD / RUSTFS_SECRET_KEY  与 GO-IM 保持一致
+#   PAIRCAST_MYSQL_PASSWORD   Paircast 自己的数据库账号密码（openssl rand -hex 16），默认 paircast-dev
+#   MYSQL_ROOT_PASSWORD / RUSTFS_SECRET_KEY  与 GO-IM 保持一致
+#
+# 数据库：与 GO-IM 共用 MySQL 实例，但用独立的 paircast 库与 paircast 账号（只授权这个库）。
+# paircast-db 每次启动时幂等地建库、建账号并同步密码，然后退出；改 PAIRCAST_MYSQL_PASSWORD 后重新 up 即可。
 
 name: paircast
 
+x-paircast-db-init: &paircast-db-init |
+  until mysqladmin ping -h mysql -u root --silent; do echo "waiting for mysql"; sleep 2; done
+  pw=$$(printf %s "$$PAIRCAST_MYSQL_PASSWORD" | sed "s/'/''/g")
+  mysql -h mysql -u root -e "
+    CREATE DATABASE IF NOT EXISTS paircast CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CREATE USER IF NOT EXISTS 'paircast'@'%' IDENTIFIED BY '$$pw';
+    ALTER USER 'paircast'@'%' IDENTIFIED BY '$$pw';
+    GRANT ALL PRIVILEGES ON paircast.* TO 'paircast'@'%';"
+
 services:
+  paircast-db:
+    image: mysql:8.4
+    restart: "no"
+    environment:
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD:-im-root}
+      PAIRCAST_MYSQL_PASSWORD: ${PAIRCAST_MYSQL_PASSWORD:-paircast-dev}
+    entrypoint: ["sh", "-ec", *paircast-db-init]
+    networks: [goim]
+
   paircast:
     restart: unless-stopped
     image: 870027381/paircast-server:${PAIRCAST_TAG:-latest}
     mem_limit: 256m
+    depends_on:
+      paircast-db:
+        condition: service_completed_successfully
     env_file:
       - apps.env
     environment:
       PAIRCAST_SESSION_SECRET: ${PAIRCAST_SESSION_SECRET:?set PAIRCAST_SESSION_SECRET in .env}
       PAIRCAST_ADMIN_EMAIL: ${PAIRCAST_ADMIN_EMAIL:-}
       PAIRCAST_MAIL_PASSWORD: ${PAIRCAST_MAIL_PASSWORD:-}
-      PAIRCAST_MYSQL_DSN: im:${MYSQL_PASSWORD:-im-dev}@tcp(mysql:3306)/im?parseTime=true&loc=UTC
+      PAIRCAST_MYSQL_DSN: paircast:${PAIRCAST_MYSQL_PASSWORD:-paircast-dev}@tcp(mysql:3306)/paircast?parseTime=true&loc=UTC
       PAIRCAST_BLOB_ACCESS_KEY: rustfsadmin
       PAIRCAST_BLOB_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
       PAIRCAST_MEDIA_OSS_ACCESS_KEY: ${MEDIA_OSS_ACCESS_KEY:-}

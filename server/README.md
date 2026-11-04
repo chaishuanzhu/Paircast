@@ -45,7 +45,7 @@ GO-IM 网关配置 `gateway.server_api.apps` 中登记同一个 `app_id`，`webh
 | `PAIRCAST_IM_SECRET` / `PAIRCAST_IM_WEBHOOK_SECRET` | GO-IM 服务端 API 与 webhook 密钥（必需 / 推荐）；未设置时读网关同名变量 `GOIM_APP_PAIRCAST_SECRET` / `_WEBHOOK_SECRET` |
 | `PAIRCAST_IM_PUBLIC_URL` | 客户端连接 GO-IM 的地址；为空表示与本服务同域名 |
 | `PAIRCAST_IM_BASE_URL` / `PAIRCAST_IM_APP_ID` | 覆盖配置中的网关地址与接入方 ID |
-| `PAIRCAST_MYSQL_DSN` | 账号、房间与刮削缓存的 MySQL；为空时在内存中（重启丢失） |
+| `PAIRCAST_MYSQL_DSN` | 账号、房间与刮削缓存的 MySQL；为空时在内存中（重启丢失）。用 Paircast 独立的库和账号，不要用 GO-IM 的（Docker / k8s 部署会自动建 `paircast` 库与账号，密码 `PAIRCAST_MYSQL_PASSWORD`） |
 | `PAIRCAST_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY` | 视频源密钥，`<ID>` 为源 id 大写（非字母数字转 `_`） |
 | `PAIRCAST_BLOB_ACCESS_KEY` / `_SECRET_KEY` | 共享 / 在线字幕存储（`blob_store`）密钥 |
 | `PAIRCAST_TMDB_ACCESS_TOKEN` / `PAIRCAST_OPENSUBTITLES_API_KEY` | 可选：TMDB 刮削、在线字幕 |

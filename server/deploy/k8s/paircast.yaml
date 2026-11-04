@@ -33,12 +33,35 @@ spec:
     spec:
       terminationGracePeriodSeconds: 30
       initContainers:
-        - name: wait-deps
+        # 与 GO-IM 共用 MySQL 实例，但用独立的 paircast 库与账号：每次启动幂等地建库、建账号并同步密码。
+        # 用外部 MySQL 时删掉这个 initContainer，自己建库建账号，并改下方 PAIRCAST_MYSQL_DSN。
+        - name: db-init
+          image: mysql:8.4
+          command:
+            - sh
+            - -ec
+            - |
+              until mysqladmin ping -h mysql -u root --silent; do echo "waiting for mysql"; sleep 2; done
+              pw=$(printf %s "$PAIRCAST_MYSQL_PASSWORD" | sed "s/'/''/g")
+              mysql -h mysql -u root -e "
+                CREATE DATABASE IF NOT EXISTS paircast CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+                CREATE USER IF NOT EXISTS 'paircast'@'%' IDENTIFIED BY '$pw';
+                ALTER USER 'paircast'@'%' IDENTIFIED BY '$pw';
+                GRANT ALL PRIVILEGES ON paircast.* TO 'paircast'@'%';"
+          env:
+            - name: MYSQL_PWD
+              valueFrom: { secretKeyRef: { name: goim-infra, key: MYSQL_ROOT_PASSWORD } }
+            - name: PAIRCAST_MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: goim-paircast, key: MYSQL_PASSWORD } }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+        - name: wait-gateway
           image: busybox:1.37
           command:
             - sh
             - -c
-            - for d in mysql:3306 gateway:8080; do until nc -z -w 2 ${d%:*} ${d#*:}; do echo "waiting for $d"; sleep 2; done; done
+            - until nc -z -w 2 gateway 8080; do echo "waiting for gateway"; sleep 2; done
           resources:
             requests: { cpu: 5m, memory: 8Mi }
             limits: { cpu: 100m, memory: 32Mi }
@@ -57,8 +80,10 @@ spec:
               valueFrom: { secretKeyRef: { name: goim-paircast, key: ADMIN_EMAIL, optional: true } }
             - name: PAIRCAST_MAIL_PASSWORD
               valueFrom: { secretKeyRef: { name: goim-paircast, key: MAIL_PASSWORD, optional: true } }
+            - name: PAIRCAST_MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: goim-paircast, key: MYSQL_PASSWORD } }
             - name: PAIRCAST_MYSQL_DSN
-              valueFrom: { secretKeyRef: { name: goim-paircast, key: MYSQL_DSN } }
+              value: paircast:$(PAIRCAST_MYSQL_PASSWORD)@tcp(mysql:3306)/paircast?parseTime=true&loc=UTC
             - name: PAIRCAST_BLOB_ACCESS_KEY
               valueFrom: { secretKeyRef: { name: goim-paircast, key: BLOB_ACCESS_KEY } }
             - name: PAIRCAST_BLOB_SECRET_KEY

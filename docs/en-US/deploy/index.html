@@ -77,9 +77,10 @@ curl http://127.0.0.1:8080/health     # ready when it returns "status":"ok"</cod
 <pre><code>base=https://raw.githubusercontent.com/chaishuanzhu/Paircast/main/server/deploy/docker
 curl -fsSLO $base/docker-compose.paircast.yml
 curl -fsSLO $base/paircast.json</code></pre>
-  <p>Set the session secret and the admin email in <code>.env</code>:</p>
+  <p>Set the session secret, the admin email and the password of Paircast's database user in <code>.env</code>:</p>
 <pre><code>echo "PAIRCAST_SESSION_SECRET=$(openssl rand -hex 32)" &gt;&gt; .env
-echo "PAIRCAST_ADMIN_EMAIL=you@example.com" &gt;&gt; .env</code></pre>
+echo "PAIRCAST_ADMIN_EMAIL=you@example.com" &gt;&gt; .env
+echo "PAIRCAST_MYSQL_PASSWORD=$(openssl rand -hex 16)" &gt;&gt; .env</code></pre>
   <p>Mail (SMTP) is optional: with it, the initial passwords for you and new users are emailed to each address; without it, the admin's initial password goes to the Paircast server log and new users' passwords are shown in the app for the admin to pass on. To send mail, add this to <code>paircast.json</code>:</p>
 <pre><code>"mail": {
     "enabled": true,
@@ -122,7 +123,7 @@ docker compose -f docker-compose.paircast.yml logs paircast   # ready when it sh
     <li>The source <code>id</code> becomes part of every movie ID, so don't change it later. If your <code>id</code> is not <code>oss</code>, add matching <code>PAIRCAST_MEDIA_&lt;UPPERCASE_ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code> entries to <code>environment</code> in <code>docker-compose.paircast.yml</code>.</li>
     <li>You can add several sources; the Library screen then shows a source picker.</li>
     <li>For playback the server issues links valid for 6 hours and the video stream bypasses the server, so a <strong>read-only</strong> key is enough.</li>
-    <li>Accounts, rooms and the metadata cache live in GO-IM's MySQL and shared subtitles in RustFS; nothing else needs deploying.</li>
+    <li>Accounts, rooms and the metadata cache live in a separate <code>paircast</code> database on GO-IM's MySQL server, with its own <code>paircast</code> user that can only access that database (the <code>paircast-db</code> service in the compose file creates both on every start). Shared subtitles live in RustFS; nothing else needs deploying.</li>
   </ul>
 
   <h3>4.2 Subtitles and posters</h3>

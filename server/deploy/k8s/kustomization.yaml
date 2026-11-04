@@ -15,6 +15,7 @@
 #
 # 上线前修改：
 #   - 下方 SESSION_SECRET（≥ 16 字符）与 ADMIN_EMAIL（首个管理员，初始密码发邮件或见 paircast 日志）
+#   - 下方 MYSQL_PASSWORD：Paircast 独立库 paircast 的账号密码（db-init 用 GO-IM 的 goim-infra MYSQL_ROOT_PASSWORD 建库建账号）
 #   - paircast.json 的 media.sources，以及下方 MEDIA_* 密钥；需要发信时配置 paircast.json 的 mail 与 MAIL_PASSWORD
 #   - ingress.yaml 的域名（与 GO-IM 的 ingress 相同）
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -35,7 +36,7 @@ secretGenerator:
       - SESSION_SECRET=change-me-paircast-session-secret
       - ADMIN_EMAIL=
       - MAIL_PASSWORD=
-      - MYSQL_DSN=im:im-dev@tcp(mysql:3306)/im?parseTime=true&charset=utf8mb4
+      - MYSQL_PASSWORD=paircast-dev
       - MEDIA_OSS_ACCESS_KEY=
       - MEDIA_OSS_SECRET_KEY=
       - BLOB_ACCESS_KEY=rustfsadmin
