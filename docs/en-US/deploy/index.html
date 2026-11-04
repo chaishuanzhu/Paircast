@@ -190,8 +190,21 @@ GOIM_TAG=x.y.z docker compose -f docker-compose.minimal.yml up -d  # pin / roll 
     Every secret (JWT, session secret, SMTP, app secrets, storage, TMDB, OpenSubtitles) stays in the server's <code>config.minimal.json</code> / <code>.env</code> / <code>apps.env</code>. Never send them to users or commit them to git. Users only need the server address and their own account.
   </div>
 
-  <h2>9. More</h2>
+  <h2>9. Troubleshooting</h2>
+  <table>
+    <thead><tr><th>Symptom</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>The server exits right after starting</td><td>Check <code>docker compose -f docker-compose.paircast.yml logs paircast</code>: missing app secret (check <code>apps.env</code>), empty <code>media.sources</code>, or the database init failed (<code>logs paircast-db</code>)</td></tr>
+      <tr><td>Sign-in says the account or password is wrong</td><td>Accounts live in the Paircast server, not in GO-IM; the admin's initial password is in the email or in <code>logs paircast</code></td></tr>
+      <tr><td>Signed in, but chat doesn't connect</td><td><code>PAIRCAST_IM_PUBLIC_URL</code> in <code>.env</code> is missing or wrong; it must be GO-IM's public address</td></tr>
+      <tr><td>The domain returns 404</td><td>The reverse proxy doesn't send the Paircast domain to port 8090 (step 5)</td></tr>
+      <tr><td>No posters / online subtitles</td><td>TMDB / OpenSubtitles keys aren't set; add them and recreate the container</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. More</h2>
   <ul>
+    <li>Full operations guide (Kubernetes, standalone container, every setting): <a href="https://github.com/chaishuanzhu/Paircast/blob/main/server/deploy/README.md">server/deploy/README.md</a> · image <a href="https://hub.docker.com/r/870027381/paircast-server">870027381/paircast-server</a></li>
     <li><a href="../guide/">User Guide</a> · <a href="../support/">Support</a> · <a href="../privacy/">Privacy</a></li>
     <li>Chat: <a href="https://github.com/chaishuanzhu/GO-IM/issues/new">GO-IM Issues</a>; accounts, media library, rooms and the app: <a href="https://github.com/chaishuanzhu/Paircast/issues/new">Paircast Issues</a></li>
   </ul>

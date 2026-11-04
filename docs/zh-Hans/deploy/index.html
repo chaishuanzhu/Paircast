@@ -190,8 +190,21 @@ GOIM_TAG=x.y.z docker compose -f docker-compose.minimal.yml up -d  # 固定 / �
     所有密钥（JWT、会话密钥、SMTP、接入方密钥、存储、TMDB、OpenSubtitles）只放在服务器的 <code>config.minimal.json</code> / <code>.env</code> / <code>apps.env</code> 里，不要发给用户，也不要提交到 git。用户只需要服务器地址和自己的账号。
   </div>
 
-  <h2>9. 更多</h2>
+  <h2>9. 常见问题</h2>
+  <table>
+    <thead><tr><th>现象</th><th>处理</th></tr></thead>
+    <tbody>
+      <tr><td>服务启动后立即退出</td><td><code>docker compose -f docker-compose.paircast.yml logs paircast</code> 看原因：缺接入方密钥（检查 <code>apps.env</code>）、<code>media.sources</code> 为空、数据库初始化失败（<code>logs paircast-db</code>）</td></tr>
+      <tr><td>登录提示账号或密码错误</td><td>账号在 Paircast 服务，不是 GO-IM 的账号；管理员初始密码见邮件或 <code>logs paircast</code></td></tr>
+      <tr><td>能登录但聊天连不上</td><td><code>.env</code> 的 <code>PAIRCAST_IM_PUBLIC_URL</code> 没填或填错，应为 GO-IM 的对外地址</td></tr>
+      <tr><td>域名打开是 404</td><td>反向代理没有把 Paircast 域名转到 8090（第 5 步）</td></tr>
+      <tr><td>没有海报 / 在线字幕</td><td>未配置 TMDB / OpenSubtitles 密钥，补上后重建容器</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. 更多</h2>
   <ul>
+    <li>完整的运维文档（Kubernetes、单独运行、全部配置项）：<a href="https://github.com/chaishuanzhu/Paircast/blob/main/server/deploy/README.md">server/deploy/README.md</a> · 镜像 <a href="https://hub.docker.com/r/870027381/paircast-server">870027381/paircast-server</a></li>
     <li><a href="../guide/">使用说明</a> · <a href="../support/">支持页</a> · <a href="../privacy/">隐私政策</a></li>
     <li>聊天问题：<a href="https://github.com/chaishuanzhu/GO-IM/issues/new">GO-IM Issues</a>；账号、片库、房间与 App 问题：<a href="https://github.com/chaishuanzhu/Paircast/issues/new">Paircast Issues</a></li>
   </ul>

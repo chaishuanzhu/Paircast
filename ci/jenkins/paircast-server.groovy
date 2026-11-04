@@ -1,12 +1,15 @@
 // Jenkins job paircast-server (Pipeline script, not SCM): build, publish and deploy the Paircast server (server/).
 //   Images  ci-01: paircast-server image of one commit, tagged sha-<7>, pushed to Docker Hub
-//           (skipped when the tag already exists, unless REBUILD)
+//           (skipped when the tag already exists, unless REBUILD); with VERSION the same image is also tagged
+//           <VERSION> and latest (release: run on main), and the Docker Hub overview is synced from
+//           server/deploy/dockerhub (also with SYNC_OVERVIEW)
 //   Deploy  ci-01: kubectl set image deployment/paircast in namespace go-im-test, rolls back on failure,
 //           then checks that https://paircast.test.chaisz.com/media/sources is served by Paircast (401 without a token)
 // The deployment, Secrets (goim-paircast, goim-paircast-config) and ingress already exist in go-im-test;
 // see server/deploy/k8s. GO-IM itself is deployed by the go-im-server job.
 //
-// Parameters: BRANCH, DOCKERHUB_NAMESPACE (empty = dockerhub credential user), PLATFORMS, REBUILD, DEPLOY
+// Parameters: BRANCH, DOCKERHUB_NAMESPACE (empty = dockerhub credential user), PLATFORMS, REBUILD, DEPLOY,
+//             VERSION (X.Y.Z, empty = no release tags), SYNC_OVERVIEW
 // Credentials:
 //   dockerhub                Username with password  Docker Hub user + Read & Write access token
 //   k8s-deployer-kubeconfig  Secret file             ServiceAccount jenkins/deployer (edit in go-im-test)
@@ -17,6 +20,8 @@ def siteUrl = 'https://paircast.test.chaisz.com'
 def commit = ''
 def tag = ''
 def imageNs = ''
+def version = params.VERSION?.trim() ?: ''
+def syncOverview = params.SYNC_OVERVIEW || version
 
 stage('Resolve') {
     node('docker') {
@@ -24,8 +29,9 @@ stage('Resolve') {
             commit = sh(script: "git ls-remote ${repoUrl} refs/heads/${params.BRANCH}", returnStdout: true).trim().tokenize()[0] ?: ''
         }
         if (!(commit ==~ /[0-9a-f]{40}/)) { error "分支 ${params.BRANCH} 不存在" }
+        if (version && !(version ==~ /[0-9]+\.[0-9]+\.[0-9]+/)) { error "VERSION 应为 X.Y.Z：${version}" }
         tag = "sha-${commit.substring(0, 7)}"
-        currentBuild.description = "${params.BRANCH} @ ${commit.substring(0, 7)}"
+        currentBuild.description = "${params.BRANCH} @ ${commit.substring(0, 7)}" + (version ? " = ${version}" : '')
     }
 }
 
@@ -39,35 +45,57 @@ stage('Image') {
                         sh 'echo "$DH_TOKEN" | docker login -u "$DH_USER" --password-stdin || { sleep 10; exit 1; }'
                     }
                     def exists = !params.REBUILD && sh(returnStatus: true, script: 'docker buildx imagetools inspect "$NS/paircast-server:$TAG" >/dev/null 2>&1') == 0
-                    if (exists) {
+                    if (exists && !syncOverview && !version) {
                         echo "${imageNs}/paircast-server:${tag} 已存在，跳过构建"
                         return
                     }
-                    deleteDir()
-                    retry(3) {
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: commit]],
-                            userRemoteConfigs: [[url: repoUrl, refspec: "+refs/heads/${params.BRANCH}:refs/remotes/origin/${params.BRANCH}"]],
-                            extensions: [[$class: 'CloneOption', shallow: true, depth: 1, noTags: true, honorRefspec: true, timeout: 20]],
-                        ])
+                    if (!exists || syncOverview) {
+                        deleteDir()
+                        retry(3) {
+                            checkout([
+                                $class: 'GitSCM',
+                                branches: [[name: commit]],
+                                userRemoteConfigs: [[url: repoUrl, refspec: "+refs/heads/${params.BRANCH}:refs/remotes/origin/${params.BRANCH}"]],
+                                extensions: [[$class: 'CloneOption', shallow: true, depth: 1, noTags: true, honorRefspec: true, timeout: 20]],
+                            ])
+                        }
                     }
-                    dir('server') {
-                        sh '''
-                            set -eu
-                            # Compile on the build host's architecture (Go cross-compiles by TARGETARCH) instead of
-                            # running go build under QEMU for arm64.
-                            sed -i -E 's#^FROM golang:([^ ]+) AS builder#FROM --platform=$BUILDPLATFORM golang:\\1 AS builder\\nARG TARGETOS TARGETARCH#' Dockerfile
-                            sed -i -E 's#CGO_ENABLED=0 go build#CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build#' Dockerfile
-                            for i in 1 2 3; do
-                                docker buildx build --platform "$PLATFORMS" \
-                                    --label org.opencontainers.image.source=https://github.com/chaishuanzhu/Paircast \
-                                    --label org.opencontainers.image.revision="$COMMIT" \
-                                    -t "$NS/paircast-server:$TAG" --push . && break
-                                [ "$i" = 3 ] && exit 1
-                                sleep 15
-                            done
-                        '''
+                    if (exists) {
+                        echo "${imageNs}/paircast-server:${tag} 已存在，跳过构建"
+                    } else {
+                        dir('server') {
+                            sh '''
+                                set -eu
+                                # Compile on the build host's architecture (Go cross-compiles by TARGETARCH) instead of
+                                # running go build under QEMU for arm64.
+                                sed -i -E 's#^FROM golang:([^ ]+) AS builder#FROM --platform=$BUILDPLATFORM golang:\\1 AS builder\\nARG TARGETOS TARGETARCH#' Dockerfile
+                                sed -i -E 's#CGO_ENABLED=0 go build#CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build#' Dockerfile
+                                for i in 1 2 3; do
+                                    docker buildx build --platform "$PLATFORMS" \
+                                        --label org.opencontainers.image.source=https://github.com/chaishuanzhu/Paircast \
+                                        --label org.opencontainers.image.revision="$COMMIT" \
+                                        -t "$NS/paircast-server:$TAG" --push . && break
+                                    [ "$i" = 3 ] && exit 1
+                                    sleep 15
+                                done
+                            '''
+                        }
+                    }
+                    if (version) {
+                        withEnv(["VERSION=${version}"]) {
+                            sh '''
+                                set -eu
+                                for i in 1 2 3; do
+                                    docker buildx imagetools create -t "$NS/paircast-server:$VERSION" -t "$NS/paircast-server:latest" \
+                                        "$NS/paircast-server:$TAG" && break
+                                    [ "$i" = 3 ] && exit 1
+                                    sleep 15
+                                done
+                            '''
+                        }
+                    }
+                    if (syncOverview) {
+                        sh 'DH_NAMESPACE="$NS" bash server/deploy/dockerhub/sync-readme.sh || echo "WARN: Docker Hub overview 同步失败"'
                     }
                 }
             }

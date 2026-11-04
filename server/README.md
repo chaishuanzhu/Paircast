@@ -54,9 +54,11 @@ GO-IM 网关配置 `gateway.server_api.apps` 中登记同一个 `app_id`，`webh
 
 ## 部署
 
-- 镜像：`docker build -t paircast-server .`（在 `server/` 目录），Docker Hub `870027381/paircast-server`。
+完整的运维文档（架构、Docker Compose / Kubernetes / 单独运行、全部配置项、验证、常见问题）见 [`deploy/README.md`](deploy/README.md)，
+它同时是 Docker Hub [`870027381/paircast-server`](https://hub.docker.com/r/870027381/paircast-server) 的 Overview；面向自建用户的图文步骤见网站的服务端部署指南（`docs/zh-Hans/deploy/`）。
+
+- 镜像：`docker build -t paircast-server .`（在 `server/` 目录）。
 - 测试环境：Jenkins 任务 `paircast-server`（脚本 `ci/jenkins/paircast-server.groovy`）构建 `sha-<提交>` 镜像并部署到 k8s 命名空间 `go-im-test`。
-- Docker：`deploy/docker/`，与 GO-IM 最小化部署放在同一目录、共用 `.env` 与 `apps.env`，加入其网络 `go-im_default`（步骤见 `docs/zh-Hans/deploy/` 第 2–4 步）。
-- Kubernetes：`deploy/k8s/`，与 GO-IM 部署在同一命名空间、共用 Secret `goim-apps`，Ingress 用独立的 Paircast 域名整站转给本服务（说明见 `kustomization.yaml` 头部）。
-- 其它反向代理：Paircast 域名整站转到 8090，GO-IM 用自己的域名；`im.public_url` 填 GO-IM 的对外地址。
+- 发布：在 `main` 上运行 `paircast-server`，参数 `VERSION=X.Y.Z`（`DEPLOY` 按需），把该提交的镜像同时打上 `X.Y.Z` 与 `latest`，并同步 Docker Hub 的 Overview；只更新 Overview 用 `SYNC_OVERVIEW`。
+  Overview 来自 `deploy/dockerhub/paircast-server.md`，其中 `<!-- DEPLOY -->` 替换为 `deploy/README.md`（`deploy/dockerhub/sync-readme.sh`）。
 - 接口文档：`swagger_enabled: true` 时在 `/swagger/` 提供 Swagger UI（文档内嵌自 `api/openapi/openapi.yaml`）。
