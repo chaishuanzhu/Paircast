@@ -104,7 +104,26 @@ data class WatchRoom(
     /** Host-shared subtitle ref stored on the room (late joiners load it). */
     val subtitleRef: String? = null,
     val subtitleLabel: String? = null,
+    /** Host's last reported playback; late joiners and members back from the background align to it. */
+    val playback: RoomPlayback? = null,
+    /** Server clock when this room was read; extrapolates [playback] without trusting the device clock. */
+    val serverTimeMs: Long = 0,
 )
+
+/** Playback snapshot the host saves on the server (`POST /room/playback`). */
+data class RoomPlayback(
+    val movieId: String,
+    val positionMs: Long,
+    val isPaused: Boolean,
+    val rate: Double = 1.0,
+    val seq: Long,
+    /** Server clock when the snapshot was saved. */
+    val updatedAtMs: Long = 0,
+) {
+    /** Position at server time [serverTimeMs] (moves on while playing). */
+    fun positionAt(serverTimeMs: Long): Long =
+        if (isPaused || serverTimeMs <= updatedAtMs) positionMs else positionMs + ((serverTimeMs - updatedAtMs) * rate).toLong()
+}
 
 enum class ChatMessageKind { USER, SYSTEM, STICKER }
 

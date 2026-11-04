@@ -8,6 +8,8 @@ github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UF
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/chaishuanzhu/GO-IM/pkg/imserver v0.0.0-20261103145519-59d7fc988921 h1:ZbprYkBJVCejiyCCERcpIwZ/y07EWOO4Maq8rEoLDrQ=
 github.com/chaishuanzhu/GO-IM/pkg/imserver v0.0.0-20261103145519-59d7fc988921/go.mod h1:FhZsZYbRv2JDWQys9H27aHTcy8JplJnUDUsKLr2ntAg=
+github.com/chaishuanzhu/GO-IM/pkg/imserver v0.0.0-20261104101415-50d2d0a62e40 h1:HJRAGcSGd+DzxjsjpdBx0NAOnOa38J/fj7y8whvRIr8=
+github.com/chaishuanzhu/GO-IM/pkg/imserver v0.0.0-20261104101415-50d2d0a62e40/go.mod h1:FhZsZYbRv2JDWQys9H27aHTcy8JplJnUDUsKLr2ntAg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=

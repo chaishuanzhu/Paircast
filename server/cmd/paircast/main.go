@@ -85,6 +85,7 @@ func main() {
 	im := imserver.New(cfg.IM.BaseURL, cfg.IM.AppID, cfg.IM.Secret)
 	rooms := watchroom.NewService(store, api.IMGroups{C: im}, api.IMNotifier{C: im}, watchroom.NewRandomID)
 	rooms.StartJanitor(ctx, time.Duration(cfg.Media.RoomRetention), time.Hour)
+	rooms.StartReconciler(ctx, 5*time.Minute)
 
 	var users account.Store = account.NewMemoryStore()
 	if db != nil {

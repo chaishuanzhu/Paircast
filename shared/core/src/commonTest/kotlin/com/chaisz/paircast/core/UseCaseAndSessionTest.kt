@@ -10,6 +10,7 @@ import com.chaisz.paircast.core.model.PlaybackSyncSignal
 import com.chaisz.paircast.core.model.ReportAction
 import com.chaisz.paircast.core.model.ReportFilter
 import com.chaisz.paircast.core.model.ReportStatus
+import com.chaisz.paircast.core.model.RoomPlayback
 import com.chaisz.paircast.core.model.SubtitleSource
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
@@ -316,6 +317,60 @@ class WatchSessionTest {
         assertEquals(listOf(30_600L), h.player.seeks)
         assertFalse(h.session.state.value.isRequestingSync)
         assertFalse(h.player.isPaused)
+        h.session.close()
+    }
+
+    @Test fun lateJoinerAlignsToServerPlayback() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.rooms.rooms["room1"] = h.rooms.rooms["room1"]!!.copy(
+            playback = RoomPlayback(movieId = "m1", positionMs = 20_000, isPaused = false, seq = 5, updatedAtMs = 1_000),
+            serverTimeMs = 4_000,
+        )
+        h.session.start()
+        runCurrent()
+        assertEquals(listOf(23_000L), h.player.seeks)
+        assertFalse(h.player.isPaused)
+        assertEquals(5L, h.session.state.value.playback.lastSeq)
+        h.session.close()
+    }
+
+    @Test fun serverPlaybackForOtherMovieIsIgnored() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.rooms.rooms["room1"] = h.rooms.rooms["room1"]!!.copy(
+            playback = RoomPlayback(movieId = "m2", positionMs = 20_000, isPaused = false, seq = 5),
+        )
+        h.session.start()
+        runCurrent()
+        assertTrue(h.player.seeks.isEmpty())
+        h.session.close()
+    }
+
+    @Test fun memberRefreshFallsBackToServerSnapshotWhenHostSilent() = runTest {
+        val h = Harness(this, User("member", "Member"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.session.requestSync()
+        runCurrent()
+        h.rooms.rooms["room1"] = h.rooms.rooms["room1"]!!.copy(
+            playback = RoomPlayback(movieId = "m1", positionMs = 7_000, isPaused = true, seq = 9),
+        )
+        advanceTimeBy(PlaybackSyncRules.SYNC_REQUEST_TIMEOUT_MS + 1)
+        runCurrent()
+        assertFalse(h.session.state.value.isRequestingSync)
+        assertEquals(7_000L, h.player.seeks.last())
+        assertTrue(h.player.isPaused)
+        h.session.close()
+    }
+
+    @Test fun hostReportsPlaybackToServer() = runTest {
+        val h = Harness(this, User("host", "Host"), roomHost = "host")
+        h.session.start()
+        runCurrent()
+        h.session.togglePlay()
+        runCurrent()
+        val reported = h.rooms.reported.last()
+        assertEquals("m1", reported.movieId)
+        assertFalse(reported.isPaused)
         h.session.close()
     }
 

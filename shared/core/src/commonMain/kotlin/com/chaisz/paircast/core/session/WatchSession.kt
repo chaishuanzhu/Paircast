@@ -18,6 +18,7 @@ import com.chaisz.paircast.core.model.Movie
 import com.chaisz.paircast.core.model.PlaybackAction
 import com.chaisz.paircast.core.model.PlaybackState
 import com.chaisz.paircast.core.model.PlaybackSyncSignal
+import com.chaisz.paircast.core.model.RoomPlayback
 import com.chaisz.paircast.core.model.RoomStatus
 import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.SubtitleSource
@@ -176,6 +177,8 @@ class WatchSession(
     /** Set while the app is in the background; see [onBackground]. */
     private var backgroundedAtMs: Long? = null
     private var backgroundPositionMs = 0L
+    /** Last time the host saved its playback snapshot on the server; heartbeats are throttled. */
+    private var lastPlaybackReportMs = Long.MIN_VALUE / 2
 
     private val me: User? get() = deps.authGateway.currentUser.value
     private val current: WatchUiState get() = _state.value
@@ -205,6 +208,9 @@ class WatchSession(
                     )
                 }
                 preparePlayer()
+                // Late joiner (or host reopening the room): start from the host's saved state; the
+                // host's live snapshot follows over IM.
+                current.room?.let { applyServerPlayback(it, play = !current.isHost) }
                 listen()
                 startHeartbeatIfNeeded()
                 refreshMemberProfiles()
@@ -260,12 +266,13 @@ class WatchSession(
             it.copy(playback = it.playback.copy(isPaused = true, positionMs = position, lastSeq = currentSeq))
         }
         scope.launch { runCatching { emitHost(room, user.id, PlaybackAction.PAUSE, position, currentSeq) } }
+        reportPlayback(position, paused = true, seq = currentSeq)
     }
 
     /**
      * App is back. A long absence (or a player error) usually means a dead HTTP stream, so the
-     * movie is re-prepared with a fresh URL at the saved position. Everyone stays paused: the
-     * host resumes by hand, members follow the host's next heartbeat.
+     * movie is re-prepared with a fresh URL at the saved position. The host stays paused and
+     * resumes by hand; members realign to the host's server snapshot, then follow its heartbeats.
      */
     fun onForeground() {
         val since = backgroundedAtMs ?: return
@@ -273,12 +280,16 @@ class WatchSession(
         player.enterForeground()
         if (current.movie == null) return
         val away = nowMs() - since
-        if (away < RELOAD_AFTER_BACKGROUND_MS && player.lastError == null) return
+        val reload = away >= RELOAD_AFTER_BACKGROUND_MS || player.lastError != null
         val position = backgroundPositionMs
         scope.launch {
-            preparePlayer()
-            if (position > 0) player.seek(position)
-            restoreSubtitleAfterReload()
+            if (reload) {
+                preparePlayer()
+                if (position > 0) player.seek(position)
+                restoreSubtitleAfterReload()
+            }
+            // A paused host sends no heartbeats; the server snapshot realigns members right away.
+            if (!current.isHost) realignFromServer()
         }
     }
 
@@ -420,6 +431,7 @@ class WatchSession(
             runCatching { emitHost(room, user.id, PlaybackAction.HEARTBEAT, position, currentSeq) }
             _state.update { it.copy(playback = it.playback.copy(positionMs = position, lastSeq = currentSeq)) }
         }
+        reportPlayback(position, paused = false, seq = currentSeq, heartbeat = true)
     }
 
     /**
@@ -437,6 +449,51 @@ class WatchSession(
             runCatching { emitHost(room, user.id, action, position, currentSeq) }
             _state.update { it.copy(playback = it.playback.copy(lastSeq = currentSeq)) }
         }
+        reportPlayback(position, paused = action == PlaybackAction.PAUSE, seq = currentSeq)
+    }
+
+    /**
+     * Host: saves the playback state on the server so members who join, reconnect or come back
+     * from the background can align without waiting for the host. Best effort; heartbeats at most
+     * every [PLAYBACK_REPORT_INTERVAL_MS].
+     */
+    private fun reportPlayback(positionMs: Long, paused: Boolean, seq: Long, heartbeat: Boolean = false) {
+        val room = current.room ?: return
+        val movieId = current.movie?.id ?: return
+        if (!current.isHost) return
+        val now = nowMs()
+        if (heartbeat && now - lastPlaybackReportMs < PLAYBACK_REPORT_INTERVAL_MS) return
+        lastPlaybackReportMs = now
+        val snapshot = RoomPlayback(movieId = movieId, positionMs = positionMs, isPaused = paused, seq = seq)
+        scope.launch { runCatching { deps.roomGateway.reportPlayback(room, snapshot) } }
+    }
+
+    /**
+     * Applies the host's server snapshot when it is for the current movie and not older than what
+     * this client already applied. [play] = false keeps the player paused (host reopening a room).
+     */
+    private fun applyServerPlayback(room: WatchRoom, play: Boolean): Boolean {
+        val snapshot = room.playback ?: return false
+        if (snapshot.movieId != current.movie?.id || snapshot.seq < current.playback.lastSeq) return false
+        val position = snapshot.positionAt(room.serverTimeMs)
+        val paused = snapshot.isPaused || !play
+        _state.update { it.copy(playback = it.playback.copy(positionMs = position, isPaused = paused, lastSeq = snapshot.seq)) }
+        seq = maxOf(seq, snapshot.seq)
+        if (backgroundedAtMs != null) return true
+        player.seek(position)
+        if (paused) {
+            if (!player.isPaused) player.pause()
+        } else if (player.isPaused) {
+            player.play()
+        }
+        return true
+    }
+
+    /** Member: reads the room and applies the host's snapshot; false when there is none to apply. */
+    private suspend fun realignFromServer(): Boolean {
+        val room = current.room ?: return false
+        val fresh = runCatching { deps.roomGateway.fetchRoom(room.id) }.getOrNull() ?: return false
+        return applyServerPlayback(fresh, play = true)
     }
 
     private suspend fun emitHostReporting(room: WatchRoom, hostUserId: String, action: PlaybackAction, positionMs: Long, seq: Long) {
@@ -546,7 +603,11 @@ class WatchSession(
                 return@launch
             }
             delay(PlaybackSyncRules.SYNC_REQUEST_TIMEOUT_MS)
-            if (current.isRequestingSync) {
+            if (!current.isRequestingSync) return@launch
+            // Host offline or backgrounded: fall back to its last snapshot on the server.
+            if (realignFromServer()) {
+                finishSyncRequest(synced = true)
+            } else if (current.isRequestingSync) {
                 _state.update { it.copy(isRequestingSync = false) }
                 toast("The host didn't respond. Try again in a moment")
             }
@@ -580,6 +641,7 @@ class WatchSession(
         val action = if (player.isPaused) PlaybackAction.PLAY else PlaybackAction.PAUSE
         val position = player.currentPositionMs
         val currentSeq = nextSeq()
+        reportPlayback(position, paused = action == PlaybackAction.PAUSE, seq = currentSeq)
         scope.launch {
             emitHostReporting(room, user.id, action, position, currentSeq)
             if (action == PlaybackAction.PLAY) player.play() else player.pause()
@@ -605,6 +667,7 @@ class WatchSession(
         val wasPaused = player.isPaused
         player.seek(clamped)
         _state.update { it.copy(playback = it.playback.copy(positionMs = clamped, lastSeq = currentSeq)) }
+        reportPlayback(clamped, paused = wasPaused, seq = currentSeq)
         scope.launch {
             emitHostReporting(room, user.id, PlaybackAction.SEEK, clamped, currentSeq)
             if (!wasPaused) player.play()
@@ -1044,5 +1107,8 @@ class WatchSession(
     internal companion object {
         /** Away at least this long → the HTTP stream is assumed dead and re-prepared. */
         const val RELOAD_AFTER_BACKGROUND_MS = 15_000L
+
+        /** Minimum gap between heartbeat-driven playback snapshots saved on the server. */
+        const val PLAYBACK_REPORT_INTERVAL_MS = 15_000L
     }
 }

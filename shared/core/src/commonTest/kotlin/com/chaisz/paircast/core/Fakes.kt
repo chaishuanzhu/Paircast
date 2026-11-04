@@ -26,6 +26,7 @@ import com.chaisz.paircast.core.model.PlaybackSyncSignal
 import com.chaisz.paircast.core.model.ReportAction
 import com.chaisz.paircast.core.model.ReportFilter
 import com.chaisz.paircast.core.model.ReportPage
+import com.chaisz.paircast.core.model.RoomPlayback
 import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
@@ -130,8 +131,12 @@ internal class FakeRoomGateway : RoomGateway {
         return next
     }
 
+    val reported = mutableListOf<RoomPlayback>()
+
     override suspend fun updateRoom(room: WatchRoom) { rooms[room.id] = room }
     override fun observeRoom(roomId: String): Flow<WatchRoom> = updates
+    override suspend fun fetchRoom(roomId: String): WatchRoom = rooms[roomId] ?: throw AppError.RoomNotFound
+    override suspend fun reportPlayback(room: WatchRoom, playback: RoomPlayback) { reported += playback }
 }
 
 internal class FakeSyncGateway : PlaybackSyncGateway {

@@ -3,7 +3,7 @@ module github.com/chaishuanzhu/Paircast/server
 go 1.26.5
 
 require (
-	github.com/chaishuanzhu/GO-IM/pkg/imserver v0.0.0-20261103145519-59d7fc988921
+	github.com/chaishuanzhu/GO-IM/pkg/imserver v0.0.0-20261104101415-50d2d0a62e40
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/swaggest/swgui v1.8.9

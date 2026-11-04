@@ -62,7 +62,7 @@ make android      # Debug APK
 - WebSocket：`ws(s)://host/ws?token=&device_id=&platform=ios|android`，每帧一个 protobuf `im.Message`
 - 心跳 25s（`CmdHeartbeat=6`），连续 3 次无响应重连；指数退避重连；`CmdAck=2` 匹配本机发出的消息
 - 回前台 `PaircastGraph.onAppForeground()`：已连接则立即探活（5s 无 pong 断开重连），退避等待中则立即重连
-- 群生命周期：由服务端房间接口托管——`POST /room/create` 同时建群（`groupId` = `g_…`），`/room/join` 入群，`/room/leave` 退群（最后一人离开结束房间并删群）
+- 群生命周期：由服务端房间接口托管——`POST /room/create` 同时建 GO-IM 聊天室（`groupId` = `g_…`；只投递在线成员、不计未读、不进 IM 群列表，客户端不能自行入群 / 拉人），`/room/join` 入群，`/room/leave` 退群（最后一人离开结束房间并删群）
 - 聊天：`CmdChat=1`，`chat_type=2`（群）；文本 `msg_type=1`（系统消息前缀 `[sys]`）；贴纸 `msg_type=6` + JSON `StickerRef`；本人消息收到 Ack 后本地回显
 - 播控：`CmdSignal=25` 瞬时信令（`chat_type=2`、`to`=群 ID；服务端校验成员身份、跨网关转发，不落库、不计未读、不回显给发送者），`content` 为 `{"type":"paircast.playback","data":<下方信令 JSON>}`；GO-IM 丢弃没有 `type` 的信令，客户端也只解析自己认识的类型（`SignalCodec`）
 
@@ -89,7 +89,8 @@ make android      # Debug APK
 - `seq` 单调；旧序丢弃
 - 房主播放中约每 5s 发 heartbeat；成员用**本机播放器实时进度**与房主 `positionMs` 比较，> 1200ms 才 Seek
 - play / pause 快照（新成员加入、`sync_request` 回应）发给全房：仅在播停状态翻转或偏差 > 1200ms 时 Seek，已同步的成员不卡顿
-- 成员刷新：`WatchSession.requestSync()` 广播 `sync_request`（`seq = 0`，任何人都不应用到播放器）→ 房主 `emitSnapshot()`（1s 节流）→ 请求方收到下一条 play / pause 时**强制** Seek 并结束 `isRequestingSync`；4s 无回应则提示。旧客户端解不开新 action 会整条丢弃，所以旧房主表现为「无响应」
+- 成员刷新：`WatchSession.requestSync()` 广播 `sync_request`（`seq = 0`，任何人都不应用到播放器）→ 房主 `emitSnapshot()`（1s 节流）→ 请求方收到下一条 play / pause 时**强制** Seek 并结束 `isRequestingSync`；4s 无回应则改读服务端播放快照（见下条），没有可用快照才提示。旧客户端解不开新 action 会整条丢弃，所以旧房主表现为「无响应」
+- 服务端播放快照：房主在 play / pause / seek / 后台暂停时、播放中 heartbeat 最多每 15s 一次，`POST /room/playback`（`movie_id`、`position_ms`、`paused`、`rate`、`seq`；换片后或 `seq` 不大于已存值时服务端忽略）。`GET /room` 等房间响应带 `playback` 与 `server_time`，客户端按 `positionMs + (server_time − updated_at) × rate` 推算当前进度（不依赖本机时钟）。成员在进房、回前台、`sync_request` 超时时对齐快照；`seq` 小于已应用的值或片源不同则忽略
 - 房主离开：先发 `host_transfer`（目标 = joinOrder 下一位），再 `POST /room/leave`（`transfer_seq`），服务端按加入顺序落库转让；最后一人离开结束房间
 - `subtitleObjectKey` 字段名沿用旧版，内容是服务端字幕 ref（见「字幕」）
 - **前后台**：`WatchSession.onBackground()` 本机暂停（房主播放中发 `pause`），后台期间不执行远端播控；`onForeground()` 离开 ≥15s 或播放器报错则用新 URL 重新 prepare 并 seek 回原进度、恢复当前字幕。`PlayerPort.enterBackground/enterForeground` 由平台处理渲染面（Android 后台 `detachViews` + 关视频轨，回前台重新挂载）
@@ -129,7 +130,7 @@ make android      # Debug APK
 
 - **影片 ID**：`<sourceId>:<nativeId>`（如 `oss:films/A.mkv`），为后续 openlist / Emby / Jellyfin 片源预留；无前缀的旧 ID 归入默认片源
 - **字幕 ref**：`src:<sourceId>:<key>`（片源外挂）、`blob:paircast/subtitles/…`（共享 / 在线下载后存入 GO-IM 文件存储）、`os:<fileId>`（在线搜索结果）
-- **房间**：服务端维护成员、`joinOrder`、房主、`movieId`、`subtitle_ref`、两个 seq 与 `revision`。仅房主可改片 / 转让 / 结束（传未变化的值不算越权）；换片清空共享字幕。每次变更由 Paircast 服务经 GO-IM 服务端 API（`signals/send`）推送 `CmdSignal` `{"type":"paircast.room_updated","data":{"group_id":…,"room":{…}}}`（不回给操作者）；客户端另以 15s 轮询 `GET /room` 兜底，只接受更大的 `revision`。房间是 GO-IM 群：建房 / 进出房由服务端调用 `groups/*`，GO-IM 侧的退群 / 解散经 webhook（`group.member_left` / `group.dismissed`）同步回房间
+- **房间**：服务端维护成员、`joinOrder`、房主、`movieId`、`subtitle_ref`、两个 seq 与 `revision`。仅房主可改片 / 转让 / 结束（传未变化的值不算越权）；换片清空共享字幕。每次变更由 Paircast 服务经 GO-IM 服务端 API（`signals/send`）推送 `CmdSignal` `{"type":"paircast.room_updated","data":{"group_id":…,"room":{…}}}`（不回给操作者）；客户端另以 15s 轮询 `GET /room` 兜底，只接受更大的 `revision`。房间是 GO-IM 聊天室：建房 / 进出房由服务端调用 `groups/*`，GO-IM 侧的退群 / 解散经 webhook（`group.member_left` / `group.dismissed`）同步回房间；另每 5 分钟用 `groups/get` 对账，补上丢失的 webhook。房主的播放快照（`playback`）单独存储，不增加 `revision`
 - **元数据**：服务端刮削——同目录 `{base}.nfo` / `-poster` / `-fanart` 优先 → TMDB → 文件名；结果（含无结果）缓存，无海报的结果 1 小时后重试；不再写回片源目录。客户端只对无海报的影片调用 `/media/item`
 - 对象存储里不再需要 `_paircast/` 目录（房间改存 MySQL，共享字幕存 GO-IM 文件存储）
 

@@ -10,9 +10,11 @@ import (
 	"time"
 )
 
-// Groups 是房间依赖的 GO-IM 群操作（通过 GO-IM 服务端 API）。
+// Groups 是房间依赖的 GO-IM 聊天室操作（通过 GO-IM 服务端 API）。
 type Groups interface {
 	Create(ctx context.Context, name, ownerUID string) (groupID string, err error)
+	// Members 返回群成员；群不存在返回 ErrEnded。
+	Members(ctx context.Context, groupID string) ([]string, error)
 	// Join 加入群；已是成员视为成功。群不存在返回 ErrEnded。
 	Join(ctx context.Context, groupID, uid string) error
 	// Leave 退群；不是成员或群不存在视为成功。
@@ -33,6 +35,10 @@ type Service struct {
 	notifier Notifier
 	newID    func() string
 	now      func() time.Time
+
+	// suspects 是上一轮对账发现「在 IM 群里、不在房间里」的成员（房间 ID + "/" + uid），
+	// 连续两轮都这样才移出群：进房先入群再写房间，单次看到可能只是进房进行到一半。只由对账协程访问。
+	suspects map[string]bool
 }
 
 // NewService 创建房间服务。notifier 可为 nil。
@@ -163,6 +169,7 @@ func (s *Service) Update(ctx context.Context, uid, roomID string, p Patch) (*Roo
 		if p.MovieID != nil && strings.TrimSpace(*p.MovieID) != "" && *p.MovieID != r.MovieID {
 			r.MovieID = strings.TrimSpace(*p.MovieID)
 			r.SubtitleRef, r.SubtitleLabel = "", ""
+			r.Playback = nil
 		}
 		if p.HostUID != nil && *p.HostUID != r.HostUID {
 			if !r.IsMember(*p.HostUID) {
@@ -218,6 +225,34 @@ func (s *Service) SetSubtitle(ctx context.Context, uid, roomID, ref, label strin
 	s.notify(ctx, uid, updated)
 	return updated, nil
 }
+
+// ReportPlayback 保存房主的播放快照。只有房主可以上报；影片不是当前影片或序号不大于已保存的快照时忽略
+// （返回 applied = false，不算错误：换片、转让房主与网络乱序时都会出现）。
+func (s *Service) ReportPlayback(ctx context.Context, uid, roomID string, p Playback) (applied bool, err error) {
+	_, err = s.store.UpdatePlayback(ctx, normalizeID(roomID), func(r *Room) error {
+		if r.Status != StatusActive {
+			return ErrEnded
+		}
+		if r.HostUID != uid {
+			return ErrNotHost
+		}
+		if p.MovieID != r.MovieID || (r.Playback != nil && p.Seq <= r.Playback.Seq) {
+			return errStalePlayback
+		}
+		p.UpdatedAt = s.now().UnixMilli()
+		if p.Rate <= 0 {
+			p.Rate = 1
+		}
+		r.Playback = &p
+		return nil
+	})
+	if errors.Is(err, errStalePlayback) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+var errStalePlayback = errors.New("watchroom: stale playback")
 
 // GroupMemberLeft 同步 IM 侧的退群（group.member_left webhook）：成员不在房间里或房间已结束时什么也不做。
 func (s *Service) GroupMemberLeft(ctx context.Context, groupID, uid string) error {
@@ -293,6 +328,79 @@ func (s *Service) cleanup(ctx context.Context, retention time.Duration) {
 	if len(groups) > 0 {
 		log.Printf("[watchroom] janitor removed %d stale rooms", len(groups))
 	}
+}
+
+// StartReconciler 定期把活跃房间与 IM 聊天室对账，兜住丢失的 webhook 和失败的退群调用：
+// 聊天室已不存在 → 结束房间；房间成员不在聊天室里 → 移出房间（同 webhook）；
+// 聊天室成员不在房间里且连续两轮如此 → 移出聊天室。
+func (s *Service) StartReconciler(ctx context.Context, interval time.Duration) {
+	if interval <= 0 {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				s.reconcile(ctx)
+			}
+		}
+	}()
+}
+
+func (s *Service) reconcile(ctx context.Context) {
+	rooms, err := s.store.ListActive(ctx)
+	if err != nil {
+		log.Printf("[watchroom] reconcile: %v", err)
+		return
+	}
+	suspects := map[string]bool{}
+	for _, room := range rooms {
+		members, err := s.groups.Members(ctx, room.GroupID)
+		if errors.Is(err, ErrEnded) {
+			if err := s.GroupDismissed(ctx, room.GroupID); err != nil {
+				log.Printf("[watchroom] reconcile: end room %s: %v", room.ID, err)
+			} else {
+				log.Printf("[watchroom] reconcile: room %s ended, its chatroom is gone", room.ID)
+			}
+			continue
+		}
+		if err != nil {
+			log.Printf("[watchroom] reconcile: members of %s: %v", room.GroupID, err)
+			continue
+		}
+		inGroup := make(map[string]bool, len(members))
+		for _, uid := range members {
+			inGroup[uid] = true
+		}
+		for _, uid := range room.Members {
+			if !inGroup[uid] {
+				log.Printf("[watchroom] reconcile: %s left chatroom %s, removing from room %s", uid, room.GroupID, room.ID)
+				if err := s.GroupMemberLeft(ctx, room.GroupID, uid); err != nil {
+					log.Printf("[watchroom] reconcile: %v", err)
+				}
+			}
+		}
+		for _, uid := range members {
+			if room.IsMember(uid) {
+				continue
+			}
+			key := room.ID + "/" + uid
+			if !s.suspects[key] {
+				suspects[key] = true
+				continue
+			}
+			log.Printf("[watchroom] reconcile: %s is not in room %s, removing from chatroom %s", uid, room.ID, room.GroupID)
+			if err := s.groups.Leave(ctx, room.GroupID, uid); err != nil {
+				suspects[key] = true
+				log.Printf("[watchroom] reconcile: %v", err)
+			}
+		}
+	}
+	s.suspects = suspects
 }
 
 func (s *Service) notify(ctx context.Context, actorUID string, room *Room) {

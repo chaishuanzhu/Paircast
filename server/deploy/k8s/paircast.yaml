@@ -68,12 +68,14 @@ spec:
       containers:
         - name: paircast
           image: 870027381/paircast-server
-          # 接入方密钥 GOIM_APP_PAIRCAST_SECRET / _WEBHOOK_SECRET 与 GO-IM 网关共用 Secret goim-apps。
-          envFrom:
-            - secretRef: { name: goim-apps }
           env:
             - { name: CONFIG_PATH, value: /etc/paircast/paircast.json }
             - { name: TZ, value: Asia/Shanghai }
+            # 接入方密钥与 GO-IM 网关共用 Secret goim-apps，但只引用 Paircast 自己的两个键（不用 envFrom，看不到其他接入方的密钥）。
+            - name: PAIRCAST_IM_SECRET
+              valueFrom: { secretKeyRef: { name: goim-apps, key: GOIM_APP_PAIRCAST_SECRET } }
+            - name: PAIRCAST_IM_WEBHOOK_SECRET
+              valueFrom: { secretKeyRef: { name: goim-apps, key: GOIM_APP_PAIRCAST_WEBHOOK_SECRET, optional: true } }
             - name: PAIRCAST_SESSION_SECRET
               valueFrom: { secretKeyRef: { name: goim-paircast, key: SESSION_SECRET } }
             - name: PAIRCAST_ADMIN_EMAIL

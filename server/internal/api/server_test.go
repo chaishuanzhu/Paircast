@@ -118,6 +118,20 @@ func (g *fakeGroups) Dismiss(_ context.Context, groupID string) error {
 	return nil
 }
 
+func (g *fakeGroups) Members(_ context.Context, groupID string) ([]string, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	m, ok := g.members[groupID]
+	if !ok {
+		return nil, watchroom.ErrEnded
+	}
+	var out []string
+	for uid := range m {
+		out = append(out, uid)
+	}
+	return out, nil
+}
+
 type nopNotifier struct{}
 
 func (nopNotifier) RoomUpdated(context.Context, string, *watchroom.Room) {}
@@ -427,5 +441,29 @@ func TestWebhookHandlerSyncsRooms(t *testing.T) {
 	}
 	if _, err := e.rooms.Join(ctx, "100002", room.ID); !errors.Is(err, watchroom.ErrEnded) {
 		t.Fatalf("join after dismiss: %v", err)
+	}
+}
+
+func TestRoomPlaybackSnapshot(t *testing.T) {
+	e := newMediaEnv(t)
+	alice, bob, movie := "100001", "100002", "oss:films/Inception.2010.1080p.mkv"
+	room := decodeJSON[watchroom.Room](t, e.call(t, e.srv.HandleRoomCreate, http.MethodPost, alice, url.Values{"movie_id": {movie}}))
+	e.call(t, e.srv.HandleRoomJoin, http.MethodPost, bob, url.Values{"room_id": {room.ID}})
+
+	report := url.Values{"room_id": {room.ID}, "movie_id": {movie}, "position_ms": {"42000"}, "paused": {"false"}, "rate": {"1.5"}, "seq": {"7"}}
+	if rec := e.call(t, e.srv.HandleRoomPlayback, http.MethodPost, bob, report); rec.Code != http.StatusForbidden {
+		t.Fatalf("member report: %d", rec.Code)
+	}
+	if got := decodeJSON[map[string]bool](t, e.call(t, e.srv.HandleRoomPlayback, http.MethodPost, alice, report)); !got["applied"] {
+		t.Fatal("host report not applied")
+	}
+	if got := decodeJSON[map[string]bool](t, e.call(t, e.srv.HandleRoomPlayback, http.MethodPost, alice, report)); got["applied"] {
+		t.Fatal("same seq applied twice")
+	}
+
+	got := decodeJSON[watchroom.Room](t, e.call(t, e.srv.HandleRoomGet, http.MethodGet, bob, url.Values{"room_id": {room.ID}}))
+	p := got.Playback
+	if p == nil || p.PositionMs != 42000 || p.Paused || p.Rate != 1.5 || p.Seq != 7 || p.UpdatedAt == 0 || got.ServerTime < p.UpdatedAt {
+		t.Fatalf("snapshot %+v server_time %d", p, got.ServerTime)
 	}
 }

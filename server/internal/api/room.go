@@ -97,7 +97,7 @@ func (s *Server) HandleRoomCreate(w http.ResponseWriter, r *http.Request) {
 		writeMediaError(w, err)
 		return
 	}
-	writeJSON(w, room)
+	writeRoom(w, room)
 }
 
 // HandleRoomJoin 加入房间（同时入群）。
@@ -112,7 +112,7 @@ func (s *Server) HandleRoomJoin(w http.ResponseWriter, r *http.Request) {
 		writeMediaError(w, err)
 		return
 	}
-	writeJSON(w, room)
+	writeRoom(w, room)
 }
 
 // HandleRoomLeave 离开房间：房主离开按加入顺序转让，最后一人离开结束房间。
@@ -131,7 +131,7 @@ func (s *Server) HandleRoomLeave(w http.ResponseWriter, r *http.Request) {
 		writeMediaError(w, err)
 		return
 	}
-	writeJSON(w, room)
+	writeRoom(w, room)
 }
 
 // HandleRoomUpdate 修改房间（换片 / 转让房主 / 结束仅房主；序号只增不减）。换片时新 movie_id 必须存在。
@@ -160,7 +160,42 @@ func (s *Server) HandleRoomUpdate(w http.ResponseWriter, r *http.Request) {
 		writeMediaError(w, err)
 		return
 	}
+	writeRoom(w, room)
+}
+
+// writeRoom 写房间响应，带上服务端时间（客户端据此推算播放快照的当前进度）。
+func writeRoom(w http.ResponseWriter, room *watchroom.Room) {
+	room.ServerTime = time.Now().UnixMilli()
 	writeJSON(w, room)
+}
+
+// HandleRoomPlayback 保存房主的播放快照（新加入 / 重连的成员据此对齐）；不是房主返回 403，
+// 影片不是当前影片或序号过旧时忽略。响应 {"applied": bool}。
+// POST /room/playback  (token, room_id, movie_id, position_ms, paused, rate?, seq)
+func (s *Server) HandleRoomPlayback(w http.ResponseWriter, r *http.Request) {
+	uid, ok := s.roomAuth(w, r, http.MethodPost)
+	if !ok {
+		return
+	}
+	position, seq := formInt64(r, "position_ms"), formInt64(r, "seq")
+	if position == nil || seq == nil || *position < 0 {
+		http.Error(w, "position_ms and seq required", http.StatusBadRequest)
+		return
+	}
+	paused, _ := strconv.ParseBool(r.FormValue("paused"))
+	rate, _ := strconv.ParseFloat(r.FormValue("rate"), 64)
+	applied, err := s.rooms.ReportPlayback(r.Context(), uid, r.FormValue("room_id"), watchroom.Playback{
+		MovieID:    r.FormValue("movie_id"),
+		PositionMs: *position,
+		Paused:     paused,
+		Rate:       rate,
+		Seq:        *seq,
+	})
+	if err != nil {
+		writeMediaError(w, err)
+		return
+	}
+	writeJSON(w, map[string]bool{"applied": applied})
 }
 
 // HandleRoomGet 返回房间状态（仅成员）。
@@ -175,5 +210,5 @@ func (s *Server) HandleRoomGet(w http.ResponseWriter, r *http.Request) {
 		writeMediaError(w, err)
 		return
 	}
-	writeJSON(w, room)
+	writeRoom(w, room)
 }

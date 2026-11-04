@@ -47,6 +47,14 @@ func (g *fakeGroups) Dismiss(_ context.Context, id string) error {
 	return nil
 }
 
+func (g *fakeGroups) Members(_ context.Context, id string) ([]string, error) {
+	m, ok := g.members[id]
+	if !ok {
+		return nil, ErrEnded
+	}
+	return slices.Clone(m), nil
+}
+
 type recorder struct{ rooms []*Room }
 
 func (r *recorder) RoomUpdated(_ context.Context, _ string, room *Room) {
@@ -214,5 +222,71 @@ func TestCreateWithRandomIDFitsGroupNameLimit(t *testing.T) {
 	}
 	if room.GroupID == "" {
 		t.Fatal("room has no group")
+	}
+}
+
+func TestReconcile(t *testing.T) {
+	ctx := context.Background()
+	svc, groups, _ := newService()
+	room, _ := svc.Create(ctx, "alice", "m")
+	if _, err := svc.Join(ctx, "bob", room.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	// 丢失的 member_left：bob 已不在聊天室，对账后移出房间。
+	groups.members[room.GroupID] = []string{"alice"}
+	svc.reconcile(ctx)
+	if got, _ := svc.Get(ctx, "alice", room.ID); got.IsMember("bob") {
+		t.Fatal("bob should be removed from the room")
+	}
+
+	// 失败的退群：carol 在聊天室、不在房间，第二轮才移出（第一轮可能是进房进行到一半）。
+	groups.members[room.GroupID] = append(groups.members[room.GroupID], "carol")
+	svc.reconcile(ctx)
+	if !slices.Contains(groups.members[room.GroupID], "carol") {
+		t.Fatal("carol removed after a single pass")
+	}
+	svc.reconcile(ctx)
+	if slices.Contains(groups.members[room.GroupID], "carol") {
+		t.Fatal("carol should be removed from the chatroom on the second pass")
+	}
+
+	// 丢失的 dismissed：聊天室不存在，房间结束。
+	delete(groups.members, room.GroupID)
+	svc.reconcile(ctx)
+	if got, _ := svc.Get(ctx, "alice", room.ID); got.Status != StatusEnded {
+		t.Fatalf("room status %s, want ended", got.Status)
+	}
+}
+
+func TestReportPlayback(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _ := newService()
+	room, _ := svc.Create(ctx, "alice", "m")
+	svc.Join(ctx, "bob", room.ID)
+
+	if ok, err := svc.ReportPlayback(ctx, "alice", room.ID, Playback{MovieID: "m", PositionMs: 5000, Seq: 10}); !ok || err != nil {
+		t.Fatalf("host report: %v %v", ok, err)
+	}
+	if _, err := svc.ReportPlayback(ctx, "bob", room.ID, Playback{MovieID: "m", Seq: 11}); !errors.Is(err, ErrNotHost) {
+		t.Fatalf("member report: %v", err)
+	}
+	if ok, _ := svc.ReportPlayback(ctx, "alice", room.ID, Playback{MovieID: "m", PositionMs: 1, Seq: 9}); ok {
+		t.Fatal("older seq applied")
+	}
+	if ok, _ := svc.ReportPlayback(ctx, "alice", room.ID, Playback{MovieID: "other", Seq: 12}); ok {
+		t.Fatal("other movie applied")
+	}
+	got, _ := svc.Get(ctx, "bob", room.ID)
+	if got.Playback == nil || got.Playback.PositionMs != 5000 || got.Playback.Rate != 1 || got.Revision != room.Revision+1 {
+		t.Fatalf("playback %+v revision %d (join only should bump it)", got.Playback, got.Revision)
+	}
+
+	next := "n"
+	if _, err := svc.Update(ctx, "alice", room.ID, Patch{MovieID: &next}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := svc.Get(ctx, "bob", room.ID); got.Playback != nil {
+		t.Fatal("movie change should clear the playback snapshot")
 	}
 }

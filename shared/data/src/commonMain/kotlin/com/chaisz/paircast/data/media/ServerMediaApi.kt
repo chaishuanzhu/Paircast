@@ -3,6 +3,7 @@ package com.chaisz.paircast.data.media
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.MediaSource
 import com.chaisz.paircast.core.model.Movie
+import com.chaisz.paircast.core.model.RoomPlayback
 import com.chaisz.paircast.core.model.RoomStatus
 import com.chaisz.paircast.core.model.VideoFormat
 import com.chaisz.paircast.core.model.WatchRoom
@@ -95,7 +96,9 @@ internal data class RoomDto(
     @SerialName("host_transfer_seq") val hostTransferSeq: Long = 0,
     @SerialName("subtitle_ref") val subtitleRef: String? = null,
     @SerialName("subtitle_label") val subtitleLabel: String? = null,
+    val playback: PlaybackDto? = null,
     val revision: Long = 0,
+    @SerialName("server_time") val serverTime: Long = 0,
 ) {
     fun toDomain() = WatchRoom(
         id = id,
@@ -110,7 +113,21 @@ internal data class RoomDto(
         groupId = groupId?.ifEmpty { null },
         subtitleRef = subtitleRef?.ifEmpty { null },
         subtitleLabel = subtitleLabel?.ifEmpty { null },
+        playback = playback?.toDomain(),
+        serverTimeMs = serverTime,
     )
+}
+
+@Serializable
+internal data class PlaybackDto(
+    @SerialName("movie_id") val movieId: String,
+    @SerialName("position_ms") val positionMs: Long = 0,
+    val paused: Boolean = true,
+    val rate: Double = 1.0,
+    val seq: Long = 0,
+    @SerialName("updated_at") val updatedAt: Long = 0,
+) {
+    fun toDomain() = RoomPlayback(movieId, positionMs, paused, rate, seq, updatedAt)
 }
 
 /** `data` of the `paircast.room_updated` signal pushed by the Paircast server. */
@@ -233,6 +250,21 @@ class ServerMediaApi(
             ),
             RoomDto.serializer(),
         )
+    }
+
+    internal suspend fun reportPlayback(roomId: String, playback: RoomPlayback) {
+        call(AppError.RoomNotFound) { s ->
+            api.appPost(
+                s,
+                "room/playback",
+                "room_id" to roomId,
+                "movie_id" to playback.movieId,
+                "position_ms" to playback.positionMs.coerceAtLeast(0).toString(),
+                "paused" to playback.isPaused.toString(),
+                "rate" to playback.rate.toString(),
+                "seq" to playback.seq.toString(),
+            )
+        }
     }
 
     internal suspend fun room(roomId: String): RoomDto = call(AppError.RoomNotFound) { s -> api.decode(api.appGet(s, "room", "room_id" to roomId), RoomDto.serializer()) }

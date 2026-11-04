@@ -95,7 +95,7 @@ docker compose -f docker-compose.paircast.yml logs paircast    # 出现 listenin
 ```bash
 git clone https://github.com/chaishuanzhu/Paircast.git && cd Paircast/server/deploy/k8s
 
-# 1. GO-IM 侧：Secret goim-apps（网关 envFrom 读取，本服务也读），然后重启网关
+# 1. GO-IM 侧：Secret goim-apps（网关 envFrom 读取；本服务只用 secretKeyRef 引用自己的两个键），然后重启网关
 kubectl -n go-im create secret generic goim-apps \
   --from-literal=GOIM_APP_PAIRCAST_SECRET=$(openssl rand -hex 32) \
   --from-literal=GOIM_APP_PAIRCAST_WEBHOOK_SECRET=$(openssl rand -hex 32)
@@ -216,7 +216,7 @@ curl -s "$P/media/sources" -H "Authorization: Bearer <token>"   # 片源列表�
 
 | 现象 | 原因与处理 |
 |------|------|
-| 启动失败 `im.base_url, im.app_id and im.secret ... are required` | 没有拿到接入方密钥：检查 `apps.env` / Secret `goim-apps` 是否挂给了本服务 |
+| 启动失败 `im.base_url, im.app_id and im.secret ... are required` | 没有拿到接入方密钥：检查 `apps.env` / Secret `goim-apps` 里有没有 `GOIM_APP_PAIRCAST_SECRET` |
 | 启动失败 `media.sources is empty` | 至少配置一个视频源 |
 | `paircast-db` / `db-init` 失败 | MySQL 未就绪或 root 密码不对；看该容器日志 |
 | 登录返回 401 `invalid account or password` | 账号在 Paircast，不是 GO-IM 的账号；管理员初始密码见邮件或服务日志 |

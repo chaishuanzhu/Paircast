@@ -8,9 +8,11 @@ Paircast 的 Go 服务端：账号（`/account/*`）、管理后台（`/console/
 - **会话**：登录返回 Paircast 会话令牌（HMAC 签名，改密 / 禁用后失效）和 GO-IM 连接信息（`users/token` 签发的 IM 令牌）；
   `/media`、`/room`、`/account`、`/console` 用会话令牌认证，聊天、上传、拉黑、举报直接用 IM 令牌访问 GO-IM。
 - **管理后台**：账号增删、禁用（同步禁用 IM 账号）；举报审核走 GO-IM `reports/list|get|resolve`，封禁同时停用 Paircast 账号，管理员不能被封禁。
-- **房间 = GO-IM 群**：建房 `groups/create`，进出房 `groups/members/add|remove`，过期房间清理时 `groups/dismiss`。
+- **房间 = GO-IM 聊天室**：建房 `groups/create`（`type: chatroom`：只投递在线成员、不存离线、不计未读、不出现在 IM 群列表，成员只能由服务端增减），进出房 `groups/members/add|remove`，过期房间清理时 `groups/dismiss`。
 - **实时推送**：房间变化用群信令 `paircast.room_updated`（`data` 为 `{"group_id","room"}`）；播放同步由客户端之间直接发 `paircast.playback`。
+- **播放快照**：房主在播停 / 拖动 / 后台暂停时（播放中最多每 15s 一次）`POST /room/playback` 保存进度，房间返回 `playback` + `server_time`；晚加入、回前台、请求同步无人应答的成员按快照对齐，不必等房主在线。
 - **Webhook**：`/im/webhook` 接收 `group.member_left` / `group.dismissed`，同步房间成员。
+- **对账**：每 5 分钟用 `groups/get` 比对房间成员与 IM 群成员，补上丢失的 webhook（聊天室不存在 → 结束房间；房间多出的人 → 移出房间；IM 群多出的人连续两轮仍在 → 移出群）。
 
 ## 目录
 

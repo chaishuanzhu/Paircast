@@ -10,16 +10,28 @@ import (
 	"github.com/chaishuanzhu/Paircast/server/internal/watchroom"
 )
 
-// IMGroups 用服务端 API 实现 watchroom.Groups。
+// IMGroups 用服务端 API 实现 watchroom.Groups：房间是 IM 聊天室（成员由本服务管理，消息只推在线成员）。
 type IMGroups struct{ C *imserver.Client }
 
 // Create 实现 watchroom.Groups。
 func (g IMGroups) Create(ctx context.Context, name, ownerUID string) (string, error) {
-	grp, err := g.C.CreateGroup(ctx, name, imserver.UID(ownerUID), nil)
+	grp, err := g.C.CreateChatroom(ctx, name, imserver.UID(ownerUID), nil)
 	if err != nil {
 		return "", err
 	}
 	return grp.ID, nil
+}
+
+// Members 实现 watchroom.Groups。
+func (g IMGroups) Members(ctx context.Context, groupID string) ([]string, error) {
+	grp, err := g.C.GetGroup(ctx, groupID)
+	if imserver.IsNotFound(err) {
+		return nil, watchroom.ErrEnded
+	}
+	if err != nil {
+		return nil, err
+	}
+	return grp.Members, nil
 }
 
 // Join 实现 watchroom.Groups。

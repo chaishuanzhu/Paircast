@@ -660,6 +660,44 @@ paths:
         "410": { $ref: "#/components/responses/RoomEnded" }
         "503": { $ref: "#/components/responses/MediaUnavailable" }
 
+  /room/playback:
+    post:
+      tags: [观影房间]
+      summary: 上报播放快照
+      description: |
+        房主在播放 / 暂停 / 拖动 / 换片时以及播放中定期上报；新加入、重连或回到前台的成员按房间的 `playback`
+        与 `server_time` 推算进度后对齐，再跟随实时的 `paircast.playback` 信令。
+        `movie_id` 不是当前影片或 `seq` 不大于已保存的快照时忽略（`applied: false`）。不递增房间 `revision`、不推送 `room_updated`。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [room_id, movie_id, position_ms, seq]
+              properties:
+                room_id: { type: string }
+                movie_id: { type: string }
+                position_ms: { type: integer, format: int64, minimum: 0 }
+                paused: { type: boolean }
+                rate: { type: number, default: 1 }
+                seq: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: 是否保存
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applied: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { description: 不是房主, content: { text/plain: { schema: { type: string } } } }
+        "404": { description: 房间不存在, content: { text/plain: { schema: { type: string } } } }
+        "410": { $ref: "#/components/responses/RoomEnded" }
+        "503": { $ref: "#/components/responses/MediaUnavailable" }
+
 components:
   securitySchemes:
     uid:
@@ -800,6 +838,20 @@ components:
         host_transfer_seq: { type: integer, format: int64 }
         subtitle_ref: { type: string }
         subtitle_label: { type: string }
+        playback:
+          description: 房主最近上报的播放快照；没有上报过或换片后为空
+          type: object
+          properties:
+            movie_id: { type: string }
+            position_ms: { type: integer, format: int64 }
+            paused: { type: boolean }
+            rate: { type: number }
+            seq: { type: integer, format: int64 }
+            updated_at: { type: integer, format: int64, description: 服务端收到快照的时间（毫秒） }
         revision: { type: integer, format: int64 }
         created_at: { type: integer, format: int64 }
         updated_at: { type: integer, format: int64 }
+        server_time:
+          type: integer
+          format: int64
+          description: 响应时的服务端时间（毫秒）；未暂停时当前进度 ≈ position_ms + (server_time − playback.updated_at) × rate

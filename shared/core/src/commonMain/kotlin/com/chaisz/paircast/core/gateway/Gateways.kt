@@ -16,6 +16,7 @@ import com.chaisz.paircast.core.model.StickerRef
 import com.chaisz.paircast.core.model.SubtitleTrack
 import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.model.UserPage
+import com.chaisz.paircast.core.model.RoomPlayback
 import com.chaisz.paircast.core.model.WatchRoom
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -135,6 +136,12 @@ interface RoomGateway {
     @Throws(Exception::class)
     suspend fun updateRoom(room: WatchRoom)
     fun observeRoom(roomId: String): Flow<WatchRoom>
+    /** Reads the room now, including the host's playback snapshot. */
+    @Throws(Exception::class)
+    suspend fun fetchRoom(roomId: String): WatchRoom
+    /** Host only: saves the playback snapshot late joiners align to (stale seq / other movie is ignored). */
+    @Throws(Exception::class)
+    suspend fun reportPlayback(room: WatchRoom, playback: RoomPlayback)
 }
 
 interface ChatGateway {

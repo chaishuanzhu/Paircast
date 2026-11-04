@@ -61,6 +61,7 @@ func (s *Server) Register(mux Mux) {
 	mux.HandleFunc("/room/join", s.HandleRoomJoin)
 	mux.HandleFunc("/room/leave", s.HandleRoomLeave)
 	mux.HandleFunc("/room/update", s.HandleRoomUpdate)
+	mux.HandleFunc("/room/playback", s.HandleRoomPlayback)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

@@ -2,6 +2,7 @@ package com.chaisz.paircast.data.media
 
 import com.chaisz.paircast.core.gateway.RoomGateway
 import com.chaisz.paircast.core.model.AppError
+import com.chaisz.paircast.core.model.RoomPlayback
 import com.chaisz.paircast.core.model.RoomStatus
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.data.goim.Cmd
@@ -67,6 +68,10 @@ class ServerRoomGateway(
         )
         accept(updated.toDomain())
     }
+
+    override suspend fun fetchRoom(roomId: String): WatchRoom = remember(api.room(roomId.trim().lowercase()).toDomain())
+
+    override suspend fun reportPlayback(room: WatchRoom, playback: RoomPlayback) = api.reportPlayback(room.id, playback)
 
     override fun observeRoom(roomId: String): Flow<WatchRoom> = channelFlow {
         val id = roomId.lowercase()

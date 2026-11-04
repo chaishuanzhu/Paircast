@@ -6,7 +6,7 @@
 #   1. GO-IM config.json 的 gateway.server_api.apps 加一项：
 #        {"app_id": "paircast", "webhook_url": "http://paircast:8090/im/webhook",
 #         "webhook_events": ["group.member_left", "group.dismissed"]}
-#   2. 接入方密钥放进 Secret goim-apps（网关 envFrom 读取，本服务也读）：
+#   2. 接入方密钥放进 Secret goim-apps（网关 envFrom 读取；本服务只用 secretKeyRef 引用自己的两个键）：
 #        kubectl -n go-im create secret generic goim-apps \
 #          --from-literal=GOIM_APP_PAIRCAST_SECRET=$(openssl rand -hex 32) \
 #          --from-literal=GOIM_APP_PAIRCAST_WEBHOOK_SECRET=$(openssl rand -hex 32)
