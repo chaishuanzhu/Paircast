@@ -136,11 +136,11 @@ docker compose -f docker-compose.paircast.yml logs paircast   # 出现 listening
   </ul>
 
   <h3>4.3 表情包（可选）</h3>
-  <p>表情包放在某个片源的桶里，目录下要有 <code>catalog.json</code> 与 <code>{pack_id}/pack.json</code>。用 Paircast 仓库里的脚本整理并上传：</p>
-<pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
-PAIRCAST_S3_ACCESS_KEY=… PAIRCAST_S3_SECRET_KEY=… \
-  python3 Scripts/upload-stickers.py --endpoint oss-cn-hangzhou.aliyuncs.com --bucket my-videos</code></pre>
-  <p>上传需要可写密钥（只在你本机使用，不要放到服务器上）。然后在 <code>paircast.json</code> 的 <code>media</code> 里设 <code>"stickers_source": "oss"</code>、<code>"stickers_prefix": "stickers/"</code>，重启 Paircast 服务。</p>
+  <p>表情包是 GO-IM 的能力：放在 GO-IM 对象存储桶的 <code>stickers/</code> 前缀下，由 GO-IM 网关的 <code>/stickers/</code> 公开提供，Paircast 服务不需要任何配置。在 GO-IM 仓库里导入表情包：</p>
+<pre><code>S3_ENDPOINT=http://127.0.0.1:9000 S3_BUCKET=im-files \
+S3_ACCESS_KEY=rustfsadmin S3_SECRET_KEY=… \
+  scripts/upload_stickers.sh stickers-dist</code></pre>
+  <p>格式与制作脚本见 GO-IM 的 <code>deploy/README.md</code>「对象存储布局与贴纸」。</p>
 
   <h2>5. 反向代理与 HTTPS</h2>
   <p>Paircast 服务和 GO-IM 各用一个域名：Paircast 域名整站转到 8090，GO-IM 域名转到 8080。App 只填 Paircast 的地址，登录后服务器会告诉它 GO-IM 的地址（上一步的 <code>PAIRCAST_IM_PUBLIC_URL</code>）。用 Caddy 时它会自动申请证书并透传 WebSocket：</p>

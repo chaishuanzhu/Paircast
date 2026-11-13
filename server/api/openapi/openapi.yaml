@@ -322,7 +322,6 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/MediaSource" }
                   online_subtitles: { type: boolean, description: 服务端是否配置了在线字幕（OpenSubtitles） }
-                  stickers: { type: boolean, description: 是否配置了贴纸目录 }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "503": { $ref: "#/components/responses/MediaUnavailable" }
@@ -515,34 +514,6 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { description: 不是房主或不是成员, content: { text/plain: { schema: { type: string } } } }
         "410": { $ref: "#/components/responses/RoomEnded" }
-        "503": { $ref: "#/components/responses/MediaUnavailable" }
-
-  /media/stickers:
-    get:
-      tags: [媒体库]
-      summary: 贴纸目录
-      description: 原样返回贴纸目录下的 `catalog.json`。
-      responses:
-        "200":
-          description: catalog.json
-          content: { application/json: { schema: { type: object } } }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "503": { $ref: "#/components/responses/MediaUnavailable" }
-
-  /media/stickers/pack:
-    get:
-      tags: [媒体库]
-      summary: 贴纸包
-      description: 返回 `{id}/pack.json`，每张贴纸附带 `url`、封面附带 `cover_url`（预签名 7 天）。
-      parameters:
-        - { name: id, in: query, required: true, schema: { type: string } }
-      responses:
-        "200":
-          description: pack.json
-          content: { application/json: { schema: { type: object } } }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/MediaUnavailable" }
 
   /room:
@@ -801,7 +772,7 @@ components:
         id: { type: string, example: oss }
         name: { type: string }
         type: { type: string, example: s3 }
-        capabilities: { type: array, items: { type: string }, example: [sidecar_subtitles, artwork, stickers] }
+        capabilities: { type: array, items: { type: string }, example: [sidecar_subtitles, artwork] }
     MediaItem:
       type: object
       properties:

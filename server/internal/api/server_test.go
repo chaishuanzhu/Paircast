@@ -159,13 +159,10 @@ func newMediaEnv(t *testing.T) *mediaEnv {
 		"films/Inception.2010.1080p.mkv":    "video",
 		"films/Inception.2010.1080p.zh.srt": "1\n00:00:01,000 --> 00:00:02,000\n你好\n",
 		"films/Interstellar (2014).mp4":     "video",
-		"stickers/catalog.json":             `{"packs":[{"id":"cats"}]}`,
-		"stickers/cats/pack.json":           `{"id":"cats","cover":"cover.png","stickers":[{"id":"a","file":"a.png"}]}`,
 	}}
 	cfg := config.MediaConfig{
-		Sources:        []config.MediaSourceConfig{{ID: "oss", Name: "Library", Type: "fake"}},
-		DefaultSource:  "oss",
-		StickersSource: "oss",
+		Sources:       []config.MediaSourceConfig{{ID: "oss", Name: "Library", Type: "fake"}},
+		DefaultSource: "oss",
 	}
 	factories := map[string]media.SourceFactory{
 		"fake": func(sc config.MediaSourceConfig, _ config.MediaConfig) (media.Source, error) {
@@ -235,10 +232,9 @@ func TestMediaLibraryEndpoints(t *testing.T) {
 
 	rec = e.call(t, e.srv.HandleMediaSources, http.MethodGet, "100001", url.Values{})
 	sources := decodeJSON[struct {
-		Sources  []media.SourceInfo `json:"sources"`
-		Stickers bool               `json:"stickers"`
+		Sources []media.SourceInfo `json:"sources"`
 	}](t, rec)
-	if len(sources.Sources) != 1 || sources.Sources[0].ID != "oss" || !sources.Stickers {
+	if len(sources.Sources) != 1 || sources.Sources[0].ID != "oss" {
 		t.Fatalf("sources = %s", rec.Body.String())
 	}
 
@@ -271,15 +267,6 @@ func TestMediaLibraryEndpoints(t *testing.T) {
 	rec = e.call(t, e.srv.HandleMediaSubtitle, http.MethodGet, "100001", url.Values{"ref": {subs.Subtitles[0].Ref}})
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "你好") || rec.Header().Get("X-Subtitle-Format") != "srt" {
 		t.Fatalf("subtitle: %d %q %v", rec.Code, rec.Body.String(), rec.Header())
-	}
-
-	rec = e.call(t, e.srv.HandleMediaStickers, http.MethodGet, "100001", url.Values{})
-	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "cats") {
-		t.Fatalf("stickers: %d %s", rec.Code, rec.Body.String())
-	}
-	rec = e.call(t, e.srv.HandleMediaStickerPack, http.MethodGet, "100001", url.Values{"id": {"cats"}})
-	if !strings.Contains(rec.Body.String(), `"url":"https://cdn.test/stickers/cats/a.png?sig=1"`) || !strings.Contains(rec.Body.String(), "cover_url") {
-		t.Fatalf("pack: %s", rec.Body.String())
 	}
 }
 

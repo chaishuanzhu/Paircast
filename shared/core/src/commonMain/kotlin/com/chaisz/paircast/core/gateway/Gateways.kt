@@ -160,7 +160,7 @@ interface PlaybackSyncGateway {
     fun signals(room: WatchRoom): Flow<PlaybackSyncSignal>
 }
 
-/** Sticker packs served by the media library (`/media/stickers…`). */
+/** Sticker packs served by the GO-IM gateway (`/stickers/…`, public). */
 interface StickerCatalogGateway {
     @Throws(Exception::class)
     suspend fun loadCatalog(config: AppCloudConfig): List<StickerPackSummary>
@@ -170,7 +170,7 @@ interface StickerCatalogGateway {
     suspend fun imageData(packId: String, fileName: String, config: AppCloudConfig): ByteArray
     @Throws(Exception::class)
     suspend fun imageDataForRef(ref: StickerRef, config: AppCloudConfig): ByteArray
-    /** Server-signed GET URL for a sticker asset (stable cache key = `ref.bindKey`). */
+    /** Public GET URL for a sticker asset (stable cache key = `ref.bindKey`). */
     @Throws(Exception::class)
     suspend fun imageUrl(ref: StickerRef, config: AppCloudConfig): String
 }

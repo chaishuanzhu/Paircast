@@ -10,7 +10,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 ```
 
 - **shared:core**：纯 Kotlin（commonMain），无 Ktor / 平台 SDK；Entities、Rules、Gateway 接口、UseCases、`WatchSession` + `PlayerPort`
-- **shared:data**：GO-IM（WebSocket protobuf + REST）、Paircast 服务端片库 / 房间 / 字幕 / 贴纸客户端（`/media/…`、`/room/…`；存储与第三方密钥只在服务端）
+- **shared:data**：GO-IM（WebSocket protobuf + REST）、Paircast 服务端片库 / 房间 / 字幕客户端（`/media/…`、`/room/…`；存储与第三方密钥只在服务端）、GO-IM 网关贴纸（`/stickers/…`）
 - **shared:umbrella**：`PaircastGraph` 组装（iOS / Android 共用的组合根）；iOS 导出 `PaircastShared` 框架（SKIE）
 - **Presentation**（iOS）：SwiftUI Scenes / ViewModel 适配层、VLCKit 播放器（实现 `PlayerPort`）、Keychain
 - **App**（iOS）：组装 `PaircastGraph`、Deep Link（`paircast://`）

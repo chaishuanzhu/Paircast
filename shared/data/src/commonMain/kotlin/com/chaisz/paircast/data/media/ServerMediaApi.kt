@@ -16,7 +16,6 @@ import io.ktor.client.plugins.timeout
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.statement.bodyAsBytes
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import kotlinx.serialization.SerialName
@@ -31,7 +30,6 @@ internal data class MediaSourceDto(val id: String, val name: String = "", val ty
 internal data class MediaSourcesDto(
     val sources: List<MediaSourceDto> = emptyList(),
     @SerialName("online_subtitles") val onlineSubtitles: Boolean = false,
-    val stickers: Boolean = false,
 )
 
 @Serializable
@@ -214,10 +212,6 @@ class ServerMediaApi(
         }
         api.decode(response, RefDto.serializer()).ref
     }
-
-    internal suspend fun stickerCatalog(): String = call { s -> api.appGet(s, "media/stickers").bodyAsText() }
-
-    internal suspend fun stickerPack(packId: String): String = call { s -> api.appGet(s, "media/stickers/pack", "id" to packId).bodyAsText() }
 
     internal suspend fun createRoom(movieId: String): RoomDto =
         call(AppError.RoomNotFound) { s -> api.decode(api.appPost(s, "room/create", "movie_id" to movieId), RoomDto.serializer()) }

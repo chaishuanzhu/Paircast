@@ -28,7 +28,7 @@ iOS 不需要预先构建 Kotlin：`Presentation` 目标的 “Compile Kotlin Fr
 | 模块 | 职责 |
 |------|------|
 | `shared/core` | 纯 Kotlin：实体、规则、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
-| `shared/data` | GO-IM（WebSocket protobuf + REST）、Paircast 服务端片库 / 房间 / 字幕 / 贴纸客户端（`/media/…`、`/room/…`） |
+| `shared/data` | GO-IM（WebSocket protobuf + REST）、Paircast 服务端片库 / 房间 / 字幕客户端（`/media/…`、`/room/…`）、GO-IM 贴纸（`/stickers/…`） |
 | `server` | Paircast 服务端（Go）：片库与观影房间，作为 GO-IM 接入方运行，见 [server/README.md](server/README.md) |
 | `shared/umbrella` | `PaircastGraph` 组装（两端共用）；iOS 导出 `PaircastShared` 框架（SKIE） |
 | `iosApp/Presentation` | iOS SwiftUI 场景、VLCKit 播放器、Keychain |

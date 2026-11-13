@@ -51,8 +51,6 @@
         "list_cache_ttl": "60s",
         "tmdb_language": "zh-CN",
         "metadata_ttl": "168h",
-        "stickers_source": "",
-        "stickers_prefix": "stickers/",
         "room_retention": "72h"
     },
     "blob_store": {

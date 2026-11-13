@@ -6,7 +6,7 @@
 > 产品定位：异地好友同步观影 + 实时聊天  
 > 客户端：**iOS（SwiftUI）+ Android（Jetpack Compose）**，业务逻辑以 Kotlin Multiplatform 共享  
 > 交互形态：**单页应用（SPA）**；「我的」入口在页面**右上角**
-> 变更摘要（v2.1）：**片库配置移到服务端**——对象存储、TMDB、OpenSubtitles 凭证只在 GO-IM 服务端配置，客户端只填 GO-IM 服务器地址；GO-IM 提供标准化的片源 / 影片列表 / 播放直链 / 字幕 / 贴纸接口（本期支持 S3 兼容存储，后续可接 openlist / Emby / Jellyfin）；房间状态由服务端管理（MySQL），不再写对象存储 `_paircast/`；**去掉配置分享 / 导入**（客户端只剩服务器地址，直接填写即可），服务配置页附「配置指南」与「服务端部署指南」；文案统一称「服务器」；**账号只由管理员创建**（App 不提供注册；管理员在「我的 → 后台管理」按邮箱添加用户、停用或删除账号，初始密码发到对方邮箱或在 App 内显示后转交，对方首次登录须改密），登录前须勾选同意《用户协议》《隐私政策》，「删除账号」改为验证密码后在服务器上真正注销账号；**聊天屏蔽 / 举报存到服务端**（屏蔽名单跟账号走，举报进入服务端待处理队列），管理员在「我的 → 后台管理 → 举报处理」中查看，可忽略或封禁被举报用户。  
+> 变更摘要（v2.1）：**片库配置移到服务端**——对象存储、TMDB、OpenSubtitles 凭证只在 GO-IM 服务端配置，客户端只填 GO-IM 服务器地址；Paircast 服务端提供标准化的片源 / 影片列表 / 播放直链 / 字幕接口，贴纸由 GO-IM 网关提供（`/stickers/`，与 GO-IM 客户端共用表情包）（本期支持 S3 兼容存储，后续可接 openlist / Emby / Jellyfin）；房间状态由服务端管理（MySQL），不再写对象存储 `_paircast/`；**去掉配置分享 / 导入**（客户端只剩服务器地址，直接填写即可），服务配置页附「配置指南」与「服务端部署指南」；文案统一称「服务器」；**账号只由管理员创建**（App 不提供注册；管理员在「我的 → 后台管理」按邮箱添加用户、停用或删除账号，初始密码发到对方邮箱或在 App 内显示后转交，对方首次登录须改密），登录前须勾选同意《用户协议》《隐私政策》，「删除账号」改为验证密码后在服务器上真正注销账号；**聊天屏蔽 / 举报存到服务端**（屏蔽名单跟账号走，举报进入服务端待处理队列），管理员在「我的 → 后台管理 → 举报处理」中查看，可忽略或封禁被举报用户。  
 > 变更摘要（v2.0）：IM 由腾讯云 IM 换成**自托管 GO-IM**；登录改为**账号 + 密码**（管理员可要求首次登录改密）；服务配置只需 GO-IM 服务器地址；新增 Android 客户端，可与 iOS 同房观影。v1.x 的腾讯云 IM 版本归档在 `archive/ios-tencent-im` 分支。
 
 ---
@@ -875,7 +875,7 @@ flowchart TD
 | GO-IM REST | `/user/profiles`、`/upload`、`/user/block*`、`/user/report` |
 | 片库 | `/media/sources`、`/media/items`、`/media/item`、`/media/play` |
 | 字幕 | `/media/subtitles`、`/media/subtitle`、`/media/subtitles/search`、`/media/subtitles/fetch`、`/media/subtitles/share` |
-| 贴纸 | `/media/stickers`、`/media/stickers/pack` |
+| 贴纸（GO-IM） | `/stickers/catalog.json`、`/stickers/{pack_id}/pack.json`、`/stickers/{pack_id}/{file}` |
 | 房间 | `/room`、`/room/create`、`/room/join`、`/room/leave`、`/room/update` |
 
 聊天与播控信令走 GO-IM WebSocket（protobuf）。

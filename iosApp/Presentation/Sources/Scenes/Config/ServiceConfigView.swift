@@ -96,7 +96,7 @@ public struct ServiceConfigView: View {
                 Section {
                     LabeledContent("Media Library", value: TandemL10n.string("Managed by the server"))
                 } footer: {
-                    Text("Videos, subtitles, posters and stickers come from the media library the server admin configures.")
+                    Text("Videos, subtitles and posters come from the media library the server admin configures; stickers come from the chat server.")
                 }
                 if let status = viewModel.statusMessage {
                     Section {

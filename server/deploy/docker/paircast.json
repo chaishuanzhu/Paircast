@@ -22,8 +22,6 @@
             }
         ],
         "tmdb_language": "zh-CN",
-        "stickers_source": "",
-        "stickers_prefix": "stickers/",
         "room_retention": "72h"
     },
     "blob_store": {

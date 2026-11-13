@@ -39,10 +39,10 @@ import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImChatGateway
 import com.chaisz.paircast.data.goim.GoImConnection
 import com.chaisz.paircast.data.goim.GoImPlaybackSyncGateway
+import com.chaisz.paircast.data.goim.GoImStickerCatalog
 import com.chaisz.paircast.data.media.ServerCatalogGateway
 import com.chaisz.paircast.data.media.ServerMediaApi
 import com.chaisz.paircast.data.media.ServerRoomGateway
-import com.chaisz.paircast.data.media.ServerStickerCatalog
 import com.chaisz.paircast.data.media.ServerSubtitleGateway
 import com.chaisz.paircast.data.net.createHttpClient
 import com.chaisz.paircast.data.net.platformName
@@ -93,7 +93,7 @@ class PaircastGraph(
     val metadataGateway: MetadataGateway = catalog
     val subtitleGateway: SubtitleGateway = subtitles
     val sharedSubtitleStorage: SharedSubtitleStorageGateway = subtitles
-    val stickerCatalog: StickerCatalogGateway = ServerStickerCatalog(media, http, support)
+    val stickerCatalog: StickerCatalogGateway = GoImStickerCatalog(goImAuth, http, support)
     val subtitleOffsets = SubtitleOffsetStore(keyValueStore)
     val chatSafety = ChatSafetyStore(keyValueStore)
     val moderationGateway: ModerationGateway = GoImModerationGateway(goImAuth, api)

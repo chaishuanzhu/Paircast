@@ -129,7 +129,7 @@ fun ConfigScreen(app: AppState, fromLogin: Boolean) {
                 ActionRow(Icons.Filled.Dns, t("Server Deployment Guide"), t("Deploy your own server with Docker")) { openDoc(context, "deploy") }
             }
 
-            SectionCard(footer = t("Videos, subtitles, posters and stickers come from the media library the server admin configures.")) {
+            SectionCard(footer = t("Videos, subtitles and posters come from the media library the server admin configures; stickers come from the chat server.")) {
                 Text(t("Media Library"), fontWeight = FontWeight.SemiBold)
                 Text(t("Managed by the server"), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

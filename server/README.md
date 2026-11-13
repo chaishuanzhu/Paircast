@@ -1,6 +1,6 @@
 # Paircast Server
 
-Paircast 的 Go 服务端：账号（`/account/*`）、管理后台（`/console/*`）、媒体库（`/media/*`：S3 兼容视频源、播放直链、字幕、贴纸）与观影房间（`/room/*`）。
+Paircast 的 Go 服务端：账号（`/account/*`）、管理后台（`/console/*`）、媒体库（`/media/*`：S3 兼容视频源、播放直链、字幕；贴纸由 GO-IM 网关提供）与观影房间（`/room/*`）。
 它作为 [GO-IM](https://github.com/chaishuanzhu/GO-IM) 的一个**接入方**运行，只使用 GO-IM 的公开能力（接入说明见 GO-IM `docs/16-integration-guide.md`）：
 
 - **账号归 Paircast**：邮箱 + 密码（bcrypt），管理员建号（随机初始密码，发邮件或显示给管理员，首次登录须改密）。
@@ -21,7 +21,7 @@ Paircast 的 Go 服务端：账号（`/account/*`）、管理后台（`/console/
 | `cmd/paircast` | 入口与配置加载 |
 | `internal/account` | 账号：存储（内存 / MySQL `paircast_users`）、会话令牌、IM 镜像用户、管理员引导、SMTP、`/account/*` 与 `/console/*` |
 | `internal/api` | 媒体库与房间 HTTP 接口、GO-IM 适配（群、信令、webhook） |
-| `internal/media` | 媒体库（数据源注册、字幕、贴纸、TMDB 刮削）；`s3source` 为 S3 兼容数据源 |
+| `internal/media` | 媒体库（数据源注册、字幕、TMDB 刮削）；`s3source` 为 S3 兼容数据源 |
 | `internal/watchroom` | 观影房间（内存 / MySQL 存储、房主转移、清理） |
 | `internal/config` | 媒体库配置 |
 

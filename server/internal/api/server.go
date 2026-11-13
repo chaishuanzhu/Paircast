@@ -53,8 +53,6 @@ func (s *Server) Register(mux Mux) {
 	mux.HandleFunc("/media/subtitles/search", s.HandleMediaSubtitleSearch)
 	mux.HandleFunc("/media/subtitles/fetch", s.HandleMediaSubtitleFetch)
 	mux.HandleFunc("/media/subtitles/share", s.HandleMediaSubtitleShare)
-	mux.HandleFunc("/media/stickers", s.HandleMediaStickers)
-	mux.HandleFunc("/media/stickers/pack", s.HandleMediaStickerPack)
 
 	mux.HandleFunc("/room", s.HandleRoomGet)
 	mux.HandleFunc("/room/create", s.HandleRoomCreate)
@@ -122,7 +120,6 @@ func (s *Server) HandleMediaSources(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"sources":          s.media.Registry.Sources(),
 		"online_subtitles": s.media.Subtitles.OnlineEnabled(),
-		"stickers":         s.media.Stickers != nil,
 	})
 }
 
@@ -309,42 +306,4 @@ func (s *Server) HandleMediaSubtitleShare(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, map[string]string{"ref": ref})
-}
-
-// HandleMediaStickers 返回贴纸目录（catalog.json）。
-// GET /media/stickers?uid=&token=
-func (s *Server) HandleMediaStickers(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.mediaAuth(w, r, http.MethodGet); !ok {
-		return
-	}
-	if s.media.Stickers == nil {
-		http.Error(w, "stickers not configured", http.StatusNotFound)
-		return
-	}
-	data, err := s.media.Stickers.Catalog(r.Context())
-	if err != nil {
-		writeMediaError(w, err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
-}
-
-// HandleMediaStickerPack 返回 pack.json，每张贴纸附带签名直链 url。
-// GET /media/stickers/pack?uid=&token=&id=
-func (s *Server) HandleMediaStickerPack(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.mediaAuth(w, r, http.MethodGet); !ok {
-		return
-	}
-	if s.media.Stickers == nil {
-		http.Error(w, "stickers not configured", http.StatusNotFound)
-		return
-	}
-	data, err := s.media.Stickers.Pack(r.Context(), r.URL.Query().Get("id"))
-	if err != nil {
-		writeMediaError(w, err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
 }

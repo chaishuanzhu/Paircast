@@ -22,7 +22,7 @@ type SourceInfo struct {
 	ID           string   `json:"id"`
 	Name         string   `json:"name"`
 	Type         string   `json:"type"`
-	Capabilities []string `json:"capabilities"` // 例如 "sidecar_subtitles"、"artwork"、"stickers"
+	Capabilities []string `json:"capabilities"` // 例如 "sidecar_subtitles"、"artwork"
 }
 
 // Item 是一部影片。ID 为全局唯一的不透明字符串（"<sourceId>:<nativeId>"）。

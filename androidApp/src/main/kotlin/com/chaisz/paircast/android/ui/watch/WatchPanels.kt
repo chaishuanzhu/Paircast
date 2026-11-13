@@ -303,7 +303,7 @@ fun InviteSheet(session: WatchSession, state: WatchUiState, app: AppState, onDis
 fun StickerImage(app: AppState, ref: StickerRef, modifier: Modifier) {
     val url by produceState<String?>(null, ref.bindKey, app.config) {
         val config = app.config ?: return@produceState
-        value = runCatching { app.graph.stickerCatalog.imageUrl(ref, config) }.getOrNull() ?: ref.url
+        value = runCatching { app.graph.stickerCatalog.imageUrl(ref, config) }.getOrNull()
     }
     Box(modifier, contentAlignment = Alignment.Center) {
         if (url != null) {

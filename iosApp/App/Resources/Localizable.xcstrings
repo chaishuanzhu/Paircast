@@ -3248,23 +3248,6 @@
         }
       }
     },
-    "Videos, subtitles, posters and stickers come from the media library the server admin configures.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Videos, subtitles, posters and stickers come from the media library the server admin configures."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "视频、字幕、海报和表情包均来自服务器管理员配置的片库。"
-          }
-        }
-      }
-    },
     "No sticker packs on the server yet": {
       "extractionState": "manual",
       "localizations": {
@@ -4502,6 +4485,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "房主暂未响应，请稍后再试"
+          }
+        }
+      }
+    },
+    "Videos, subtitles and posters come from the media library the server admin configures; stickers come from the chat server.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videos, subtitles and posters come from the media library the server admin configures; stickers come from the chat server."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频、字幕和海报来自服务器管理员配置的片库；表情包来自聊天服务器。"
           }
         }
       }

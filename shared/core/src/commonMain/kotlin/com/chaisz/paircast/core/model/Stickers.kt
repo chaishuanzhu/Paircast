@@ -3,7 +3,7 @@ package com.chaisz.paircast.core.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Sticker wire payload. Authority is `pack_id` + `sticker_id`. */
+/** Sticker wire payload (GO-IM `msg_type=6`). Images come from the GO-IM gateway `/stickers/{pack_id}/{file}`. */
 @Serializable
 data class StickerRef(
     @SerialName("pack_id") val packId: String,
@@ -11,8 +11,6 @@ data class StickerRef(
     val format: String = "png",
     val width: Int = 240,
     val height: Int = 240,
-    /** Optional object key or absolute URL fallback; receivers prefer resolving via storage. */
-    val url: String? = null,
     /** Optional file name inside the pack (e.g. `001-file_1437.gif`). */
     val file: String? = null,
 ) {
@@ -25,8 +23,6 @@ data class StickerItem(
     val fileName: String,
     val width: Int = 240,
     val height: Int = 240,
-    /** Server-signed download URL (valid for days; not sent over the wire). */
-    val url: String? = null,
 ) {
     val id: String get() = stickerId
 
@@ -49,12 +45,11 @@ data class StickerPack(
     val version: Int,
     val coverFileName: String? = null,
     val stickers: List<StickerItem> = emptyList(),
-    val coverUrl: String? = null,
 ) {
     val id: String get() = packId
 }
 
-/** Index entry from `stickers/catalog.json` (full sticker list loaded from pack.json). */
+/** Index entry from the gateway's `/stickers/catalog.json` (full sticker list loaded from pack.json). */
 data class StickerPackSummary(
     val packId: String,
     val name: String,
@@ -65,7 +60,7 @@ data class StickerPackSummary(
     val id: String get() = packId
 }
 
-// Wire DTOs (ignore cdn_base / base_url)
+// Wire DTOs (GO-IM gateway `/stickers/…`)
 
 @Serializable
 data class StickerCatalogDTO(
@@ -96,7 +91,6 @@ data class StickerPackDTO(
     val name: String,
     val version: Int? = null,
     val cover: String? = null,
-    @SerialName("cover_url") val coverUrl: String? = null,
     val stickers: List<StickerItemDTO>,
 ) {
     fun asPack() = StickerPack(
@@ -104,7 +98,6 @@ data class StickerPackDTO(
         name = name,
         version = version ?: 1,
         coverFileName = cover,
-        coverUrl = coverUrl,
         stickers = stickers.map {
             StickerItem(
                 packId = packId,
@@ -112,7 +105,6 @@ data class StickerPackDTO(
                 fileName = it.file,
                 width = it.w ?: 240,
                 height = it.h ?: 240,
-                url = it.url,
             )
         },
     )
@@ -124,6 +116,4 @@ data class StickerItemDTO(
     val file: String,
     val w: Int? = null,
     val h: Int? = null,
-    /** Added by the server (`/media/stickers/pack`). */
-    val url: String? = null,
 )

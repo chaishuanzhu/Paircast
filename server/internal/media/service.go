@@ -15,7 +15,6 @@ type Service struct {
 	Registry  *Registry
 	Metadata  *Metadata
 	Subtitles *Subtitles
-	Stickers  *Stickers // 未配置贴纸源时为 nil
 }
 
 // SourceFactory 按配置创建数据源（由调用方注入，避免 media 依赖具体实现包）。
@@ -65,11 +64,6 @@ func NewService(cfg config.MediaConfig, factories map[string]SourceFactory, db *
 		Registry:  reg,
 		Metadata:  NewMetadata(cache, time.Duration(cfg.MetadataTTL), tmdb),
 		Subtitles: NewSubtitles(reg, blobs, os, newID),
-	}
-	if src, err := reg.Source(cfg.StickersSource); err == nil {
-		if fs, ok := src.(FileSource); ok {
-			svc.Stickers = NewStickers(fs, cfg.StickersPrefix)
-		}
 	}
 	return svc, nil
 }

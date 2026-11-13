@@ -155,7 +155,6 @@ GRANT ALL PRIVILEGES ON paircast.* TO 'paircast'@'%';
 | `media.default_source` | 默认片源，空 = 第一个 |
 | `media.play_url_ttl` / `list_cache_ttl` | 播放直链有效期（默认 `6h`）/ 影片列表缓存（默认 `60s`） |
 | `media.tmdb_language` / `metadata_ttl` | TMDB 语言（默认 `zh-CN`）/ 刮削缓存（默认 `168h`） |
-| `media.stickers_source` / `stickers_prefix` | 表情包所在片源与前缀（可选） |
 | `media.room_retention` | 无人房间保留时长，默认 `72h` |
 | `blob_store` | 共享 / 在线字幕存储（S3 兼容，读写）；`endpoint` 为空则不提供这两项功能 |
 | `blob_prefix` | 字幕对象键前缀，默认空 |
@@ -199,7 +198,7 @@ curl -s $P/health                                   # ok
 curl -s -o /dev/null -w '%{http_code}\n' $P/media/sources   # 401（需要登录）
 curl -s -X POST $P/account/login -d account=you@example.com -d password='初始密码'
 # 返回 token、must_change_password 与 im{url, uid, token}；im.url 应为 GO-IM 的对外地址
-curl -s "$P/media/sources" -H "Authorization: Bearer <token>"   # 片源列表与 online_subtitles / stickers 开关
+curl -s "$P/media/sources" -H "Authorization: Bearer <token>"   # 片源列表与 online_subtitles 开关
 ```
 
 接口文档：设 `swagger_enabled: true` 后访问 `https://paircast.example.com/swagger/`。

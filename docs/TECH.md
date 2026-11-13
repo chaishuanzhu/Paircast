@@ -15,7 +15,7 @@ Android: androidApp (Compose + libVLC + Coil) ───────────�
 | 模块 | 内容 |
 |------|------|
 | `shared/core` | 纯 Kotlin：实体、规则（播控/转让/配置码/校验）、Gateway 接口、用例、`WatchSession` + `PlayerPort` |
-| `shared/data` | GO-IM（Wire protobuf over WebSocket + Ktor REST）、服务端片库 / 房间 / 字幕 / 贴纸客户端（`ServerMediaApi` + `Server*Gateway`）、字幕 GBK 转码、安全存储接口 |
+| `shared/data` | GO-IM（Wire protobuf over WebSocket + Ktor REST）、服务端片库 / 房间 / 字幕客户端（`ServerMediaApi` + `Server*Gateway`）、GO-IM 贴纸（`GoImStickerCatalog`，网关 `/stickers/`）、字幕 GBK 转码、安全存储接口 |
 | `shared/umbrella` | `PaircastGraph` 组装依赖（两端共用）；iOS 由 Xcode 构建阶段 `embedAndSignAppleFrameworkForXcode` 编译 `PaircastShared` 框架（SKIE：`suspend` → `async throws`，`Flow` → `AsyncSequence`） |
 | `iosApp/Presentation` | SwiftUI 场景、`VLCPlayerController`（实现 `PlayerPort`）、Keychain / UserDefaults 平台存储 |
 | `iosApp/App` | iOS 入口、Deep Link；`iosApp/Project.swift` 为唯一 Tuist 工程清单（Paircast / Presentation 两个 target） |
@@ -63,7 +63,7 @@ make android      # Debug APK
 - 心跳 25s（`CmdHeartbeat=6`），连续 3 次无响应重连；指数退避重连；`CmdAck=2` 匹配本机发出的消息
 - 回前台 `PaircastGraph.onAppForeground()`：已连接则立即探活（5s 无 pong 断开重连），退避等待中则立即重连
 - 群生命周期：由服务端房间接口托管——`POST /room/create` 同时建 GO-IM 聊天室（`groupId` = `g_…`；只投递在线成员、不计未读、不进 IM 群列表，客户端不能自行入群 / 拉人），`/room/join` 入群，`/room/leave` 退群（最后一人离开结束房间并删群）
-- 聊天：`CmdChat=1`，`chat_type=2`（群）；文本 `msg_type=1`（系统消息前缀 `[sys]`）；贴纸 `msg_type=6` + JSON `StickerRef`；本人消息收到 Ack 后本地回显
+- 聊天：`CmdChat=1`，`chat_type=2`（群）；文本 `msg_type=1`（系统消息前缀 `[sys]`）；贴纸 `msg_type=6` + JSON `StickerRef`（`pack_id` / `sticker_id` / `file`，图片从 GO-IM 网关 `/stickers/{pack_id}/{file}` 取，公开、无需签名）；本人消息收到 Ack 后本地回显
 - 播控：`CmdSignal=25` 瞬时信令（`chat_type=2`、`to`=群 ID；服务端校验成员身份、跨网关转发，不落库、不计未读、不回显给发送者），`content` 为 `{"type":"paircast.playback","data":<下方信令 JSON>}`；GO-IM 丢弃没有 `type` 的信令，客户端也只解析自己认识的类型（`SignalCodec`）
 
 ## 播控信令 JSON（`paircast.playback` 的 `data`）
@@ -116,7 +116,7 @@ make android      # Debug APK
 
 | 接口 | 说明 |
 |------|------|
-| `GET /media/sources` | 片源列表（`id` / `name` / `type` / `capabilities`），以及 `online_subtitles` / `stickers` 开关 |
+| `GET /media/sources` | 片源列表（`id` / `name` / `type` / `capabilities`），以及 `online_subtitles` 开关 |
 | `GET /media/items?source=&cursor=&refresh=` | 影片分页（每页 500，`next_cursor` 翻页），服务端缓存列表 |
 | `GET /media/item?id=` | 单片元数据（刮削并缓存在 `media_metadata` 表） |
 | `GET /media/play?id=` | 播放直链 `{url, expires_at, format}`（S3 预签名，两端 VLC 直接拉流） |
@@ -125,7 +125,6 @@ make android      # Debug APK
 | `GET /media/subtitles/search?q=&year=` | 在线字幕搜索（`os:<fileId>` ref） |
 | `POST /media/subtitles/fetch` | `ref=os:…` → 下载到服务端存储，返回可读 ref |
 | `POST /media/subtitles/share` | multipart：`room_id` / `label` / `file`；仅房主；返回 `blob:…` ref 并写入房间 |
-| `GET /media/stickers`、`/media/stickers/pack?id=` | 贴纸目录 / 包清单（每张注入签名 `url`，7 天有效） |
 | `GET /room?room_id=`、`POST /room/create`、`/room/join`、`/room/leave`、`/room/update` | 观影房间（MySQL `watch_rooms`；`revision` 单调） |
 
 - **影片 ID**：`<sourceId>:<nativeId>`（如 `oss:films/A.mkv`），为后续 openlist / Emby / Jellyfin 片源预留；无前缀的旧 ID 归入默认片源

@@ -136,11 +136,11 @@ docker compose -f docker-compose.paircast.yml logs paircast   # ready when it sh
   </ul>
 
   <h3>4.3 Stickers (optional)</h3>
-  <p>Stickers live in the bucket of one of your sources, as <code>catalog.json</code> plus <code>{pack_id}/pack.json</code>. The Paircast repo has scripts to build and upload them:</p>
-<pre><code>python3 Scripts/build-stickers.py --src /path/to/Stickers --out ./stickers-dist
-PAIRCAST_S3_ACCESS_KEY=… PAIRCAST_S3_SECRET_KEY=… \
-  python3 Scripts/upload-stickers.py --endpoint oss-cn-hangzhou.aliyuncs.com --bucket my-videos</code></pre>
-  <p>Uploading needs a writable key; use it only on your own machine, not on the server. Then set <code>"stickers_source": "oss"</code> and <code>"stickers_prefix": "stickers/"</code> under <code>media</code> in <code>paircast.json</code> and restart the Paircast server.</p>
+  <p>Stickers are a GO-IM feature: they live under the <code>stickers/</code> prefix of the GO-IM object storage bucket and the GO-IM gateway serves them publicly at <code>/stickers/</code>. The Paircast server needs no sticker settings. Import packs from the GO-IM repo:</p>
+<pre><code>S3_ENDPOINT=http://127.0.0.1:9000 S3_BUCKET=im-files \
+S3_ACCESS_KEY=rustfsadmin S3_SECRET_KEY=… \
+  scripts/upload_stickers.sh stickers-dist</code></pre>
+  <p>See “Object storage layout and stickers” in GO-IM's <code>deploy/README.md</code> for the pack format and build scripts.</p>
 
   <h2>5. Reverse proxy and HTTPS</h2>
   <p>The Paircast server and GO-IM each get their own domain: the Paircast domain goes to 8090, the GO-IM domain to 8080. Users enter only the Paircast address in the app; at sign-in the server tells the app where GO-IM is (<code>PAIRCAST_IM_PUBLIC_URL</code> from the previous step). Caddy obtains certificates automatically and passes WebSocket through:</p>

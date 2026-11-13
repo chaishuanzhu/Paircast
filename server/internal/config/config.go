@@ -43,10 +43,6 @@ type MediaConfig struct {
 	OpenSubtitlesAPIKey string   `json:"opensubtitles_api_key"`
 	MetadataTTL         Duration `json:"metadata_ttl"` // 刮削结果缓存，默认 "168h"
 
-	// 贴纸目录所在的源与路径前缀（catalog.json / {pack}/pack.json / 图片）。空 = 默认源的 "stickers/"。
-	StickersSource string `json:"stickers_source"`
-	StickersPrefix string `json:"stickers_prefix"`
-
 	// 房间：超过该时长未更新的房间由清理任务删除，默认 "72h"。
 	RoomRetention Duration `json:"room_retention"`
 }
