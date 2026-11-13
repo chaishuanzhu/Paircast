@@ -1,15 +1,17 @@
 // Jenkins job paircast-server (Pipeline script, not SCM): build, publish and deploy the Paircast server (server/).
 //   Images  ci-01: paircast-server image of one commit, tagged sha-<7>, pushed to Docker Hub
-//           (skipped when the tag already exists, unless REBUILD); with VERSION the same image is also tagged
-//           <VERSION> and latest (release: run on main), and the Docker Hub overview is synced from
+//           (skipped when the tag already exists, unless REBUILD). With TAG=vX.Y.Z (started by paircast-tags when
+//           the tag is pushed; the IPA / APK of the same tag are built by GitHub Actions) the tagged commit is built,
+//           Scripts/release.sh check must pass (app versions = tag, GO-IM version contains the imserver SDK),
+//           the image is also tagged X.Y.Z and latest, and the Docker Hub overview is synced from
 //           server/deploy/dockerhub (also with SYNC_OVERVIEW)
 //   Deploy  ci-01: kubectl set image deployment/paircast in namespace go-im-test, rolls back on failure,
 //           then checks that https://paircast.test.chaisz.com/media/sources is served by Paircast (401 without a token)
 // The deployment, Secrets (goim-paircast, goim-paircast-config) and ingress already exist in go-im-test;
 // see server/deploy/k8s. GO-IM itself is deployed by the go-im-server job.
 //
-// Parameters: BRANCH, DOCKERHUB_NAMESPACE (empty = dockerhub credential user), PLATFORMS, REBUILD, DEPLOY,
-//             VERSION (X.Y.Z, empty = no release tags), SYNC_OVERVIEW
+// Parameters: TAG (vX.Y.Z, overrides BRANCH; empty = no release tags), BRANCH, DOCKERHUB_NAMESPACE
+//             (empty = dockerhub credential user), PLATFORMS, REBUILD, DEPLOY, SYNC_OVERVIEW
 // Credentials:
 //   dockerhub                Username with password  Docker Hub user + Read & Write access token
 //   k8s-deployer-kubeconfig  Secret file             ServiceAccount jenkins/deployer (edit in go-im-test)
@@ -20,18 +22,30 @@ def siteUrl = 'https://paircast.test.chaisz.com'
 def commit = ''
 def tag = ''
 def imageNs = ''
-def version = params.VERSION?.trim() ?: ''
+def releaseTag = params.TAG?.trim() ?: ''
+def version = ''
+def srcRef = "refs/heads/${params.BRANCH}"
+def fetchSpec = "+refs/heads/${params.BRANCH}:refs/remotes/origin/${params.BRANCH}"
+if (releaseTag) {
+    if (!(releaseTag ==~ /v[1-9][0-9]*\.[0-9]+\.[0-9]+/)) { error "TAG 应为 vX.Y.Z：${releaseTag}" }
+    version = releaseTag.substring(1)
+    srcRef = "refs/tags/${releaseTag}"
+    fetchSpec = "+refs/tags/${releaseTag}:refs/tags/${releaseTag}"
+}
 def syncOverview = params.SYNC_OVERVIEW || version
 
 stage('Resolve') {
     node('docker') {
+        def refs = ''
         retry(3) {
-            commit = sh(script: "git ls-remote ${repoUrl} refs/heads/${params.BRANCH}", returnStdout: true).trim().tokenize()[0] ?: ''
+            refs = sh(script: "git ls-remote ${repoUrl} '${srcRef}' '${srcRef}^{}'", returnStdout: true).trim()
         }
-        if (!(commit ==~ /[0-9a-f]{40}/)) { error "分支 ${params.BRANCH} 不存在" }
-        if (version && !(version ==~ /[0-9]+\.[0-9]+\.[0-9]+/)) { error "VERSION 应为 X.Y.Z：${version}" }
+        // Annotated tags: use the peeled commit (<tag>^{}), not the tag object.
+        def lines = refs ? refs.readLines() : []
+        commit = (lines.find { it.endsWith('^{}') } ?: lines.find { true } ?: '').tokenize()[0] ?: ''
+        if (!(commit ==~ /[0-9a-f]{40}/)) { error "${srcRef} 不存在" }
         tag = "sha-${commit.substring(0, 7)}"
-        currentBuild.description = "${params.BRANCH} @ ${commit.substring(0, 7)}" + (version ? " = ${version}" : '')
+        currentBuild.description = "${releaseTag ?: params.BRANCH} @ ${commit.substring(0, 7)}"
     }
 }
 
@@ -55,10 +69,13 @@ stage('Image') {
                             checkout([
                                 $class: 'GitSCM',
                                 branches: [[name: commit]],
-                                userRemoteConfigs: [[url: repoUrl, refspec: "+refs/heads/${params.BRANCH}:refs/remotes/origin/${params.BRANCH}"]],
+                                userRemoteConfigs: [[url: repoUrl, refspec: fetchSpec]],
                                 extensions: [[$class: 'CloneOption', shallow: true, depth: 1, noTags: true, honorRefspec: true, timeout: 20]],
                             ])
                         }
+                    }
+                    if (releaseTag) {
+                        sh "bash Scripts/release.sh check '${releaseTag}'"
                     }
                     if (exists) {
                         echo "${imageNs}/paircast-server:${tag} 已存在，跳过构建"
@@ -113,7 +130,7 @@ stage('Deploy') {
     }
     node('docker') {
         withCredentials([file(credentialsId: 'k8s-deployer-kubeconfig', variable: 'KUBECONFIG')]) {
-            withEnv(["NS=${imageNs}", "TAG=${tag}", "K8S_NS=${k8sNamespace}"]) {
+            withEnv(["NS=${imageNs}", "TAG=${version ?: tag}", "K8S_NS=${k8sNamespace}"]) {
                 sh '''
                     set -eu
                     k() { kubectl -n "$K8S_NS" "$@"; }

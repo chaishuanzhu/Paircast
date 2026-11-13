@@ -26,6 +26,6 @@ Never commit real cloud keys, provisioning profiles, or full `paircast://config?
 
 ## Release sketch
 
-1. Version + metadata → commit on `main`
-2. Tag `vX.Y.Z` for IPA CI (if using the Release IPA workflow)
+1. Version (`iosApp/Project.swift`, `gradle.properties`; `paircast.goimVersion` = required GO-IM release) + metadata → commit on `main`; `Scripts/release.sh check vX.Y.Z` passes locally
+2. Tag `vX.Y.Z` on `main`: GitHub Actions attach the IPA + APK, Jenkins `paircast-tags` → `paircast-server` publishes `870027381/paircast-server:X.Y.Z` + `latest`; the Release body (artifacts + GO-IM dependency) comes from `Scripts/release.sh notes`
 3. Upload/distribute TestFlight with `asc` on a machine that has ASC API access

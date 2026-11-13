@@ -4,6 +4,7 @@
 
 - 源码：https://github.com/chaishuanzhu/Paircast（`server/`）
 - 项目介绍 / App 下载：https://paircast.chaisz.com
-- 依赖镜像：[`870027381/go-im-gateway`](https://hub.docker.com/r/870027381/go-im-gateway)（需要先部署 GO-IM）
+- 依赖镜像：[`870027381/go-im-gateway`](https://hub.docker.com/r/870027381/go-im-gateway) **<!-- GOIM_VERSION --> 或更新的版本**（需要先部署 GO-IM）
+- 版本：`X.Y.Z` 与 App 同时发布，对应 [GitHub Release](https://github.com/chaishuanzhu/Paircast/releases) `vX.Y.Z`，说明里写明该版本依赖的 GO-IM 版本
 
 <!-- DEPLOY -->

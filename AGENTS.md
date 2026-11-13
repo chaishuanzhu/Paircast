@@ -47,8 +47,10 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 
 ## 发布相关
 
-- IPA：打 tag `v*` 触发 `.github/workflows/release-ipa.yaml`（self-hosted，先跑 Kotlin 单测，归档时 Xcode 自动编译 KMP 框架）
+- 发版：在 `main` 上打 tag `vX.Y.Z`，App 与服务端同版本发布。先把 `iosApp/Project.swift`、`gradle.properties` 的版本号改成 `X.Y.Z`（构建号两边一致），依赖的 GO-IM 版本写在 `gradle.properties` 的 `paircast.goimVersion`；三条流水线都先跑 `Scripts/release.sh check`（不一致即失败），GitHub Release 说明由 `Scripts/release.sh notes` 生成（产物 + 依赖的 GO-IM 版本）
+- IPA：tag 触发 `.github/workflows/release-ipa.yaml`（self-hosted，先跑 Kotlin 单测，归档时 Xcode 自动编译 KMP 框架）
 - APK：`.github/workflows/android.yaml`（PR / main 出 Debug；tag 出 Release，签名走 `PAIRCAST_KEYSTORE_*` secrets）
+- 服务端镜像：Jenkins `paircast-tags` 轮询到 tag 后启动 `paircast-server`（`TAG=vX.Y.Z`），推送 `870027381/paircast-server:X.Y.Z` + `latest`、同步 Docker Hub Overview、部署测试环境；脚本在 `ci/jenkins/`（Jenkins 上是 Pipeline script，改完要粘贴到任务配置）
 - TestFlight / ASC：本机 `asc` + keychain；Agent 环境若无完整网络则在本机终端执行
 - LiveContainer：`Scripts/update-livecontainer-source.sh` + `docs/source.json`
 - 服务端：`server/`（Go 模块 `github.com/chaishuanzhu/Paircast/server`，`/media/…`、`/room/…`，接口定义 `server/api/openapi/openapi.yaml`，`swagger_enabled` 时在 `/swagger/` 提供文档），作为 GO-IM 接入方运行（服务端 API + webhook，SDK `github.com/chaishuanzhu/GO-IM/pkg/imserver`）；`make server-test`。依赖 GO-IM 的 `CmdSignal=25` 类型化信令：播控 `paircast.playback`（客户端互发）、房间快照 `paircast.room_updated`（服务端推送），`content` 为 `{"type","data"}`

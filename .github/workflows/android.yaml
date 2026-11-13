@@ -1,5 +1,5 @@
 # Shared Kotlin tests + Android APK. Runs on GitHub-hosted Linux (safe for fork PRs: no secrets on PRs).
-# On `v*` tags the signed release APK is attached to the GitHub Release.
+# On `v*` tags the signed release APK is attached to the GitHub Release (notes and version checks: Scripts/release.sh).
 name: Android
 
 on:
@@ -22,6 +22,12 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check release versions
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./Scripts/release.sh check "$GITHUB_REF_NAME"
 
       - uses: actions/setup-java@v4
         with:
@@ -71,8 +77,4 @@ jobs:
           VERSION_CODE="$(grep '^paircast.versionCode=' gradle.properties | cut -d= -f2)"
           ASSET="Paircast-${TAG}-build${VERSION_CODE}.apk"
           cp androidApp/build/outputs/apk/release/androidApp-release.apk "$ASSET"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ASSET" --clobber
-          else
-            gh release create "$TAG" "$ASSET" --title "$TAG" --notes "Paircast \`$TAG\` — Android APK." --target "$(git rev-parse HEAD)"
-          fi
+          ./Scripts/release.sh publish "$TAG" "$ASSET"
