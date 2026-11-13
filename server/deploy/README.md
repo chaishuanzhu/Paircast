@@ -151,7 +151,7 @@ GRANT ALL PRIVILEGES ON paircast.* TO 'paircast'@'%';
 | `im.token_ttl` | 签发给 App 的 IM 令牌有效期，默认 GO-IM 的上限 |
 | `account.session_ttl` | 会话有效期，默认 `720h` |
 | `mail` | SMTP：`enabled` / `host` / `port`（465 隐式 TLS，其它 STARTTLS）/ `username` / `from`；用于给新账号发初始密码 |
-| `media.sources` | **必填，至少一个**视频源：`id`（写进影片 ID，上线后不要改）、`name`、`type: "s3"`、`s3.endpoint`（不含协议，不要填 CDN 域名）/ `bucket` / `region` / `prefix` / `use_ssl` / `path_style` |
+| `media.sources` | **必填，至少一个**视频源：`id`（写进影片 ID，上线后不要改）、`name`、`type: "s3"`、`s3.endpoint`（不含协议，不要填 CDN 域名；播放地址按它预签名，必须是客户端能访问的公网地址，不能填 `rustfs:9000` 这类容器内地址）/ `bucket` / `region` / `prefix` / `use_ssl` / `path_style` |
 | `media.default_source` | 默认片源，空 = 第一个 |
 | `media.play_url_ttl` / `list_cache_ttl` | 播放直链有效期（默认 `6h`）/ 影片列表缓存（默认 `60s`） |
 | `media.tmdb_language` / `metadata_ttl` | TMDB 语言（默认 `zh-CN`）/ 刮削缓存（默认 `168h`） |

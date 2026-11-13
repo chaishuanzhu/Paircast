@@ -120,7 +120,7 @@ MEDIA_OSS_SECRET_KEY=read-only-secret-key</code></pre>
 docker compose -f docker-compose.paircast.yml logs paircast   # ready when it shows listening on :8090</code></pre>
   <p>After changing <code>paircast.json</code>, <code>.env</code> or <code>apps.env</code>, run <code>docker compose -f docker-compose.paircast.yml up -d --force-recreate</code> (“restart the Paircast server” below). The app's Library lists the <code>mp4</code> / <code>m4v</code> / <code>mkv</code> files under <code>prefix</code>.</p>
   <ul>
-    <li><code>endpoint</code> is the regional S3 API host without <code>https://</code>; <strong>do not use a CDN domain</strong>. Qiniu and MinIO usually need <code>"path_style": true</code>.</li>
+    <li><code>endpoint</code> is the regional S3 API host without <code>https://</code>; <strong>do not use a CDN domain</strong>. Play links are presigned for this host, so it must be publicly reachable from phones — not a container-internal address like <code>rustfs:9000</code>. Qiniu and MinIO usually need <code>"path_style": true</code>.</li>
     <li>The source <code>id</code> becomes part of every movie ID, so don't change it later. If your <code>id</code> is not <code>oss</code>, add matching <code>PAIRCAST_MEDIA_&lt;UPPERCASE_ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code> entries to <code>environment</code> in <code>docker-compose.paircast.yml</code>.</li>
     <li>You can add several sources; the Library screen then shows a source picker.</li>
     <li>For playback the server issues links valid for 6 hours and the video stream bypasses the server, so a <strong>read-only</strong> key is enough.</li>

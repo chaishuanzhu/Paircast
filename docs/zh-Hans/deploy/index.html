@@ -120,7 +120,7 @@ MEDIA_OSS_SECRET_KEY=只读SecretKey</code></pre>
 docker compose -f docker-compose.paircast.yml logs paircast   # 出现 listening on :8090 即就绪</code></pre>
   <p>之后改 <code>paircast.json</code>、<code>.env</code> 或 <code>apps.env</code>，执行 <code>docker compose -f docker-compose.paircast.yml up -d --force-recreate</code>（下文简称「重启 Paircast 服务」）。App 片库会列出 <code>prefix</code> 下的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>。</p>
   <ul>
-    <li><code>endpoint</code> 填 S3 API 的地域域名（不含 <code>https://</code>），<strong>不要填 CDN 域名</strong>。七牛、MinIO 通常需要 <code>"path_style": true</code>。</li>
+    <li><code>endpoint</code> 填 S3 API 的地域域名（不含 <code>https://</code>），<strong>不要填 CDN 域名</strong>；播放地址按它签名，必须是手机能访问的公网地址，不能填 <code>rustfs:9000</code> 这类容器内地址。七牛、MinIO 通常需要 <code>"path_style": true</code>。</li>
     <li>源 <code>id</code> 会写进影片 ID，上线后不要修改。<code>id</code> 不是 <code>oss</code> 时，在 <code>docker-compose.paircast.yml</code> 的 <code>environment</code> 里按 <code>PAIRCAST_MEDIA_&lt;大写ID&gt;_ACCESS_KEY</code> / <code>_SECRET_KEY</code> 的格式自行添加。</li>
     <li>可以配置多个源，App 片库页会出现片源切换。</li>
     <li>播放时服务器签发 6 小时有效的直链，视频流不经过服务器，所以密钥只需<strong>只读</strong>权限。</li>
