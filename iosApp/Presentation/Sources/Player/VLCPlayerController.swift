@@ -395,16 +395,36 @@ public final class VLCPlayerController: NSObject, ObservableObject {
         return (nil, "")
     }
 
-    private static func configureAudioSession() {
-        do {
+    /// Activation can block for a long time (route negotiation), so it must stay off the main thread.
+    private nonisolated static let audioSessionQueue = DispatchQueue(label: "paircast.player.audio-session", qos: .userInitiated)
+
+    private nonisolated static func configureAudioSession() {
+        audioSessionQueue.async {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .moviePlayback, options: [])
-            try session.setActive(true)
-        } catch {
-            PaircastLog.playback.error(
-                "audio session failed error=\(String(describing: error), privacy: .public)"
-            )
+            do {
+                try session.setCategory(.playback, mode: .moviePlayback, options: [])
+            } catch {
+                logAudioSessionError(error)
+                return
+            }
+            if #available(iOS 27.0, *) {
+                session.activate(options: []) { _, error in
+                    if let error { logAudioSessionError(error) }
+                }
+            } else {
+                do {
+                    try session.setActive(true)
+                } catch {
+                    logAudioSessionError(error)
+                }
+            }
         }
+    }
+
+    private nonisolated static func logAudioSessionError(_ error: Error) {
+        PaircastLog.playback.error(
+            "audio session failed error=\(String(describing: error), privacy: .public)"
+        )
     }
 }
 
