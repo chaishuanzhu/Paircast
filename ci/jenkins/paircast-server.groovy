@@ -1,7 +1,7 @@
 // Jenkins job paircast-server (Pipeline script, not SCM): build, publish and deploy the Paircast server (server/).
 //   Images  ci-01: paircast-server image of one commit, tagged sha-<7>, pushed to Docker Hub
-//           (skipped when the tag already exists, unless REBUILD). With TAG=vX.Y.Z (started by paircast-tags when
-//           the tag is pushed; the IPA / APK of the same tag are built by GitHub Actions) the tagged commit is built,
+//           (skipped when the tag already exists, unless REBUILD). With TAG=vX.Y.Z (started by the paircast job,
+//           which also builds the IPA / APK of the same tag) the tagged commit is built,
 //           Scripts/release.sh check must pass (app versions = tag, GO-IM version contains the imserver SDK),
 //           the image is also tagged X.Y.Z and latest, and the Docker Hub overview is synced from
 //           server/deploy/dockerhub (also with SYNC_OVERVIEW)

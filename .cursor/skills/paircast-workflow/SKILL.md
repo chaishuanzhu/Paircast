@@ -26,6 +26,7 @@ Never commit real cloud keys, provisioning profiles, or full `paircast://config?
 
 ## Release sketch
 
-1. Version (`iosApp/Project.swift`, `gradle.properties`; `paircast.goimVersion` = required GO-IM release) + metadata → commit on `main`; `Scripts/release.sh check vX.Y.Z` passes locally
-2. Tag `vX.Y.Z` on `main`: GitHub Actions attach the IPA + APK, Jenkins `paircast-tags` → `paircast-server` publishes `870027381/paircast-server:X.Y.Z` + `latest`; the Release body (artifacts + GO-IM dependency) comes from `Scripts/release.sh notes`
-3. Upload/distribute TestFlight with `asc` on a machine that has ASC API access
+1. On a branch: version (`iosApp/Project.swift`, `gradle.properties`; `paircast.goimVersion` = required GO-IM release), legal / guide / deploy docs, store copy `metadata/version/X.Y.Z/` (its `whatsNew` is also the TestFlight "What to Test") and review notes (accounts only in ASC); `Scripts/release.sh check vX.Y.Z` passes locally
+2. Merge to `main`, tag `vX.Y.Z` on `main` and push the tag
+3. Jenkins `paircast-tags` → `paircast` (`TAG=vX.Y.Z`): checks (versions, store copy, tag on `main`), signed APK + App Store IPA → TestFlight (submitted for beta review), `paircast-server` publishes `870027381/paircast-server:X.Y.Z` + `latest`, GitHub Release (body from `Scripts/release.sh notes`), LiveContainer source pushed to `main`. See `ci/jenkins/README.md`
+4. Test builds: Jenkins `paircast` with `TAG` empty and `BRANCH` = any branch → TestFlight internal group only, APK in Jenkins artifacts

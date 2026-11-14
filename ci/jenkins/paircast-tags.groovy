@@ -1,6 +1,6 @@
-// Jenkins job paircast-tags (Pipeline script): polls GitHub for new v<MAJOR.MINOR.PATCH> tags and starts
-// paircast-server with TAG=<tag> for each one (server image X.Y.Z + latest, test deploy). The IPA and APK of the
-// same tag are built by GitHub Actions. Jenkins is LAN-only, so GitHub webhooks cannot reach it.
+// Jenkins job paircast-tags (Pipeline script): polls GitHub for new v<MAJOR.MINOR.PATCH> tags and starts paircast
+// with TAG=<tag> for each one (IPA → TestFlight review, APK, server image X.Y.Z + latest, GitHub Release).
+// Jenkins is LAN-only, so GitHub webhooks cannot reach it.
 // Known tags are kept on ci-01 in /data/jenkins-agent/state/paircast-tags.txt; the first run only records the existing
 // tags. Delete a line from that file to release that tag again on the next poll.
 
@@ -26,10 +26,10 @@ node('docker') {
             return
         }
         for (t in fresh) {
-            build job: 'paircast-server', wait: false, parameters: [string(name: 'TAG', value: t)]
-            echo "started paircast-server for ${t}"
+            build job: 'paircast', wait: false, parameters: [string(name: 'TAG', value: t)]
+            echo "started paircast for ${t}"
         }
         writeFile file: 'paircast-tags.txt', text: (known + fresh).join('\n') + '\n'
-        currentBuild.description = "started paircast-server: ${fresh.join(', ')}"
+        currentBuild.description = "started paircast: ${fresh.join(', ')}"
     }
 }
