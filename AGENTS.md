@@ -50,7 +50,7 @@ Android: androidApp ─────────┼→ shared:umbrella → shared
 - 发版顺序（App 与服务端同版本，全部由 Jenkins 构建，见 `ci/jenkins/README.md`）：
   1. 在分支上改好发版内容：`iosApp/Project.swift`、`gradle.properties` 的版本号改成 `X.Y.Z`（构建号两边一致、高于 TestFlight 上已有的），依赖的 GO-IM 版本写在 `paircast.goimVersion`；同步隐私 / 条款 / 使用说明 / 部署文档、`metadata/version/X.Y.Z/`（商店文案，`whatsNew` 同时用作 TestFlight 测试说明）、审核备注（账号只放 ASC）；本地 `Scripts/release.sh check vX.Y.Z` 通过
   2. 合入 `main`，在 `main` 上打 tag `vX.Y.Z` 并推送
-  3. Jenkins `paircast-tags` 发现 tag → `paircast`（`TAG=vX.Y.Z`）：校验（`release.sh check` + tag 在 `main` 上）→ 单测 → 签名 APK、App Store IPA → TestFlight（内部测试 + External Testers，提交 Beta 审核）→ `paircast-server` 推送 `870027381/paircast-server:X.Y.Z` + `latest`、同步 Docker Hub Overview、部署测试环境 → GitHub Release（IPA + APK，说明由 `Scripts/release.sh notes` 生成）→ 更新 LiveContainer 源 `docs/source.json` 推到 `main`
+  3. Jenkins `paircast-tags` 发现 tag → `paircast`（`TAG=vX.Y.Z`）：校验（`release.sh check` + tag 在 `main` 上）→ 单测 → 签名 APK、App Store IPA → TestFlight（内部测试 + External Testers，提交 Beta 审核）→ `paircast-server` 推送 `870027381/paircast-server:X.Y.Z` + `latest`、同步 Docker Hub Overview、部署测试环境 → 部署生产（主机只在 Jenkins 凭据里，受限 SSH 密钥执行 `paircast-deploy.sh`，失败回滚）→ GitHub Release（IPA + APK，说明由 `Scripts/release.sh notes` 生成）→ 更新 LiveContainer 源 `docs/source.json` 推到 `main`
 - 测试包：Jenkins `paircast` 留空 `TAG`、填 `BRANCH`（可以是当前开发分支）；IPA 构建号 `<CURRENT_PROJECT_VERSION-1>.<Jenkins 构建号>` 进 TestFlight 内部测试（不提审），APK 在 Jenkins 产物里，服务端镜像 `sha-<提交>` 部署测试环境。发版后先提高版本号 / 构建号再出测试包
 - GitHub Actions 只跑 PR / `main` 的共享层单测与 Debug APK，不做发布
 - Jenkins 任务是 Pipeline script（非 SCM），脚本在 `ci/jenkins/`，改完要同步到任务配置；签名 / ASC / GitHub 凭据只在 Jenkins

@@ -4,6 +4,9 @@
 //              node-mac         shared Kotlin tests; App Store signed IPA → TestFlight (internal group + External
 //                               Testers, submitted for beta review, What to Test = metadata whatsNew); signed APK
 //              paircast-server  image 870027381/paircast-server:X.Y.Z + latest, Docker Hub overview, test deploy
+//              docker           production deploy of X.Y.Z to every host in paircast-prod-targets, one after another:
+//                               ssh → paircast-deploy.sh (server/deploy/docker/prod-deploy.sh, rolls back on failure)
+//                               → public /health
 //              node-mac         GitHub Release vX.Y.Z (IPA + APK, body from Scripts/release.sh notes), then
 //                               docs/source.json (LiveContainer source) regenerated and pushed to main
 //   Test     TAG empty: the head of BRANCH. IPA build number <CURRENT_PROJECT_VERSION - 1>.<Jenkins build number>
@@ -13,7 +16,7 @@
 // Each node checks out the same commit; the controller does not check out (flaky network to GitHub).
 //
 // Parameters: TAG, BRANCH, BUILD_IOS, BUILD_ANDROID, BUILD_SERVER, TESTFLIGHT, SUBMIT_REVIEW (TAG only),
-//             PUBLISH (TAG only), DEPLOY_TEST
+//             PUBLISH (TAG only), DEPLOY_TEST, DEPLOY_PROD (TAG only)
 // Credentials:
 //   paircast-ios-keychain-password  Secret text             password of ~/Library/Keychains/iOSDevKeychain-db on
 //                                                           node-mac (Apple Distribution cert, iosApp/fastlane)
@@ -22,6 +25,10 @@
 //   goim-asc-api-key                Secret file             App Store Connect API key (.p8), same team 8PHCHYD8X3
 //   goim-asc-api-ids                Username with password  username = Key ID, password = Issuer ID
 //   github-token                    Secret text             GitHub token with contents:write on chaishuanzhu/Paircast
+//   paircast-prod-ssh               SSH Username with private key  production hosts; authorized_keys only allows
+//                                                           paircast-deploy.sh
+//   paircast-prod-targets           Secret file             one host per line: name host port public-url host-key
+//                                                           (host-key = "type base64" as in known_hosts)
 //   (paircast-server job: dockerhub, k8s-deployer-kubeconfig)
 
 def repoUrl = 'https://github.com/chaishuanzhu/Paircast.git'
@@ -190,6 +197,45 @@ if (params.BUILD_SERVER) {
 stage('Build') {
     timeout(time: 3, unit: 'HOURS') {
         parallel branches
+    }
+}
+
+stage('Deploy prod') {
+    if (!gitTag || !params.DEPLOY_PROD || !params.BUILD_SERVER) {
+        echo gitTag ? '跳过生产部署' : '测试包只部署测试环境'
+        return
+    }
+    node('docker') {
+        // Host addresses live only in the credential: no xtrace, ssh / curl errors discarded.
+        withCredentials([
+            sshUserPrivateKey(credentialsId: 'paircast-prod-ssh', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER'),
+            file(credentialsId: 'paircast-prod-targets', variable: 'TARGETS'),
+        ]) {
+            withEnv(["VERSION=${gitTag.substring(1)}"]) {
+                sh '''
+                    set +x -eu
+                    kh="$(mktemp)"
+                    trap 'rm -f "$kh"' EXIT
+                    grep -v '^#' "$TARGETS" | grep -v '^[[:space:]]*$' | while read -r name host port url keytype key; do
+                        if [ "$port" = 22 ]; then hk="$host"; else hk="[$host]:$port"; fi
+                        echo "$hk $keytype $key" > "$kh"
+                        echo "== $name: paircast-server $VERSION"
+                        rc=0
+                        ssh -n -i "$SSH_KEY" -p "$port" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=20 -o LogLevel=QUIET \
+                            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$kh" "$SSH_USER@$host" "$VERSION" || rc=$?
+                        [ "$rc" -eq 0 ] || { echo "$name 部署失败（ssh / paircast-deploy.sh 退出码 $rc），后面的主机未部署"; exit 1; }
+                        ok=''
+                        for i in $(seq 1 12); do
+                            out=$(curl -fsS --max-time 10 "$url/health" 2>/dev/null) && [ "$out" = ok ] && { ok=1; break; }
+                            sleep 5
+                        done
+                        [ -n "$ok" ] || { echo "$name 公网健康检查失败"; exit 1; }
+                        echo "$name: $url/health ok"
+                    done
+                '''
+            }
+        }
+        currentBuild.description += ' → 生产'
     }
 }
 

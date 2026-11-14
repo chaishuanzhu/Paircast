@@ -64,5 +64,6 @@ GO-IM 网关配置 `gateway.server_api.apps` 中登记同一个 `app_id`，`webh
 - 发布：与 App 同一个 tag `vX.Y.Z` 发布（流程见 [`ci/jenkins/README.md`](../ci/jenkins/README.md)）。Jenkins `paircast-tags` 发现新 tag 后启动 `paircast`，它以 `TAG=vX.Y.Z` 触发 `paircast-server`：
   先跑 `Scripts/release.sh check`（App 版本号 = tag、提审文案齐全，`gradle.properties` 的 `paircast.goimVersion` 对应的 GO-IM 版本包含 `go.mod` 里的 imserver SDK），
   再把 tag 指向的提交的镜像打上 `X.Y.Z` 与 `latest`、同步 Docker Hub 的 Overview、部署测试环境；只更新 Overview 用 `SYNC_OVERVIEW`。
+  之后 `paircast` 把 `X.Y.Z` 部署到各生产主机（`deploy/docker/prod-deploy.sh`，主机列表只在 Jenkins 凭据里）。
   Overview 来自 `deploy/dockerhub/paircast-server.md`，其中 `<!-- DEPLOY -->` 替换为 `deploy/README.md`、`<!-- GOIM_VERSION -->` 替换为 GO-IM 版本（`deploy/dockerhub/sync-readme.sh`）。
 - 接口文档：`swagger_enabled: true` 时在 `/swagger/` 提供 Swagger UI（文档内嵌自 `api/openapi/openapi.yaml`）。
