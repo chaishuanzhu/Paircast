@@ -123,9 +123,11 @@ platform :ios do
 
       FileUtils.mkdir_p(artifacts)
 
+      # Only the app target: the Presentation framework rejects a manually specified profile.
       update_code_signing_settings(
         use_automatic_signing: false,
         path: project_path,
+        targets: ["Paircast"],
         code_sign_identity: "Apple Distribution",
         bundle_identifier: APP_IDENTIFIER,
         profile_name: PROFILE_NAME,
@@ -153,7 +155,8 @@ platform :ios do
       # Tuist regenerates the project next CI run; reset like Moments for local safety.
       update_code_signing_settings(
         use_automatic_signing: true,
-        path: project_path
+        path: project_path,
+        targets: ["Paircast"]
       )
 
       puts("If you run this lane on your local machine, should not commit the changes for your project file to Git")
