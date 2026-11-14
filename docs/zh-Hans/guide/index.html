@@ -95,7 +95,7 @@
   <ul>
     <li><strong>无法连接服务器</strong>：检查服务器地址拼写、是否需要 <code>http://</code>（仅局域网）以及网络；管理员可用 <code>curl https://你的域名/health</code> 确认服务在线。</li>
     <li><strong>账号或密码错误 / 账号不存在</strong>：确认账号是在你填写的这台服务器上创建的。</li>
-    <li><strong>视频播不了</strong>：播放直链几小时后过期，回到片库重新打开即可。管理员：S3 Endpoint 必须是 API 地域域名，不要填 CDN 域名。</li>
+    <li><strong>视频播不了</strong>：播放直链几小时后过期，回到片库重新打开即可。管理员：S3 Endpoint 必须是手机能访问的 S3 API 公网地址，不要填 CDN 域名或 <code>rustfs:9000</code> 这类容器内地址。</li>
     <li><strong>两人进度不同步</strong>：确认两人连的是同一台服务器，且网络通畅。</li>
   </ul>
 

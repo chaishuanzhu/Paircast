@@ -210,7 +210,7 @@ func (o *OpenSubtitles) do(req *http.Request) (*http.Response, error) {
 	req.Header.Set("Api-Key", o.APIKey)
 	ua := o.UserAgent
 	if ua == "" {
-		ua = "Paircast v2.1"
+		ua = "Paircast v2.0"
 	}
 	req.Header.Set("User-Agent", ua)
 	req.Header.Set("Accept", "application/json")

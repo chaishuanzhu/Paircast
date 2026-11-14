@@ -1,6 +1,6 @@
 # Paircast 技术说明
 
-对应 PRD v2.1 与本地设计预览 `docs/design-preview/index.html`。
+对应 PRD v2.0 与本地设计预览 `docs/design-preview/index.html`。
 
 ## 架构
 
@@ -47,12 +47,12 @@ make android      # Debug APK
 - 两套令牌分工：Paircast 令牌用于 `/account/*`、`/console/*`、`/media/*`、`/room/*`；IM 令牌用于 GO-IM 的 WebSocket、`/upload`、`/user/profiles`、屏蔽与举报提交。IM 令牌由 `GET /account/session` 刷新：App 启动恢复会话时、以及 GO-IM 拒绝 IM 令牌时（`GoImConnection.refreshSession`）；刷新返回 401 才算会话失效，网络错误保留本机会话
 - 会话（serverUrl、uid、token、appToken、imUrl）存安全存储：iOS Keychain（AfterFirstUnlockThisDeviceOnly），Android EncryptedSharedPreferences
 - token 失效 / 被踢（WebSocket `KICK`）→ 先清掉本机保存的会话（`GoImConnection.onSessionEnded` → `SessionStore.clear`），再发 `SessionEvent` → 回登录页；重开 App 不会用旧 token 自动登录（否则会把另一台设备踢回去）
-- 配置只有 Paircast 服务器地址（GO-IM 地址由登录返回）：不含 IM 密钥，也不含对象存储 / TMDB / OpenSubtitles 凭证（v2.1 起全部在服务端）
+- 配置只有 Paircast 服务器地址（GO-IM 地址由登录返回）：不含 IM 密钥，也不含对象存储 / TMDB / OpenSubtitles 凭证（v2.0 起全部在服务端）
 
 ## 服务配置
 
 - 只有一个字段：服务器（Paircast）地址，用户手动填写；`ConfigValidation.normalizedServerUrl` 补 `https://`、去掉路径与结尾 `/`，局域网可显式 `http://`
-- v2.1 起**不再提供配置分享 / 导入**：删除 `ConfigQRCodec`、`ConfigLinkCodec` / `ConfigShareLink`（AES-GCM）、导入导出用例与二维码 / 扫码 UI，Android 去掉 CameraX / ML Kit / ZXing 依赖与相机权限，iOS 去掉存相册权限；`paircast://config?args=…` 不再注册处理（`paircast://` scheme 仍用于 `watch`）
+- v2.0 起**不再提供配置分享 / 导入**：删除 `ConfigQRCodec`、`ConfigLinkCodec` / `ConfigShareLink`（AES-GCM）、导入导出用例与二维码 / 扫码 UI，Android 去掉 CameraX / ML Kit / ZXing 依赖与相机权限，iOS 去掉存相册权限；`paircast://config?args=…` 不再注册处理（`paircast://` scheme 仍用于 `watch`）
 - 已登录时保存了不同的服务器地址 → 退出登录、清元数据缓存、回登录页并提示「服务器已更换，请重新登录」
 - 本机安全存储（键 `paircast.cloud-config.v4` 保持不变）只存 `serverUrl` / `updatedAtMs` / `configVersion`；读到旧版遗留的 `accessKey` / `secretKey` / `subtitleApiKey` / `tmdbAccessToken` 时立即重写清除。iOS 1.x Keychain 旧配置直接删除
 - 配置页附两个外链：`https://paircast.chaisz.com/{zh-Hans|en-US}/guide/`（使用说明）与 `/deploy/`（服务端部署指南：Docker 最小化部署、HTTPS、SMTP 与管理员、`/console/users/create`、片库 / 字幕 / 海报 / 表情包）
@@ -110,7 +110,7 @@ make android      # Debug APK
 | `paircast://watch?roomId={id}&movieId={id}&hostUserId={id}` | 加入观影房（未登录则暂存邀请） |
 | `https://paircast.chaisz.com/invite/?roomId=…` | 同上（邀请落地页；Android 声明了 intent-filter） |
 
-## 服务端片库与房间（GO-IM，v2.1）
+## 服务端片库与房间（Paircast 服务端，v2.0）
 
 接口由本仓库的 Paircast 服务（`server/`，定义见 `server/api/openapi/openapi.yaml`，开启 `swagger_enabled` 后在 `/swagger/` 查看）提供。Paircast 与 GO-IM 各用一个域名：客户端只填 Paircast 的地址，GO-IM 地址随登录返回（`im.url`）。片源、TMDB、OpenSubtitles 凭证都在 Paircast 服务配置的 `media` 段（密钥走环境变量 `PAIRCAST_MEDIA_<ID>_ACCESS_KEY` / `_SECRET_KEY`、`PAIRCAST_TMDB_ACCESS_TOKEN`、`PAIRCAST_OPENSUBTITLES_API_KEY`，见 `server/README.md`）。所有接口都要 Paircast 会话令牌（`/account/login` 返回的 `token`）；服务端未配置片库返回 **503**（客户端提示「服务器尚未配置片库」），片源不支持某能力返回 **501**。
 
@@ -133,7 +133,7 @@ make android      # Debug APK
 - **元数据**：服务端刮削——同目录 `{base}.nfo` / `-poster` / `-fanart` 优先 → TMDB → 文件名；结果（含无结果）缓存，无海报的结果 1 小时后重试；不再写回片源目录。客户端只对无海报的影片调用 `/media/item`
 - 对象存储里不再需要 `_paircast/` 目录（房间改存 MySQL，共享字幕存 GO-IM 文件存储）
 
-## 聊天屏蔽与举报（v2.1）
+## 聊天屏蔽与举报（v2.0）
 
 - GO-IM `internal/moderation`：`user_blocks`（owner_uid, target_uid）与 `user_reports`（reporter / target / message_id / context=房间 ID / content ≤500 字 / status `pending|ignored|banned`）两张表，启动自动建表；无 MySQL 时存内存
 - 用户接口：`POST /user/block`、`/user/unblock`（幂等）、`GET /user/blocks`、`POST /user/report`（同一举报人对同一条消息的待处理举报去重）

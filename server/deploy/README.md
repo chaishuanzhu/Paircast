@@ -24,7 +24,7 @@ App ──────▶ im.example.com ─────────────
 | 标签 | 说明 |
 |------|------|
 | `latest` | 最新发布版本 |
-| `2.1.0` 等 | 固定版本，生产环境建议使用；与同版本的 App 一起发布，对应 [GitHub Release](https://github.com/chaishuanzhu/Paircast/releases) `v2.1.0`，Release 说明里写明依赖的 GO-IM 版本 |
+| `2.0.0` 等 | 固定版本，生产环境建议使用；与同版本的 App 一起发布，对应 [GitHub Release](https://github.com/chaishuanzhu/Paircast/releases) `v2.0.0`，Release 说明里写明依赖的 GO-IM 版本 |
 | `sha-<commit>` | 某次提交的构建（测试环境用） |
 
 容器监听 `8090`，配置文件路径 `CONFIG_PATH`（默认 `/etc/paircast/paircast.json`），密钥全部用环境变量提供。健康检查 `GET /health`（MySQL 不可用时 503）。

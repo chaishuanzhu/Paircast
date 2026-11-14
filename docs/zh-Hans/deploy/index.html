@@ -37,6 +37,7 @@
     <tbody>
       <tr><td>服务器</td><td>Linux，2 核 2 GB 起；已装 Docker 20.10+ 与 Docker Compose v2</td></tr>
       <tr><td>域名（推荐）</td><td>两个子域名都解析到服务器，用于 HTTPS：Paircast 服务（如 <code>paircast.example.com</code>，App 里填这个）与 GO-IM（如 <code>im.example.com</code>）。仅局域网使用可以不要</td></tr>
+      <tr><td>版本</td><td>Paircast 服务与 App 同版本发布；Paircast 2.0.0 需要 GO-IM <strong>2.0.0 及以上</strong>（表情包、头像存储布局依赖它）。默认的 <code>latest</code> 镜像即满足；固定版本时对应关系见 <a href="https://github.com/chaishuanzhu/Paircast/releases">Paircast Releases</a> 说明</td></tr>
       <tr><td>发件邮箱（可选）</td><td>任意支持 SMTP 的邮箱，用来给管理员和好友发初始密码；不配时初始密码在日志 / App 里显示</td></tr>
       <tr><td>视频存储</td><td>S3 兼容对象存储（阿里云 OSS、腾讯云 COS、七牛、MinIO 等）里放好的 <code>mp4</code> / <code>m4v</code> / <code>mkv</code>，以及一对<strong>只读</strong>的访问密钥</td></tr>
     </tbody>

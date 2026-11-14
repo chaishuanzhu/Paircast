@@ -95,7 +95,7 @@
   <ul>
     <li><strong>Cannot reach the server:</strong> check the spelling of the address, whether it needs <code>http://</code> (LAN only), and your network. Admins can run <code>curl https://your-domain/health</code> to confirm the server is up.</li>
     <li><strong>Wrong account or password / account not found:</strong> make sure the account was created on the server you entered.</li>
-    <li><strong>Videos do not play:</strong> playback links expire after a few hours; go back to the library and open the title again. Admins: the S3 endpoint must be the regional API host, not a CDN domain.</li>
+    <li><strong>Videos do not play:</strong> playback links expire after a few hours; go back to the library and open the title again. Admins: the S3 endpoint must be a public S3 API host that phones can reach, not a CDN domain or a container-internal address like <code>rustfs:9000</code>.</li>
     <li><strong>Playback is out of sync:</strong> make sure both of you are on the same server and have a working connection.</li>
   </ul>
 

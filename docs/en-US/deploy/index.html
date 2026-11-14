@@ -37,6 +37,7 @@
     <tbody>
       <tr><td>Server</td><td>Linux, 2 vCPU / 2 GB or more, with Docker 20.10+ and Docker Compose v2</td></tr>
       <tr><td>Domains (recommended)</td><td>Two subdomains pointing at the server, for HTTPS: one for the Paircast server (e.g. <code>paircast.example.com</code>, the address users enter in the app) and one for GO-IM (e.g. <code>im.example.com</code>). Not needed for LAN-only use</td></tr>
+      <tr><td>Versions</td><td>The Paircast server ships with the app under the same version; Paircast 2.0.0 needs GO-IM <strong>2.0.0 or later</strong> (stickers and the avatar storage layout depend on it). The default <code>latest</code> images satisfy this; when pinning versions, see the <a href="https://github.com/chaishuanzhu/Paircast/releases">Paircast Releases</a> notes for the matching GO-IM version</td></tr>
       <tr><td>Mail account (optional)</td><td>Any mailbox with SMTP, used to send initial passwords to you and your friends; without it the passwords show up in the log / app</td></tr>
       <tr><td>Video storage</td><td><code>mp4</code> / <code>m4v</code> / <code>mkv</code> files in S3-compatible storage (Alibaba Cloud OSS, Tencent Cloud COS, Qiniu, MinIO, …) plus a <strong>read-only</strong> access key</td></tr>
     </tbody>
