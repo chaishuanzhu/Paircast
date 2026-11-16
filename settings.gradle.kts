@@ -28,6 +28,17 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        mavenLocal()
+        maven {
+            url = uri("https://maven.pkg.github.com/chaishuanzhu/GO-IM")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").orElse("").get()
+                password = providers.environmentVariable("GITHUB_TOKEN")
+                    .orElse(providers.environmentVariable("GH_TOKEN"))
+                    .orElse("")
+                    .get()
+            }
+        }
     }
 }
 
@@ -35,3 +46,10 @@ include(":shared:core")
 include(":shared:data")
 include(":shared:umbrella")
 include(":androidApp")
+
+// Sibling GO-IM KMP: full targets (incl. iOS) + Signal; substitutes Maven com.goim:sdk-lite.
+includeBuild("../GitHub/GO-IM/kmp") {
+    dependencySubstitution {
+        substitute(module("com.goim:sdk-lite")).using(project(":sdk:lite"))
+    }
+}

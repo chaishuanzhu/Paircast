@@ -11,93 +11,120 @@ import com.chaisz.paircast.core.model.User
 import com.chaisz.paircast.core.model.WatchRoom
 import com.chaisz.paircast.core.rules.ChatStickerCodec
 import com.chaisz.paircast.core.support.PaircastJson
-import im.Message
+import com.goim.kmp.domain.InboundEvent
+import com.goim.kmp.model.ChatType
+import com.goim.kmp.model.MsgType
+import com.goim.kmp.model.StickerRef as GoImStickerRef
+import com.goim.sdk.lite.GoImSdkPreview
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
-import kotlin.time.Clock
 
 /**
- * Room chat over GO-IM group chat (`CmdChat`, `chat_type=2`): text `msg_type=1` (system lines
- * carry `[sys]`), stickers `msg_type=6` with JSON [StickerRef]. Own messages are echoed locally
- * once the server acks them (the gateway does not echo to the sending connection).
+ * Room chat over GO-IM group chat via sdk-lite: text / stickers, with local echo after send.
+ * System lines carry `[sys]`; group membership notifications are filtered out.
  */
+@OptIn(GoImSdkPreview::class, ExperimentalCoroutinesApi::class)
 class GoImChatGateway(
-    private val connection: GoImConnection,
+    private val link: GoImRealtimeLink,
     private val auth: GoImAuthGateway,
 ) : ChatGateway {
     private val localEcho = MutableSharedFlow<ChatMessage>(extraBufferCapacity = 64)
 
     override suspend fun send(room: WatchRoom, text: String, sender: User): ChatMessage {
-        val msgId = sendGroup(room, MsgType.TEXT, text)
-        return echo(ChatMessage(id = msgId, roomId = room.id, senderId = sender.id, senderNickname = sender.displayName, text = text, createdAtMs = now()))
+        val groupId = room.groupId ?: throw AppError.RoomNotFound
+        val sent = link.requireLite().messages.sendText(groupId, ChatType.GROUP, text, link.requireLite().user)
+        return echo(
+            ChatMessage(
+                id = sent.serverMsgId?.toString() ?: sent.id,
+                roomId = room.id,
+                senderId = sender.id,
+                senderNickname = sender.displayName,
+                text = text,
+                createdAtMs = sent.timestampMs,
+            ),
+        )
     }
 
     override suspend fun sendSticker(room: WatchRoom, sticker: StickerRef, sender: User): ChatMessage {
-        val msgId = sendGroup(room, MsgType.STICKER, ChatStickerCodec.encodeJson(sticker))
+        val groupId = room.groupId ?: throw AppError.RoomNotFound
+        val goimSticker = GoImStickerRef(
+            packId = sticker.packId,
+            stickerId = sticker.stickerId,
+            format = sticker.format,
+            width = sticker.width,
+            height = sticker.height,
+        )
+        val sent = link.requireLite().messages.sendSticker(groupId, ChatType.GROUP, goimSticker, link.requireLite().user)
         return echo(
             ChatMessage(
-                id = msgId,
+                id = sent.serverMsgId?.toString() ?: sent.id,
                 roomId = room.id,
                 senderId = sender.id,
                 senderNickname = sender.displayName,
                 text = ChatStickerCodec.FALLBACK_TEXT,
                 kind = ChatMessageKind.STICKER,
                 sticker = sticker,
-                createdAtMs = now(),
+                createdAtMs = sent.timestampMs,
             ),
         )
     }
 
     override suspend fun postSystemMessage(room: WatchRoom, text: String): ChatMessage {
-        val msgId = sendGroup(room, MsgType.TEXT, SYSTEM_PREFIX + text)
-        return echo(ChatMessage(id = msgId, roomId = room.id, senderNickname = "System", text = text, kind = ChatMessageKind.SYSTEM, createdAtMs = now()))
+        val groupId = room.groupId ?: throw AppError.RoomNotFound
+        val sent = link.requireLite().messages.sendText(groupId, ChatType.GROUP, SYSTEM_PREFIX + text, link.requireLite().user)
+        return echo(
+            ChatMessage(
+                id = sent.serverMsgId?.toString() ?: sent.id,
+                roomId = room.id,
+                senderNickname = "System",
+                text = text,
+                kind = ChatMessageKind.SYSTEM,
+                createdAtMs = sent.timestampMs,
+            ),
+        )
     }
 
     override fun messages(room: WatchRoom): Flow<ChatMessage> {
         val groupId = room.groupId ?: return localEcho.filter { it.roomId == room.id }
-        val remote = connection.inbound
-            .filter { it.cmd == Cmd.CHAT && it.chat_type == ChatType.GROUP && it.to == groupId }
-            .mapNotNull { map(room.id, it) }
+        val remote = link.liteSession.flatMapLatest { lite ->
+            if (lite == null) {
+                emptyFlow()
+            } else {
+                lite.connection.inboundEvents
+                    .filterIsInstance<InboundEvent.MessageReceived>()
+                    .mapNotNull { map(room.id, groupId, it) }
+            }
+        }
         return merge(remote, localEcho.filter { it.roomId == room.id })
     }
 
-    private suspend fun map(roomId: String, m: Message): ChatMessage? {
-        if (m.content.isEmpty() || isGroupNotification(m)) return null
-        val id = if (m.msg_id != 0L) m.msg_id.toString() else "${m.from}-${m.seq}"
-        val sticker = if (m.msg_type == MsgType.STICKER || ChatStickerCodec.isStickerPayload(m.content)) {
+    private suspend fun map(roomId: String, groupId: String, event: InboundEvent.MessageReceived): ChatMessage? {
+        val m = event.message
+        if (m.chatType != ChatType.GROUP || m.toUid != groupId) return null
+        if (m.content.isEmpty() || isGroupNotification(m.content, m.msgType)) return null
+        val id = m.serverMsgId?.takeIf { it != 0L }?.toString() ?: m.id
+        val sticker = if (m.msgType == MsgType.Sticker || ChatStickerCodec.isStickerPayload(m.content)) {
             ChatStickerCodec.decode(m.content)
         } else {
             null
         }
         if (sticker != null) {
-            return ChatMessage(id, roomId, m.from, auth.nickname(m.from), ChatStickerCodec.FALLBACK_TEXT, ChatMessageKind.STICKER, sticker, m.timestamp)
+            return ChatMessage(id, roomId, m.fromUid, auth.nickname(m.fromUid), ChatStickerCodec.FALLBACK_TEXT, ChatMessageKind.STICKER, sticker, m.timestampMs)
         }
         if (m.content.startsWith(SYSTEM_PREFIX)) {
-            return ChatMessage(id, roomId, m.from, "System", m.content.removePrefix(SYSTEM_PREFIX), ChatMessageKind.SYSTEM, null, m.timestamp)
+            return ChatMessage(id, roomId, m.fromUid, "System", m.content.removePrefix(SYSTEM_PREFIX), ChatMessageKind.SYSTEM, null, m.timestampMs)
         }
-        return ChatMessage(id, roomId, m.from, auth.nickname(m.from), m.content, ChatMessageKind.USER, null, m.timestamp)
-    }
-
-    private suspend fun sendGroup(room: WatchRoom, msgType: Int, content: String): String {
-        val groupId = room.groupId ?: throw AppError.RoomNotFound
-        val msgId = connection.sendAwaitingAck(
-            Message(
-                cmd = Cmd.CHAT,
-                to = groupId,
-                chat_type = ChatType.GROUP,
-                msg_type = msgType,
-                content = content,
-                timestamp = now(),
-            ),
-        )
-        return msgId.toString()
+        return ChatMessage(id, roomId, m.fromUid, auth.nickname(m.fromUid), m.content, ChatMessageKind.USER, null, m.timestampMs)
     }
 
     private suspend fun echo(message: ChatMessage): ChatMessage {
@@ -105,47 +132,44 @@ class GoImChatGateway(
         return message
     }
 
-    private fun now() = Clock.System.now().toEpochMilliseconds()
-
     companion object {
         const val SYSTEM_PREFIX = "[sys]"
         private val NOTIFICATION_TYPES = setOf("member_joined", "member_left", "member_kicked", "group_renamed", "owner_transferred")
 
         /** REST group join/leave makes the gateway push `{"type":"member_joined","group_id":…}` as group chat. */
-        internal fun isGroupNotification(m: Message): Boolean {
-            if (m.msg_type != MsgType.TEXT || !m.content.startsWith("{")) return false
-            val obj = runCatching { PaircastJson.default.parseToJsonElement(m.content).jsonObject }.getOrNull() ?: return false
+        internal fun isGroupNotification(content: String, msgType: MsgType = MsgType.Text): Boolean {
+            if (msgType != MsgType.Text || !content.startsWith("{")) return false
+            val obj = runCatching { PaircastJson.default.parseToJsonElement(content).jsonObject }.getOrNull() ?: return false
             val type = (obj["type"] as? JsonPrimitive)?.contentOrNull ?: return false
             return type in NOTIFICATION_TYPES && obj["group_id"] != null
         }
     }
 }
 
-/** Playback signals ([PaircastSignal.PLAYBACK]) over the transient group `CmdSignal` (never stored, no unread, no echo). */
-class GoImPlaybackSyncGateway(private val connection: GoImConnection) : PlaybackSyncGateway {
+/** Playback signals ([PaircastSignal.PLAYBACK]) over Lite [GoImSession.sendSignal] / [GoImSession.signals]. */
+@OptIn(GoImSdkPreview::class, ExperimentalCoroutinesApi::class)
+class GoImPlaybackSyncGateway(private val link: GoImRealtimeLink) : PlaybackSyncGateway {
     override suspend fun send(room: WatchRoom, signal: PlaybackSyncSignal) {
         val groupId = room.groupId ?: throw AppError.RoomNotFound
-        connection.send(
-            Message(
-                cmd = Cmd.SIGNAL,
-                seq = connection.nextSeq(),
-                to = groupId,
-                chat_type = ChatType.GROUP,
-                content = SignalCodec.encode(PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer(), signal),
-                timestamp = Clock.System.now().toEpochMilliseconds(),
-            ),
-        )
+        val dataJson = PaircastJson.default.encodeToString(PlaybackSyncSignal.serializer(), signal)
+        link.requireLite().sendSignal(to = groupId, type = PaircastSignal.PLAYBACK, dataJson = dataJson)
     }
 
     override fun signals(room: WatchRoom): Flow<PlaybackSyncSignal> {
         val groupId = room.groupId
-        return connection.inbound
-            .filter { it.cmd == Cmd.SIGNAL && it.to == groupId }
-            .mapNotNull { m ->
-                SignalCodec.decode(m.content, PaircastSignal.PLAYBACK, PlaybackSyncSignal.serializer())
-                    // Trust the server-stamped sender over the payload.
-                    ?.let { it.copy(senderId = m.from.ifEmpty { it.senderId }) }
+        return link.liteSession.flatMapLatest { lite ->
+            if (lite == null) {
+                emptyFlow()
+            } else {
+                lite.signals
+                    .filter { it.type == PaircastSignal.PLAYBACK && it.to == groupId }
+                    .mapNotNull { event ->
+                        runCatching {
+                            PaircastJson.default.decodeFromString(PlaybackSyncSignal.serializer(), event.dataJson)
+                        }.getOrNull()?.let { it.copy(senderId = event.from.ifEmpty { it.senderId }) }
+                    }
+                    .filter { it.senderId != link.selfUid }
             }
-            .filter { it.senderId != connection.selfUid }
+        }
     }
 }

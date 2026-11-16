@@ -39,6 +39,7 @@ class PaircastApplication : Application(), SingletonImageLoader.Factory {
             supportDirectory = File(filesDir, "paircast").apply { mkdirs() }.absolutePath,
             preferredLanguage = Locale.getDefault().toLanguageTag(),
             appVersion = BuildConfig.VERSION_NAME,
+            platformContext = this,
         )
         appState = AppState(graph)
     }

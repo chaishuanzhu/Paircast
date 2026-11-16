@@ -5,19 +5,23 @@ import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.core.model.RoomPlayback
 import com.chaisz.paircast.core.model.RoomStatus
 import com.chaisz.paircast.core.model.WatchRoom
-import com.chaisz.paircast.data.goim.Cmd
-import com.chaisz.paircast.data.goim.GoImConnection
+import com.chaisz.paircast.core.support.PaircastJson
+import com.chaisz.paircast.data.goim.GoImRealtimeLink
 import com.chaisz.paircast.data.goim.PaircastSignal
 import com.chaisz.paircast.data.goim.SignalCodec
 import com.chaisz.paircast.data.support.PaircastLog
+import com.goim.sdk.lite.GoImSdkPreview
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -28,9 +32,10 @@ import kotlinx.coroutines.sync.withLock
  * get `paircast.room_updated` group signals in realtime plus a slow poll as a safety net; only newer
  * revisions are emitted.
  */
+@OptIn(ExperimentalCoroutinesApi::class, GoImSdkPreview::class)
 class ServerRoomGateway(
     private val api: ServerMediaApi,
-    private val connection: GoImConnection,
+    private val link: GoImRealtimeLink,
     private val pollIntervalMs: Long = 15_000,
 ) : RoomGateway {
     private val lock = Mutex()
@@ -86,10 +91,15 @@ class ServerRoomGateway(
         coroutineScope {
             launch { local.collect { offer(it) } }
             launch {
-                connection.inbound
-                    .filter { it.cmd == Cmd.SIGNAL }
-                    .mapNotNull { parseRoomUpdated(it.content) }
-                    .collect { offer(remember(it)) }
+                link.liteSession.flatMapLatest { lite ->
+                    if (lite == null) {
+                        emptyFlow()
+                    } else {
+                        lite.signals
+                            .filter { it.type == PaircastSignal.ROOM_UPDATED }
+                            .mapNotNull { parseRoomUpdated(it.dataJson) }
+                    }
+                }.collect { offer(remember(it)) }
             }
             launch {
                 while (true) {
@@ -123,8 +133,11 @@ class ServerRoomGateway(
     }
 
     companion object {
+        /** Accepts full `{"type","data"}` envelope or Lite `dataJson` (data object only). */
         internal fun parseRoomUpdated(content: String): WatchRoom? {
-            val data = SignalCodec.decode(content, PaircastSignal.ROOM_UPDATED, RoomUpdatedDto.serializer()) ?: return null
+            val data = SignalCodec.decode(content, PaircastSignal.ROOM_UPDATED, RoomUpdatedDto.serializer())
+                ?: runCatching { PaircastJson.default.decodeFromString(RoomUpdatedDto.serializer(), content) }.getOrNull()
+                ?: return null
             return data.room?.toDomain()
         }
     }
