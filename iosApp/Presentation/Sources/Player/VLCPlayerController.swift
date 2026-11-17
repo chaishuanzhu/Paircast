@@ -219,7 +219,9 @@ public final class VLCPlayerController: NSObject, ObservableObject {
             if durationMs > 0 {
                 mediaPlayer.position = Float(Double(clamped) / Double(durationMs))
             }
-            // If a previous prebuffer left VLC running, stop it from advancing.
+            // Entering a room seeks during muted prebuffer — cancel it so VLC cannot
+            // keep running after a sticky first-frame pause (looks like auto-play).
+            isPrebuffering = false
             if mediaPlayer.isPlaying {
                 mediaPlayer.pause()
             }

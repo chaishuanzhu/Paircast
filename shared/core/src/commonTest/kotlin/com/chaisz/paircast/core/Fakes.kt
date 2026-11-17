@@ -201,13 +201,14 @@ internal class FakePlayer : PlayerPort {
     override var lastError: String? = null
     val seeks = mutableListOf<Long>()
     var prepared: String? = null
+    var pauseCount = 0
 
     override fun prepare(url: String, format: VideoFormat, completion: (String?) -> Unit) {
         prepared = url
         completion(null)
     }
     override fun play() { isPaused = false; hasStartedPlayback = true }
-    override fun pause() { isPaused = true }
+    override fun pause() { isPaused = true; pauseCount += 1 }
     override fun seek(positionMs: Long) { seeks += positionMs; currentPositionMs = positionMs }
     override fun stop() {}
     var inBackground = false

@@ -894,6 +894,11 @@ public struct WatchView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
+                    Text("Invite-only room · Long-press a message to block or report")
+                        .font(.system(size: 11))
+                        .foregroundStyle(TandemColors.tertiaryLabel)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 4)
                     ForEach(viewModel.messages) { message in
                         chatRow(message)
                             .id(message.id)
@@ -901,11 +906,6 @@ public struct WatchView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                Text("Invite-only room · Long-press a message to block or report")
-                    .font(.system(size: 11))
-                    .foregroundStyle(TandemColors.tertiaryLabel)
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, 8)
             }
             .onChange(of: viewModel.messages.count) { _, _ in
                 if let last = viewModel.messages.last {

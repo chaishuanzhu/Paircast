@@ -698,19 +698,19 @@ private fun ChatArea(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item {
+                Text(
+                    t("Invite-only room · Long-press a message to block or report"),
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                    textAlign = TextAlign.Center,
+                )
+            }
             items(state.messages, key = { it.id }) { message ->
                 ChatRow(
                     app, state, message,
                     isMe = message.senderId != null && message.senderId == myId,
                     onLongPress = { if (state.canModerate(message)) moderating = message },
-                )
-            }
-            item {
-                Text(
-                    t("Invite-only room · Long-press a message to block or report"),
-                    fontSize = 11.sp, color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    textAlign = TextAlign.Center,
                 )
             }
         }
