@@ -27,11 +27,16 @@ fun PaircastTheme(content: @Composable () -> Unit) {
             primary = PaircastColors.blueDark,
             onPrimary = Color.White,
             background = PaircastColors.groupedDark,
+            onBackground = Color(0xFFFFFFFF),
             surface = PaircastColors.cardDark,
+            onSurface = Color(0xFFFFFFFF),
+            onSurfaceVariant = Color(0xFF8E8E93),
             surfaceVariant = Color(0xFF2C2C2E),
             surfaceContainer = PaircastColors.cardDark,
             surfaceContainerHigh = Color(0xFF2C2C2E),
             surfaceContainerLow = PaircastColors.cardDark,
+            outline = Color(0xFF8E8E93),
+            outlineVariant = Color(0xFF38383A),
             error = PaircastColors.danger,
         )
     } else {
@@ -39,11 +44,16 @@ fun PaircastTheme(content: @Composable () -> Unit) {
             primary = PaircastColors.blue,
             onPrimary = Color.White,
             background = PaircastColors.groupedLight,
+            onBackground = Color(0xFF000000),
             surface = PaircastColors.cardLight,
+            onSurface = Color(0xFF000000),
+            onSurfaceVariant = Color(0xFF8E8E93),
             surfaceVariant = Color(0xFFE5E5EA),
             surfaceContainer = PaircastColors.cardLight,
             surfaceContainerHigh = PaircastColors.cardLight,
             surfaceContainerLow = PaircastColors.cardLight,
+            outline = Color(0xFF8E8E93),
+            outlineVariant = Color(0xFFC6C6C8),
             error = PaircastColors.danger,
         )
     }

@@ -22,7 +22,6 @@ struct TwemojiComposerField: UIViewRepresentable {
         view.textContainerInset = UIEdgeInsets(top: 10, left: 14, bottom: 10, right: 14)
         view.textContainer.lineFragmentPadding = 0
         view.font = TwemojiComposerStyle.font
-        view.textColor = .label
         view.tintColor = UIColor(TandemColors.systemBlue)
         view.isScrollEnabled = false
         view.returnKeyType = .default
@@ -30,11 +29,13 @@ struct TwemojiComposerField: UIViewRepresentable {
         view.spellCheckingType = .no
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         view.setContentHuggingPriority(.required, for: .vertical)
+        view.onTraitCollectionChange = { [weak coordinator = context.coordinator] in
+            coordinator?.applyAppearance(rebuild: true)
+        }
 
         let placeholderLabel = UILabel()
         placeholderLabel.text = placeholder
         placeholderLabel.font = TwemojiComposerStyle.font
-        placeholderLabel.textColor = .tertiaryLabel
         placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
         placeholderLabel.tag = 9_901
         view.addSubview(placeholderLabel)
@@ -45,7 +46,7 @@ struct TwemojiComposerField: UIViewRepresentable {
         ])
 
         context.coordinator.attach(view)
-        context.coordinator.reload(from: text, force: true)
+        context.coordinator.applyAppearance(rebuild: true)
         return view
     }
 
@@ -57,6 +58,8 @@ struct TwemojiComposerField: UIViewRepresentable {
         let current = TwemojiComposerStyle.plainString(from: uiView.attributedText)
         if current != text {
             context.coordinator.reload(from: text, force: true)
+        } else {
+            context.coordinator.applyAppearance(rebuild: false)
         }
         context.coordinator.updatePlaceholder()
 
@@ -84,6 +87,19 @@ struct TwemojiComposerField: UIViewRepresentable {
 
         func attach(_ view: PaddingTextView) {
             textView = view
+        }
+
+        /// Keep label / placeholder / typingAttributes on the dynamic system colors across light↔dark.
+        func applyAppearance(rebuild: Bool) {
+            guard let textView else { return }
+            textView.textColor = .label
+            textView.typingAttributes = TwemojiComposerStyle.typingAttributes
+            if let label = textView.viewWithTag(9_901) as? UILabel {
+                label.textColor = .tertiaryLabel
+            }
+            if rebuild {
+                reload(from: parent.text, force: true)
+            }
         }
 
         func updatePlaceholder() {
@@ -119,6 +135,8 @@ struct TwemojiComposerField: UIViewRepresentable {
                 from: plain,
                 displayScale: textView.traitCollection.displayScale
             )
+            textView.typingAttributes = TwemojiComposerStyle.typingAttributes
+            textView.textColor = .label
             let maxLoc = textView.attributedText.length
             textView.selectedRange = NSRange(location: min(selected.location, maxLoc), length: 0)
             updatePlaceholder()
@@ -161,6 +179,8 @@ struct TwemojiComposerField: UIViewRepresentable {
 
 /// Fixed vertical metrics so SwiftUI layout matches the previous capsule TextField.
 final class PaddingTextView: UITextView {
+    var onTraitCollectionChange: (() -> Void)?
+
     override var intrinsicContentSize: CGSize {
         let width = bounds.width > 0
             ? bounds.width
@@ -174,11 +194,24 @@ final class PaddingTextView: UITextView {
         super.layoutSubviews()
         invalidateIntrinsicContentSize()
     }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        guard traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) else { return }
+        onTraitCollectionChange?()
+    }
 }
 
 enum TwemojiComposerStyle {
     static let font = UIFont.systemFont(ofSize: 15)
     static let emojiSide: CGFloat = 18
+
+    static var typingAttributes: [NSAttributedString.Key: Any] {
+        [
+            .font: font,
+            .foregroundColor: UIColor.label,
+        ]
+    }
 
     static func plainString(from attributed: NSAttributedString?) -> String {
         guard let attributed else { return "" }

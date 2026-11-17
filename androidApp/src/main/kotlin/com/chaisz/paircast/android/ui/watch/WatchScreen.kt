@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -59,6 +60,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material.icons.outlined.Subtitles
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -78,7 +81,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -731,13 +733,13 @@ private fun ChatArea(
                         modifier = Modifier.size(24.dp),
                     )
                 }
-                val textColor = MaterialTheme.colorScheme.onSurface
+                val scheme = MaterialTheme.colorScheme
                 BasicTextField(
                     value = draft,
                     onValueChange = { draft = it },
                     maxLines = 4,
-                    textStyle = TextStyle(color = textColor, fontSize = 15.sp),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    textStyle = TextStyle(color = scheme.onSurface, fontSize = 15.sp),
+                    cursorBrush = SolidColor(scheme.primary),
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester)
@@ -749,30 +751,35 @@ private fun ChatArea(
                         Box(
                             Modifier
                                 .heightIn(min = 40.dp)
-                                .background(MaterialTheme.colorScheme.background, RoundedCornerShape(20.dp))
+                                .background(scheme.background, RoundedCornerShape(20.dp))
                                 .padding(horizontal = 14.dp, vertical = 9.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             if (draft.isEmpty()) {
-                                Text(t("Say something…"), color = MaterialTheme.colorScheme.outline, fontSize = 15.sp)
+                                Text(t("Say something…"), color = scheme.onSurfaceVariant, fontSize = 15.sp)
                             }
                             inner()
                         }
                     },
                 )
                 val canSend = draft.isNotBlank()
-                Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable(enabled = canSend) {
-                            session.sendChat(draft)
-                            draft = ""
-                        }
-                        .alpha(if (canSend) 1f else 0.5f)
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                Button(
+                    onClick = {
+                        session.sendChat(draft)
+                        draft = ""
+                    },
+                    enabled = canSend,
+                    modifier = Modifier.defaultMinSize(minWidth = 1.dp, minHeight = 1.dp),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = scheme.primary,
+                        contentColor = scheme.onPrimary,
+                        disabledContainerColor = scheme.primary.copy(alpha = 0.5f),
+                        disabledContentColor = scheme.onPrimary.copy(alpha = 0.5f),
+                    ),
                 ) {
-                    Text(t("Send"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(t("Send"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             if (panel) {
