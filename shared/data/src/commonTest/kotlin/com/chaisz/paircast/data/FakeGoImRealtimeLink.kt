@@ -1,4 +1,4 @@
-@file:OptIn(com.goim.sdk.lite.GoImSdkPreview::class)
+@file:OptIn(com.goim.sdk.core.GoImSdkPreview::class)
 
 package com.chaisz.paircast.data
 
@@ -7,7 +7,7 @@ import com.chaisz.paircast.core.gateway.SessionEvent
 import com.chaisz.paircast.core.model.AppError
 import com.chaisz.paircast.data.goim.GoImRealtimeLink
 import com.chaisz.paircast.data.secure.GoImSession as PaircastImSession
-import com.goim.sdk.lite.GoImSession as LiteSession
+import com.goim.sdk.core.GoImSession as LiteSession
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** No-op link for HTTP-focused unit tests (does not open sdk-lite). */
+/** No-op link for HTTP-focused unit tests (does not open sdk-core). */
 class FakeGoImRealtimeLink : GoImRealtimeLink {
     private val _state = MutableStateFlow(ConnectionState.DISCONNECTED)
     override val state: StateFlow<ConnectionState> = _state.asStateFlow()

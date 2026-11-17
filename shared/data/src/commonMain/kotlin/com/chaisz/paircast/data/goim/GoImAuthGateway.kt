@@ -21,7 +21,7 @@ import kotlin.time.Clock
 
 /**
  * Password login against the Paircast server, which also issues the GO-IM token; persists the
- * session in the secure store and opens the sdk-lite IM session via [GoImLiteLink].
+ * session in the secure store and opens the sdk-core IM session via [GoImLiteLink].
  */
 class GoImAuthGateway(
     private val configGateway: ConfigGateway,

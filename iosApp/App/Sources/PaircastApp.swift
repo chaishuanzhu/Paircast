@@ -39,7 +39,7 @@ struct PaircastApp: App {
             supportDirectory: support.path,
             preferredLanguage: Locale.preferredLanguages.first ?? "en",
             appVersion: version,
-            platformContext: PlatformContext.companion.INSTANCE
+            platformContext: CommonPlatformContext.companion
         )
     }
 }

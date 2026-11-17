@@ -186,7 +186,7 @@ final class AppRouteDeepLinkTests: XCTestCase {
             supportDirectory: root.appendingPathComponent("support").path,
             preferredLanguage: "en",
             appVersion: "test",
-            platformContext: PlatformContext.companion.INSTANCE
+            platformContext: CommonPlatformContext.companion
         )
         return AppSession(graph: graph)
     }
@@ -212,7 +212,7 @@ final class SharedBridgeTests: XCTestCase {
             supportDirectory: NSTemporaryDirectory(),
             preferredLanguage: "en",
             appVersion: "test",
-            platformContext: PlatformContext.companion.INSTANCE
+            platformContext: CommonPlatformContext.companion
         )
         do {
             _ = try await graph.login.invoke(account: "alice", password: "secret", agreedToTerms: true)

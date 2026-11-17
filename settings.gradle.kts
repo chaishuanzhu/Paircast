@@ -47,9 +47,10 @@ include(":shared:data")
 include(":shared:umbrella")
 include(":androidApp")
 
-// Sibling GO-IM KMP: full targets (incl. iOS) + Signal; substitutes Maven com.goim:sdk-lite.
-includeBuild("../GitHub/GO-IM/kmp") {
-    dependencySubstitution {
-        substitute(module("com.goim:sdk-lite")).using(project(":sdk:lite"))
-    }
-}
+// Sibling GO-IM KMP (optional local composite). Commented out → resolve com.goim:sdk-core from
+// mavenLocal / GitHub Packages instead.
+// includeBuild("../GitHub/GO-IM/kmp") {
+//     dependencySubstitution {
+//         substitute(module("com.goim:sdk-core")).using(project(":sdk:core"))
+//     }
+// }

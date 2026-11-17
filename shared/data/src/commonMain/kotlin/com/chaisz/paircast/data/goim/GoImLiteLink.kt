@@ -9,11 +9,11 @@ import com.chaisz.paircast.data.secure.GoImSession as PaircastImSession
 import com.goim.kmp.common.PlatformContext
 import com.goim.kmp.model.ConnectionState as LiteConnectionState
 import com.goim.kmp.repository.SessionEndReason
-import com.goim.sdk.lite.GoImClient
-import com.goim.sdk.lite.GoImConfig
-import com.goim.sdk.lite.GoImIdentity
-import com.goim.sdk.lite.GoImSdkPreview
-import com.goim.sdk.lite.GoImSession as LiteSession
+import com.goim.sdk.core.GoImClient
+import com.goim.sdk.core.GoImConfig
+import com.goim.sdk.core.GoImIdentity
+import com.goim.sdk.core.GoImSdkPreview
+import com.goim.sdk.core.GoImSession as LiteSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow

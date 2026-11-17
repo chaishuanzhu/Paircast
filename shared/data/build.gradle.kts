@@ -12,7 +12,7 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.okio)
-            api("com.goim:sdk-lite:0.2.0-SNAPSHOT")
+            api("com.goim:sdk-core:0.2.0-SNAPSHOT")
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)

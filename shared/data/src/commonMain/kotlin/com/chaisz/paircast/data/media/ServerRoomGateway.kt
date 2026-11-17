@@ -10,7 +10,7 @@ import com.chaisz.paircast.data.goim.GoImRealtimeLink
 import com.chaisz.paircast.data.goim.PaircastSignal
 import com.chaisz.paircast.data.goim.SignalCodec
 import com.chaisz.paircast.data.support.PaircastLog
-import com.goim.sdk.lite.GoImSdkPreview
+import com.goim.sdk.core.GoImSdkPreview
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.BufferOverflow

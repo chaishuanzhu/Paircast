@@ -139,6 +139,7 @@ make android      # Debug APK
 - 用户接口：`POST /user/block`、`/user/unblock`（幂等）、`GET /user/blocks`、`POST /user/report`（同一举报人对同一条消息的待处理举报去重）
 - 管理接口（Paircast 转 GO-IM 服务端 API `reports/list|get|resolve`）：`GET /console/reports?status=pending|handled|all`（附双方昵称、`target_disabled`、`pending` 总数）、`POST /console/reports/resolve`（`action=ignore|ban`；`ban` = GO-IM 停用 IM 用户 + CmdKick `account disabled` + 关闭该用户其余待处理举报，Paircast 同时停用本地账号；不能封禁 Paircast 管理员）
 - 客户端：`ModerationGateway`（`GoImModerationGateway`）；`ChatSafetyStore` 是服务端屏蔽名单的本机副本（离线也能隐藏消息），未上传成功的屏蔽记为 pending。`WatchSession.start` 调 `SyncBlockListUseCase`：先补传 pending（首次同步时把旧版本机屏蔽全部上传），再以服务端名单为准；`BlockUserUseCase` 先本机隐藏再上传；`ReportMessageUseCase` 直接提交服务器（不再打开 GitHub Issues）
+- **上屏过滤：** GO-IM inbound 仍会送达并经 `GoImChatGateway` 映射；`WatchSession.ingestChat` 用 `ChatSafetyStore.visibleMessages` 丢掉 `senderId` 在屏蔽名单中的消息，故 UI 看不到。排查「收到消息不上屏」时先确认对方是否已被屏蔽（本机发送走 `localEcho`，不受此过滤）
 - 管理员身份：`/account/login` 与 `/account/session` 的 `role == "admin"` → `User.isAdmin`；「我的」里仅管理员可见「后台管理」（用户管理〔含添加用户〕/ 举报处理；各用例也会校验）
 
 ## 测试

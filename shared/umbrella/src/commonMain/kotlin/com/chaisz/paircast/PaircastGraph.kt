@@ -49,7 +49,7 @@ import com.chaisz.paircast.data.net.platformName
 import com.chaisz.paircast.data.secure.SecureConfigStore
 import com.chaisz.paircast.data.secure.SessionStore
 import com.goim.kmp.common.PlatformContext
-import com.goim.sdk.lite.GoImSdkPreview
+import com.goim.sdk.core.GoImSdkPreview
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -58,7 +58,7 @@ import kotlin.uuid.Uuid
 
 /**
  * App-wide dependency graph shared by iOS (SwiftUI) and Android (Compose). Platforms supply
- * secret storage, plain preferences, writable directories, and a [PlatformContext] for sdk-lite.
+ * secret storage, plain preferences, writable directories, and a [PlatformContext] for sdk-core.
  */
 @OptIn(GoImSdkPreview::class)
 class PaircastGraph(

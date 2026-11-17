@@ -15,7 +15,7 @@ import com.goim.kmp.domain.InboundEvent
 import com.goim.kmp.model.ChatType
 import com.goim.kmp.model.MsgType
 import com.goim.kmp.model.StickerRef as GoImStickerRef
-import com.goim.sdk.lite.GoImSdkPreview
+import com.goim.sdk.core.GoImSdkPreview
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 
 /**
- * Room chat over GO-IM group chat via sdk-lite: text / stickers, with local echo after send.
+ * Room chat over GO-IM group chat via sdk-core: text / stickers, with local echo after send.
  * System lines carry `[sys]`; group membership notifications are filtered out.
  */
 @OptIn(GoImSdkPreview::class, ExperimentalCoroutinesApi::class)
