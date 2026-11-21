@@ -1,6 +1,6 @@
 # Paircast 技术说明
 
-对应 PRD v2.0 与本地设计预览 `docs/design-preview/index.html`。
+对应 PRD v2.0（App / 服务端 2.0.1）与本地设计预览 `docs/design-preview/index.html`。
 
 ## 架构
 
