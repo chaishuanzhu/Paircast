@@ -334,6 +334,34 @@ class WatchSessionTest {
         h.session.close()
     }
 
+    @Test fun enterRoomForcesPauseWhenSnapshotSaysPaused() = runTest {
+        // prepare() prebuffers while isPaused is already true; we must still call pause()
+        // so native players cannot keep advancing (iOS "auto play on enter").
+        val h = Harness(this, User("host", "Host"), roomHost = "host")
+        h.rooms.rooms["room1"] = h.rooms.rooms["room1"]!!.copy(
+            playback = RoomPlayback(movieId = "m1", positionMs = 8_000, isPaused = true, seq = 3),
+        )
+        h.session.start()
+        runCurrent()
+        assertTrue(h.player.isPaused)
+        assertTrue(h.player.pauseCount >= 1)
+        assertEquals(listOf(8_000L), h.player.seeks)
+        h.session.close()
+    }
+
+    @Test fun hostReopeningPlayingSnapshotStaysPaused() = runTest {
+        val h = Harness(this, User("host", "Host"), roomHost = "host")
+        h.rooms.rooms["room1"] = h.rooms.rooms["room1"]!!.copy(
+            playback = RoomPlayback(movieId = "m1", positionMs = 12_000, isPaused = false, seq = 4),
+        )
+        h.session.start()
+        runCurrent()
+        assertTrue(h.player.isPaused)
+        assertFalse(h.player.hasStartedPlayback)
+        assertTrue(h.player.pauseCount >= 1)
+        h.session.close()
+    }
+
     @Test fun serverPlaybackForOtherMovieIsIgnored() = runTest {
         val h = Harness(this, User("member", "Member"), roomHost = "host")
         h.rooms.rooms["room1"] = h.rooms.rooms["room1"]!!.copy(

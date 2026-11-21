@@ -211,6 +211,9 @@ class WatchSession(
                 // Late joiner (or host reopening the room): start from the host's saved state; the
                 // host's live snapshot follows over IM.
                 current.room?.let { applyServerPlayback(it, play = !current.isHost) }
+                // prepare() starts a muted prebuffer while PlayerPort.isPaused stays true. If we
+                // skip pause() because of that flag, MobileVLCKit can keep running ("auto play").
+                if (current.playback.isPaused) ensurePaused()
                 listen()
                 startHeartbeatIfNeeded()
                 refreshMemberProfiles()
@@ -287,6 +290,8 @@ class WatchSession(
                 preparePlayer()
                 if (position > 0) player.seek(position)
                 restoreSubtitleAfterReload()
+                // Cancel prebuffer; member realign below may call play() if the host is playing.
+                ensurePaused()
             }
             // A paused host sends no heartbeats; the server snapshot realigns members right away.
             if (!current.isHost) realignFromServer()
@@ -482,11 +487,17 @@ class WatchSession(
         if (backgroundedAtMs != null) return true
         player.seek(position)
         if (paused) {
-            if (!player.isPaused) player.pause()
+            // Always pause — prebuffer may be running while isPaused is already true.
+            ensurePaused()
         } else if (player.isPaused) {
             player.play()
         }
         return true
+    }
+
+    /** Force native pause so muted prebuffer cannot keep the stream advancing. */
+    private fun ensurePaused() {
+        player.pause()
     }
 
     /** Member: reads the room and applies the host's snapshot; false when there is none to apply. */
@@ -553,6 +564,7 @@ class WatchSession(
                         )
                     }
                     preparePlayer()
+                    ensurePaused()
                     refreshSubtitlesInternal(autoSelectChinese = true)
                 }
             }
@@ -566,7 +578,8 @@ class WatchSession(
         if (result.seek || answersRequest) player.seek(state.positionMs)
         // Avoid pause↔play thrash on heartbeat when already in the right state.
         if (state.isPaused) {
-            if (!player.isPaused) player.pause()
+            // Always pause: prebuffer can leave VLC playing while isPaused reports true.
+            ensurePaused()
         } else if (player.isPaused) {
             // Host must not auto-start from a stray heartbeat/echo while still on the poster.
             val ignore = signal.action == PlaybackAction.HEARTBEAT && current.isHost && !player.hasStartedPlayback
@@ -719,6 +732,7 @@ class WatchSession(
                 }
                 player.pause()
                 preparePlayer()
+                ensurePaused()
                 refreshSubtitlesInternal(autoSelectChinese = true)
             } catch (e: CancellationException) {
                 throw e

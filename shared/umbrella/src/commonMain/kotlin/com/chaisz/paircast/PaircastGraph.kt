@@ -37,7 +37,7 @@ import com.chaisz.paircast.data.goim.GoImAccountAdminGateway
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
 import com.chaisz.paircast.data.goim.GoImChatGateway
-import com.chaisz.paircast.data.goim.GoImConnection
+import com.chaisz.paircast.data.goim.GoImLiteLink
 import com.chaisz.paircast.data.goim.GoImPlaybackSyncGateway
 import com.chaisz.paircast.data.goim.GoImStickerCatalog
 import com.chaisz.paircast.data.media.ServerCatalogGateway
@@ -48,6 +48,8 @@ import com.chaisz.paircast.data.net.createHttpClient
 import com.chaisz.paircast.data.net.platformName
 import com.chaisz.paircast.data.secure.SecureConfigStore
 import com.chaisz.paircast.data.secure.SessionStore
+import com.goim.kmp.common.PlatformContext
+import com.goim.sdk.core.GoImSdkPreview
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,8 +58,9 @@ import kotlin.uuid.Uuid
 
 /**
  * App-wide dependency graph shared by iOS (SwiftUI) and Android (Compose). Platforms supply
- * secret storage, plain preferences and writable directories; everything else lives here.
+ * secret storage, plain preferences, writable directories, and a [PlatformContext] for sdk-core.
  */
+@OptIn(GoImSdkPreview::class)
 class PaircastGraph(
     secureStore: SecureStore,
     keyValueStore: KeyValueStore,
@@ -65,6 +68,7 @@ class PaircastGraph(
     supportDirectory: String,
     preferredLanguage: String,
     appVersion: String,
+    platformContext: PlatformContext,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val http = createHttpClient()
@@ -72,23 +76,23 @@ class PaircastGraph(
     private val support = FileStore(supportDirectory)
     private val sessions = SessionStore(secureStore)
     private val api = GoImApi(http)
-    private val connection = GoImConnection(
-        client = http,
-        api = api,
+    private val link = GoImLiteLink(
+        context = platformContext,
         scope = scope,
         deviceId = sessions.deviceId { Uuid.random().toString() },
         platform = platformName,
+        api = api,
     )
-    private val goImAuth: GoImAuthGateway = GoImAuthGateway(SecureConfigStore(secureStore), sessions, api, connection)
+    private val goImAuth: GoImAuthGateway = GoImAuthGateway(SecureConfigStore(secureStore), sessions, api, link)
     private val media = ServerMediaApi(http, api, goImAuth)
     private val catalog = ServerCatalogGateway(media)
     private val subtitles = ServerSubtitleGateway(media, cache)
 
     val configGateway: ConfigGateway = SecureConfigStore(secureStore)
     val authGateway: AuthGateway = goImAuth
-    val roomGateway: RoomGateway = ServerRoomGateway(media, connection)
-    val chatGateway: ChatGateway = GoImChatGateway(connection, goImAuth)
-    val syncGateway: PlaybackSyncGateway = GoImPlaybackSyncGateway(connection)
+    val roomGateway: RoomGateway = ServerRoomGateway(media, link)
+    val chatGateway: ChatGateway = GoImChatGateway(link, goImAuth)
+    val syncGateway: PlaybackSyncGateway = GoImPlaybackSyncGateway(link)
     val catalogGateway: MovieCatalogGateway = catalog
     val metadataGateway: MetadataGateway = catalog
     val subtitleGateway: SubtitleGateway = subtitles
@@ -133,7 +137,7 @@ class PaircastGraph(
         WatchSession(watchDependencies, player, roomId, movieId, hostUserId)
 
     /** Call when the app returns to the foreground: re-verifies the GO-IM link right away. */
-    fun onAppForeground() = connection.probe()
+    fun onAppForeground() = link.onForeground()
 
     /** Drops in-memory scrape results (e.g. after switching servers). */
     suspend fun clearMetadataCache() = catalog.clearCache()

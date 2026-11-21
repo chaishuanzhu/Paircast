@@ -38,7 +38,8 @@ struct PaircastApp: App {
             cacheDirectory: caches.path,
             supportDirectory: support.path,
             preferredLanguage: Locale.preferredLanguages.first ?? "en",
-            appVersion: version
+            appVersion: version,
+            platformContext: CommonPlatformContext.companion
         )
     }
 }

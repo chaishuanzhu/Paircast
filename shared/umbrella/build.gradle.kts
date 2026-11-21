@@ -21,6 +21,7 @@ kotlin {
         commonMain.dependencies {
             api(projects.shared.core)
             api(projects.shared.data)
+            api("com.goim:sdk-core:0.2.0-SNAPSHOT")
         }
     }
 }

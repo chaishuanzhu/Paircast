@@ -6,7 +6,6 @@ import com.chaisz.paircast.core.model.IMConfig
 import com.chaisz.paircast.data.goim.GoImAccountAdminGateway
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
-import com.chaisz.paircast.data.goim.GoImConnection
 import com.chaisz.paircast.data.goim.GoImModerationGateway
 import com.chaisz.paircast.core.model.ReportAction
 import com.chaisz.paircast.core.model.ReportFilter
@@ -28,10 +27,6 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,6 +44,7 @@ class GoImAuthTest {
         val requests: MutableList<HttpRequestData>,
         val scope: CoroutineScope,
         val api: GoImApi,
+        val link: FakeGoImRealtimeLink,
     )
 
     private suspend fun harness(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData): Harness {
@@ -61,9 +57,9 @@ class GoImAuthTest {
         )
         val api = GoImApi(client)
         val scope = CoroutineScope(SupervisorJob())
-        val connection = GoImConnection(client, api, scope, deviceId = "dev", platform = "test")
+        val link = FakeGoImRealtimeLink()
         val sessions = SessionStore(store)
-        return Harness(GoImAuthGateway(config, sessions, api, connection), sessions, requests, scope, api)
+        return Harness(GoImAuthGateway(config, sessions, api, link), sessions, requests, scope, api, link)
     }
 
     private fun formBody(req: HttpRequestData): String =
@@ -86,9 +82,9 @@ class GoImAuthTest {
             }
         }
         h.auth.login("alice", "pw")
-        withContext(Dispatchers.Default) {
-            withTimeout(5_000) { while (h.sessions.load() != null) delay(20) }
-        }
+        val stored = h.sessions.load()!!
+        h.link.onSessionEnded?.invoke(stored)
+        assertNull(h.sessions.load())
         assertNull(h.auth.session)
         assertNull(h.auth.currentUser.value)
         assertNull(h.auth.restoreSession())
@@ -398,14 +394,14 @@ class GoImAuthTest {
                     sessionCalls++
                     respond("""{"uid":"u1","token":"pc","im":{"token":"renewed"}}""", HttpStatusCode.OK, json)
                 }
-                "/unread" -> respond("", if (req.url.parameters["token"] == "expired") HttpStatusCode.Unauthorized else HttpStatusCode.OK)
                 else -> respond("", HttpStatusCode.NotFound)
             }
         }
         h.auth.login("alice@example.com", "pw")
-        withContext(Dispatchers.Default) {
-            withTimeout(5_000) { while (h.sessions.load()?.token != "renewed") delay(20) }
-        }
+        val stale = h.sessions.load()!!
+        assertEquals("expired", stale.token)
+        val refreshed = h.link.refreshSession!!.invoke(stale)
+        assertEquals("renewed", refreshed?.token)
         assertEquals("renewed", h.auth.session?.token)
         assertTrue(sessionCalls >= 1)
         h.auth.logout()

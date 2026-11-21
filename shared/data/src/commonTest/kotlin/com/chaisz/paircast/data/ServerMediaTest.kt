@@ -10,7 +10,6 @@ import com.chaisz.paircast.core.model.VideoFormat
 import com.chaisz.paircast.core.store.InMemorySecureStore
 import com.chaisz.paircast.data.goim.GoImApi
 import com.chaisz.paircast.data.goim.GoImAuthGateway
-import com.chaisz.paircast.data.goim.GoImConnection
 import com.chaisz.paircast.data.goim.GoImHttpException
 import com.chaisz.paircast.data.goim.PaircastSignal
 import com.chaisz.paircast.data.goim.SignalCodec
@@ -46,7 +45,7 @@ class ServerMediaTest {
     private val json = headersOf(HttpHeaders.ContentType, "application/json")
     private val config = AppCloudConfig(im = IMConfig("https://im.example.com"))
 
-    private class Harness(val api: ServerMediaApi, val connection: GoImConnection, val requests: List<HttpRequestData>, val scope: CoroutineScope)
+    private class Harness(val api: ServerMediaApi, val link: FakeGoImRealtimeLink, val requests: List<HttpRequestData>, val scope: CoroutineScope)
 
     private suspend fun harness(handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData): Harness {
         val requests = mutableListOf<HttpRequestData>()
@@ -68,10 +67,10 @@ class ServerMediaTest {
         SecureConfigStore(store).save(config)
         val goim = GoImApi(client)
         val scope = CoroutineScope(SupervisorJob())
-        val connection = GoImConnection(client, goim, scope, deviceId = "dev", platform = "test")
-        val auth = GoImAuthGateway(SecureConfigStore(store), SessionStore(store), goim, connection)
+        val link = FakeGoImRealtimeLink()
+        val auth = GoImAuthGateway(SecureConfigStore(store), SessionStore(store), goim, link)
         auth.login("alice", "pw")
-        return Harness(ServerMediaApi(client, goim, auth), connection, requests, scope)
+        return Harness(ServerMediaApi(client, goim, auth), link, requests, scope)
     }
 
     @Test

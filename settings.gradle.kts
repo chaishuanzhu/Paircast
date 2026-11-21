@@ -28,6 +28,17 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        mavenLocal()
+        maven {
+            url = uri("https://maven.pkg.github.com/chaishuanzhu/GO-IM")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").orElse("").get()
+                password = providers.environmentVariable("GITHUB_TOKEN")
+                    .orElse(providers.environmentVariable("GH_TOKEN"))
+                    .orElse("")
+                    .get()
+            }
+        }
     }
 }
 
@@ -35,3 +46,11 @@ include(":shared:core")
 include(":shared:data")
 include(":shared:umbrella")
 include(":androidApp")
+
+// Sibling GO-IM KMP (optional local composite). Commented out → resolve com.goim:sdk-core from
+// mavenLocal / GitHub Packages instead.
+// includeBuild("../GitHub/GO-IM/kmp") {
+//     dependencySubstitution {
+//         substitute(module("com.goim:sdk-core")).using(project(":sdk:core"))
+//     }
+// }

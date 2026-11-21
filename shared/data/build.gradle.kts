@@ -1,14 +1,6 @@
 plugins {
     alias(libs.plugins.paircast.kmp.library)
     alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.wire)
-}
-
-wire {
-    sourcePath {
-        srcDir("src/commonMain/proto")
-    }
-    kotlin {}
 }
 
 kotlin {
@@ -19,8 +11,8 @@ kotlin {
             implementation(libs.ktor.client.websockets)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
-            implementation(libs.wire.runtime)
             implementation(libs.okio)
+            api("com.goim:sdk-core:0.2.0-SNAPSHOT")
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
